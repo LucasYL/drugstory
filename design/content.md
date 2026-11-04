@@ -1,7 +1,8 @@
 # 内容表 v1
 
 > 这份文档里的科学标签和组合结果，请重点把关。
-> 第 3.3、3.4 节由 [tools/combo.py](tools/combo.py) 按规则算出来。改了标签或规则以后，运行 `python design/tools/combo.py`，把输出贴回来即可。
+> 这里的表格和 `src/drugstory/content/` 下的 TOML 是同一份内容：TOML 是游戏真正读取的，这份文档给人看。
+> 第 3.3、3.4 节由 `uv run python design/tools/combo.py` 用引擎的规则生成，测试会检查它和数据一致。
 
 数值（解锁花费、周数、系数）都是初稿，会用模拟来调。
 

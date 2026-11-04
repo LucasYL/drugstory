@@ -1,6 +1,6 @@
-# 技术方案 v1
+# 技术方案 v1.1
 
-配合 [game-design.md](game-design.md) 和 [content.md](content.md) 阅读。
+配合 [game-design.md](game-design.md) 和 [content.md](content.md) 阅读。v1.1 补上了实现时定下来的约定：钱的单位、周的编号、随机流、决策队列、操作日志和回放、命令行入口。
 
 ## 1. 目标
 
@@ -11,119 +11,119 @@
 
 ## 2. 技术选型
 
-- **Python 3.12+**：用 uv 管理环境，pytest 测试，ruff 检查格式
-- **内容数据用 TOML**：标准库 `tomllib` 就能读，还能写注释，方便你直接改靶点表
-- **文字界面**：先用标准库；想好看一点再加 `rich`
+- **Python 3.12+**：用 uv 管理环境，pytest 测试，ruff 检查代码
+- **内容和数值都用 TOML**：标准库 `tomllib` 就能读，还能写注释。靶点表、分子类型表、所有可调数值都在 `src/drugstory/content/` 下，改数值不用改代码
+- **文字界面只用标准库**，不引入额外依赖
 - **不用游戏引擎**：MVP 的难点全在规则和数值上，不在画面
 
 ## 3. 目录结构
 
-包名暂定 `drugstory`，游戏名定了再改。
-
 ```
 src/drugstory/
+  __main__.py             python -m drugstory：启动文字界面
+  content/                内容与数值（TOML），以及加载和校验
+    balance.toml          所有可调数值：开局、团队公式、临床、销售、场地、招聘……
+    targets.toml          靶点（科学标签 + 疾病参数）
+    modalities.toml       分子类型（科学能力 + 数值 + 解锁条件）
+    overrides.toml        组合特例
+    contracts.toml        外包单
+    texts.toml            隐患、结果文案、起名音节、人名
   engine/                 纯逻辑：不读输入、不打印
     state.py              全部可存档的游戏状态（dataclass）
-    clock.py              周 / 月 / 年
-    rng.py                随机数：从主种子派生出每个系统自己的随机流
+    calendar.py           周编号 ↔ 第几年几月第几周
+    rng.py                从主种子派生出每个系统自己的随机流
+    decisions.py          决策队列：需要玩家决定的事
     actions.py            玩家能做的所有操作，先校验再修改状态
-    events.py             事件队列：通知，以及需要玩家决定的事
-    loop.py               step_week()：按固定顺序调用各个系统
+    loop.py               step_week() 和 advance()
+    game.py               开局：new_game(seed)
+    save.py               JSON 存档、读档、回放
+    rules/
+      combo.py            组合规则
+      scoring.py          打分、标准、综合分
+      naming.py           起名后缀
+      texts.py            结果文案
     systems/
       teams.py            团队产出、经验、升级
       research.py         研发进度、点数、攻关、隐患
       clinical.py         临床各期与审评：打分、过关、爆雷
       market.py           在售药物的销售与退市
-      finance.py          工资、月租、花费、收入、破产判定
+      finance.py          工资、月租、破产判定
       contracts.py        外包
-      progression.py      解锁、熟练度、成就、年终、标准提高
-    rules/
-      combo.py            组合规则（由 design/tools/combo.py 正式化而来）
-      scoring.py          打分公式
-      naming.py           起名后缀
-  content/                TOML 数据：targets、modalities、overrides、contracts、texts、names
-  ui/cli/                 文字界面：只读状态，只通过 actions 修改状态
-  sim/                    bot 和批量模拟
+      recruiting.py       招聘与候选人
+      progression.py      熟练度、成就、年报、20 年结算
+  ui/cli.py               文字界面：只读状态，只通过 actions 修改状态
+  sim/                    bot 和批量模拟：python -m drugstory.sim
 tests/
-design/                   设计文档和设计工具
+design/                   设计文档；design/tools/combo.py 用引擎的规则生成 content.md 3.3、3.4 节
 ```
 
-## 4. 主循环
+## 4. 约定
+
+- **钱**：游戏里所有金额的单位都是万元，现金是整数。每笔进出先按公式算出小数，再四舍五入成整数入账。
+- **周**：`state.week` 是从 0 开始的周编号。第 `week // 48 + 1` 年、第 `week % 48 // 4 + 1` 月、第 `week % 4 + 1` 周。处理完第 4 周算月底，处理完第 48 周算年底。
+- **属性名**：负责人的四项属性用 `bio / chem / tox / proc`，药的四项属性用 `efficacy / druggability / safety / manufacturability`，一一对应。
+- **随机流**：每个系统用 `random.Random(f"{seed}:{系统名}")`，字符串种子的哈希是确定的，不受 Python 哈希随机化影响。随机流的状态跟着存档走。
+- **ID**：团队、项目、药物、外包都用 `state.next_id` 递增分配，读档以后也不会撞号。
+
+## 5. 主循环
 
 ```python
 while not state.game_over:
-    events = advance_until_blocking(state)   # 一周一周地推进，直到出现需要玩家决定的事件
-    ui.show(state, events)
-    action = ui.ask(events)
-    apply_action(state, action)              # 经过 actions.py 校验
+    advance(state, max_weeks=4)        # 一周一周推进，出现待决定的事就停
+    ui.show(state)
+    for decision in state.pending:     # 一件件问玩家
+        ui.resolve(decision)           # 通过 actions 修改状态
+    ui.menu()                          # 立项、招聘、管理团队……
 ```
 
-- `step_week(state)` 按固定顺序调用各个系统：团队产出 → 研发 → 临床 → 市场 → 外包 → 财务（月底）→ 成长（年底）。顺序固定，结果才是确定的。
+- `step_week(state)` 按固定顺序调用各个系统：研发 → 外包 → 临床 → 市场 → 招聘 → 周数 +1 → 月底结算 → 年底结算 → 成就检查。顺序固定，结果才是确定的。
 - 界面、bot、测试都通过同一套 actions 操作游戏。bot 本质上就是一个不用键盘的玩家。
+- 每个 action 都会记进 `state.action_log`（发生在第几周、操作名、参数），用于回放。
 
-## 5. 可扩展的关键设计
+## 6. 决策队列
+
+需要玩家决定的事统一放在 `state.pending` 里，每一项有种类、编号和相关数据：
+
+| 种类 | 什么时候出现 | 玩家的选择 |
+|---|---|---|
+| `milestone` | 研发到了攻关节点 | 派哪个团队攻关 |
+| `rd_end` | 研发期结束 | 多磨 4 周 / 进入临床 / 终止 |
+| `phase_result` | 某一期临床出结果 | 过关：继续 / 终止；没过关：知道了 |
+| `approval` | 审评通过 | 给药起名 |
+| `candidates` | 招聘出了候选人 | 签哪一个，或者都不要 |
+| `cash_negative` | 现金第一次在月底变成负数 | 知道了 |
+| `year_end` | 年底 | 看年报 |
+| `game_end` | 第 20 年结束 | 看结算，继续玩 |
+
+`pending` 不为空时，`advance()` 不会往前推进。以后的事件卡就是多一种带选项的决策，界面已经会处理。
+
+## 7. 可扩展的关键设计
 
 | 设计 | 带来的好处 |
 |---|---|
-| 系统按周更新，彼此只通过状态和事件交流 | 新机制就是一个新系统，加进 `step_week` 的顺序表就行 |
-| 研发管线是一张阶段列表（数据） | 拆分临床阶段、加成功率判定，只要改数据和判定函数 |
+| 系统按周更新，彼此只通过状态和决策队列交流 | 新机制就是一个新系统，加进 `step_week` 的顺序表就行 |
+| 临床管线是一张阶段表（在 balance.toml 里） | 拆分阶段、加成功率判定，只改数据和判定函数 |
 | 过关判定可插拔 | MVP 用"分数过线"，以后换成"分数 → 概率"，接口不变 |
-| 统一的事件队列，事件可以带选项 | 事件卡只是一种带选项的事件，界面本来就会处理 |
-| 内容全部放在 TOML 里 | 加靶点、分子类型、外包单都不用改代码 |
+| 统一的决策队列 | 事件卡只是一种新的决策 |
+| 内容和数值全部放在 TOML 里 | 加靶点、分子类型、外包单都不用改代码；bot 调参时也只改数值 |
 | 每个系统有自己的随机流 | 加一个新系统不会打乱其他系统的随机序列，旧测试和回放不受影响 |
-| 状态里带版本号 | 以后改了存档格式，可以写迁移 |
+| 存档里带版本号 | 以后改了存档格式，可以写迁移 |
 
-## 6. 存档与回放
+## 8. 存档与回放
 
 - 整个 `GameState` 序列化成 JSON，包含每个随机流的状态和版本号。
-- 每年年底自动存一次，玩家也可以随时手动存。
-- 回放：记录"种子 + 操作列表"，可以把一局完整重放出来，用来复现 bug。
+- 每年年底自动存一次（`autosave.json`），玩家也可以随时手动存。
+- 回放：从同一个种子开局，按 `action_log` 在对应的周重放每个操作，结果和原来的一局完全一样。测试里用它检查确定性。
 
-## 7. 内容数据格式
+## 9. 模拟与平衡
 
-```toml
-[[targets]]
-key = "egfr"
-name = "EGFR"
-disease = "非小细胞肺癌"
-location = "surface"        # secreted / surface / intracellular / nucleic
-pocket = "yes"              # yes / hard / no
-actions = ["inhibit"]
-tissue = "solid_tumor"
-unlock_cost = 0
-market = 4
-trial_cost = 1.0
-trial_time = 0.9
-difficulty = 0.9
-chronic = false
-```
+`python -m drugstory.sim` 批量跑 bot，先做三种策略：
 
-```toml
-[[modalities]]
-key = "small_molecule"
-name = "小分子"
-enters_cell = true
-crosses_bbb = true
-pocket = "functional"       # functional / binder / none
-actions = ["inhibit", "activate"]
-base_weeks = 30
-weekly_cost = 5
-trial_cost = 1.0
-risk = "medium"
-route = "oral"
-```
+- **新手**：总是选已知最好的组合，项目做完再开下一个，不接外包
+- **稳健**：优先招毒理和工艺负责人，团队闲着就接外包，临床分数偏低就终止，留足现金
+- **激进**：一个团队一个项目，同时开很多个，专挑大市场
 
-加载时做校验：缺字段、取值不合法、引用了不存在的 key，一律直接报错，不让坏数据进游戏。
-
-## 8. 模拟与平衡
-
-先做三种 bot 策略：
-
-- **新手**：总是选已知最好的组合，团队平均分配，不接外包
-- **稳健**：优先招毒理和工艺负责人，常接外包，某一期分数偏低就终止
-- **激进**：同时开很多项目，专挑大市场
-
-每种策略用 200 个种子各跑满 20 年，看下面这些指标：
+每种策略用一批种子各跑满 20 年，看下面这些指标：
 
 | 指标 | 目标 |
 |---|---|
@@ -134,22 +134,24 @@ route = "oral"
 | 后期分数 | 第 15 年以后不会轻松满分（标准增长够快） |
 | 名人堂 | 稳健策略 20 年能进 2–5 个 |
 
-结果输出成 CSV 加一页摘要。每调一轮数值重跑一遍，和上一轮对比。
+结果打印成一页摘要，也可以导出 CSV。每调一轮数值重跑一遍，和上一轮对比。
 
-## 9. 测试
+## 10. 测试
 
-- **规则的单元测试**：组合规则逐条对照 content.md 里的例子，再加打分公式、销售曲线、起名
-- **不变量测试**：每推进一周检查一遍，比如现金的变化等于收入减支出，人数不超过场地容量
-- **黄金测试**：固定种子跑完整一局，关键数字和保存的快照一致
-- **存档测试**："存档 → 读档 → 继续跑"和"不存档直接跑"的结果完全一样
+- **内容校验**：TOML 缺字段、取值不合法、引用不存在的 key，都会在加载时报错；content.md 3.3、3.4 节必须和引擎算出来的完全一致
+- **规则的单元测试**：组合规则、打分公式、销售曲线、团队产出、起名
+- **系统测试**：研发、临床、外包、招聘、财务各自的行为
+- **不变量测试**：用 bot 跑完整局，每推进一周检查一遍，比如现金的变化等于账本里的收支，人数不超过场地容量
+- **确定性和存档测试**：同样的种子和操作得到同样的结果；"存档 → 读档 → 继续跑"和"不存档直接跑"完全一样；回放和原局完全一样
+- **界面测试**：用脚本喂输入，完整走一遍主要菜单，不崩溃
 
-## 10. 里程碑
+## 11. 里程碑
 
 | 里程碑 | 内容 | 完成的标志 |
 |---|---|---|
-| M0 | 项目骨架、内容加载和校验、组合规则 | 组合测试全绿，能打印出 content.md 里的组合表 |
-| M1 | 团队与研发 | 命令行里能跑完一个项目的研发期 |
+| M0 | 项目骨架、内容加载和校验、组合规则 | 组合测试全绿，能生成 content.md 里的组合表 |
+| M1 | 团队与研发 | 一个项目能跑完研发期 |
 | M2 | 临床、审评、上市、经济 | 一个药能从立项一路走到退市 |
 | M3 | 文字界面、存档 | 能完整玩一局 20 年 |
-| M4 | bot 与平衡模拟 | 跑出第 8 节的指标，并完成一轮调参 |
+| M4 | bot 与平衡模拟 | 跑出第 9 节的指标，并完成一轮调参 |
 | M5 | 新手引导、成就、打磨 | 可以交给别人试玩 |

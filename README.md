@@ -1,59 +1,45 @@
-# coding-practice
+# 新药物语（暂定名）
 
-## 当前项目：新药物语（暂定名）
+开罗《游戏发展国》式的制药经营游戏。你从一家小 biotech 起步：招募科学家、组建团队，选"靶点 × 分子类型"开发新药，闯过三期临床和上市审评，把公司做成大药厂。
 
-一款开罗式的制药经营游戏，目前在设计阶段：
+状态：MVP（文字版）。
 
-- [游戏设计](design/game-design.md)：核心循环、各个系统、MVP 范围
-- [内容表](design/content.md)：靶点、分子类型、组合规则
-- [技术方案](design/tech.md)：架构、存档、模拟、里程碑
+## 怎么玩
 
----
+需要 [uv](https://docs.astral.sh/uv/)。
 
-## 附：之前的热身练习（柠檬水摊，已暂停）
-
-每周 3 次、每次 20–30 分钟，亲手写一个模拟经营游戏，把编程手感和工程习惯找回来。
-
-- 先做热身关 **🍋 柠檬水摊**，大约两周做出第一个能玩的版本
-- 然后做**你自己设计的游戏**
-
-完整计划见 [路线图](ROADMAP.md)。第一次来，从 [第 0 课：环境搭建](sessions/00-setup.md) 开始。
-
-### 每节课怎么上
-
-1. 打开下一张任务卡 `sessions/NN-xxx.md`
-2. 跑这节课的测试，先看到红色：`uv run pytest tests/test_NN_xxx.py`
-3. 自己手写实现，直到全绿
-4. `git commit` + `git push`
-
-到点就停。没写完也没关系，失败的测试就是书签，下次从这里接着做。
-
-### 规矩
-
-- **手写**：练习时关掉 Copilot、Cursor Tab 这类 AI 补全。查文档、搜索都可以。
-- **卡住了按顺序来**：先自己想 5 分钟，然后依次看卡片里的提示 1、2、3。还不行再问 Claude，让它给方向，别直接给代码。
-- **写完找人 review**：push 之后，可以让 Claude 按真实团队的标准 review 你这节课的代码。
-- **测试就是需求**：前几课的测试都写好了。不要改测试去迁就代码。往后你会越来越多地自己写测试。
-
-### 常用命令
-
-| 做什么 | 命令 |
-|---|---|
-| 装环境（第一次，或者依赖变了） | `uv sync` |
-| 跑某一节课的测试 | `uv run pytest tests/test_01_demand.py` |
-| 跑全部测试 | `uv run pytest` |
-| 玩游戏（第 6 课以后） | `uv run lemonade` |
-
-### 代码结构
-
-```
-src/lemonade/
-  rules.py   规则：纯函数（需求曲线、卖一天）
-  state.py   状态 + step()：旧状态 + 决定 + 天气 → 新状态
-  game.py    一局游戏：随机种子、天数、流程
-  cli.py     界面：整个项目里只有这里用 print / input
-tests/       每节课一个测试文件
-sessions/    每节课一张任务卡
+```bash
+uv sync
+uv run drugstory                    # 开始新游戏
+uv run drugstory --seed 42          # 指定随机种子
+uv run drugstory --load save.json   # 读档
 ```
 
-上面一层只依赖下面的层。规则层完全不知道界面的存在，所以以后想换一个界面（网页、TUI……），下面三层一行都不用改。
+## 开发
+
+```bash
+uv run pytest                                # 全部测试
+uv run ruff check .                          # 代码检查
+uv run python -m drugstory.sim --runs 100    # 平衡模拟：三种 bot 各跑 100 局
+uv run python design/tools/combo.py          # 重新生成 content.md 里的组合表
+```
+
+## 文档
+
+- [游戏设计](design/game-design.md)：核心循环、各个系统、数值初稿、MVP 范围
+- [内容表](design/content.md)：靶点、分子类型、组合规则、文案
+- [技术方案](design/tech.md)：架构、约定、存档、模拟、里程碑
+
+## 代码结构
+
+```
+src/drugstory/
+  content/   内容和数值（TOML）：靶点、分子类型、组合特例、外包、文案、balance
+  engine/    纯逻辑：状态、各个系统、玩家操作、存档
+  ui/        文字界面
+  sim/       bot 和批量模拟
+tests/
+design/      设计文档
+```
+
+引擎不读输入、不打印；界面、bot 和测试都通过同一套操作来玩游戏。
