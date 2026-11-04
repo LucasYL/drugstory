@@ -1,7 +1,7 @@
 function competitionView() {
   return `<h2>有对手，也有机会</h2><p class="muted">三家研究机构有不同偏好。阶段可能延期或失败；相同种子可以复现，刷新不会改变结果。对手影响市场与年度评选，不会抬高你的审批门槛。</p>
   <div class="card-grid">${state.rivals.map((r) => `<article class="project-card"><span class="badge">${esc(r.style_name)}</span><h3>${esc(r.name)}</h3><p>${esc(r.description)}</p><h4>${esc(r.market_name)} · ${r.status === "rebuilding" ? "调整下一计划" : esc(r.phase)}</h4><p>${esc(r.last_update)}</p>${r.status === "developing" ? `<p>若顺利推进，预计第 ${r.eta_low}–${r.eta_high} 周进入市场；不是承诺。</p>` : "<p>下一条管线方向将重新公布。</p>"}<p>在售：${r.products.map((p) => `${esc(p.market)}（余 ${p.remaining} 周）`).join("、") || "暂无"}</p><details><summary>近期情报</summary>${r.history.map((e) => `<p>第 ${e.week} 周 · ${esc(e.text)}</p>`).join("") || "<p>等待首次数据公布。</p>"}</details></article>`).join("")}</div>
-  <div class="hint">应对方式：转向竞争较少的领域；取得概念验证后授权；选择自营生产改善利润；保留仿制现金流，避免为了抢先而跳过证据。</div>`;
+  <div class="hint">应对方式：转向竞争较少的领域；取得概念验证后授权；完善产品证据；保留仿制现金流，避免为了抢先而跳过证据。</div>`;
 }
 function honorsView() {
   const h = state.honors;
@@ -43,15 +43,6 @@ function honorsView() {
 }
 function extensionModal(type, h, id) {
   if (type === "ceremony") return ceremonyView();
-  if (type === "focus")
-    return `<h2 id="modal-title">${esc(h.name)} · 选择长期专长</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><p>精英以上可选一次，投入 ¥90 万。专长与角色自身特质一起生效。</p><div class="card-grid">${Object.entries(
-      state.focuses,
-    )
-      .map(
-        ([key, f]) =>
-          `<article class="candidate"><h3>${esc(f.name)}</h3><p>${esc(f.description)}</p>${button("确立" + f.name, "specialize", { character: id, track: key }, "primary", !!h.busy)}</article>`,
-      )
-      .join("")}</div>`;
   if (type === "study") {
     const study = state.honors.studies.find((x) => x.product === id);
     return formFrame(

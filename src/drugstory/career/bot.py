@@ -27,7 +27,7 @@ def choose(s, novice=False, remaining=960):
             return g.execute(s, "trial_decision", {"project": pid, "choice": "keep"})
         if status == "selecting":
             scores = []
-            for i in range(3):
+            for i in range(len(p["candidates"])):
                 probe = copy.copy(p)
                 probe["chosen"] = i
                 scores.append(sc.outlook(probe))
@@ -110,11 +110,6 @@ def choose(s, novice=False, remaining=960):
         and cash > FACILITIES[s["facility"] + 1]["cost"] + (2400 if products else 3000)
     ):
         return g.execute(s, "upgrade")
-    for d in products:
-        if d["production"] == "contract" and cash > 700:
-            result = attempt(s, "set_production", product=d["id"], mode="self")
-            if result:
-                return result
 
     active = [p for p in s["projects"] if p["status"] in ACTIVE]
     if len(active) < (1 if novice else 2) and cash > 650:
@@ -133,7 +128,9 @@ def choose(s, novice=False, remaining=960):
         for kind in priority:
             if kind != "generic" and cash < (2200 if kind == "innovative" else 1100):
                 continue
-            choices = [c for c in CATALOG.values() if c["kind"] == kind]
+            choices = [
+                c for c in CATALOG.values() if c["kind"] == kind and (kind != "innovative" or "__" not in c["key"])
+            ]
             # Rotate therapeutic areas, so repeated launches do not sidestep market crowding.
             choices.sort(key=lambda c: sum(p["catalog"] == c["key"] for p in s["projects"]))
             for spec in choices:
@@ -143,6 +140,12 @@ def choose(s, novice=False, remaining=960):
                 if result:
                     return result
 
+    if cash > 6000:
+        for profession in ("bio", "chem", "proc"):
+            if s["equipment"][profession] < 2:
+                result = attempt(s, "upgrade_equipment", profession=profession)
+                if result:
+                    return result
     # Invite visibly stronger specialists after meeting the published conditions.
     if not novice and cash > 4200 and len(employed) < 8:
         for key, spec in sorted(ROSTER.items(), key=lambda pair: -pair[1]["tier"]):

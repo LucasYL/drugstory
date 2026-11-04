@@ -1,62 +1,48 @@
-"""Small, explicit character traits and mutually exclusive career specializations."""
+"""One visible signature ability per character, strengthened by their personal project."""
 
-from .content import ROSTER
+import json
 
-TRAITS = {
-    "thrift": ("精打细算", "负责非临床研究时，阶段费减少 5%。"),
-    "quality": ("批次守护", "参与研究时，工艺指标的观察误差减少 6%。"),
-    "learner": ("越学越会", "专业培训额外获得 2 点经验。"),
-    "safety": ("风险嗅觉", "参与研究时，安全指标的观察误差减少 6%。"),
-    "clinical": ("数据直觉", "参与临床时，观察误差减少 5%。"),
-    "refine": ("精修匠心", "定向优化额外改善 1 点，同时承担对应的性质代价。"),
-    "speed": ("调度能手", "担任本阶段相关专业负责人时，工期减少 8%。"),
-    "screen": ("线索捕手", "参与候选筛选时，初始证据误差减少 10%。"),
-    "mentor": ("薪火传承", "导师课题给学习者额外增加 5 点经验。"),
-}
-ASSIGNMENTS = dict(
-    zip(
-        ROSTER,
-        [
-            "thrift",
-            "quality",
-            "learner",
-            "safety",
-            "clinical",
-            "refine",
-            "safety",
-            "speed",
-            "screen",
-            "clinical",
-            "refine",
-            "safety",
-            "quality",
-            "screen",
-            "speed",
-            "screen",
-            "mentor",
-            "safety",
-            "quality",
-            "clinical",
-        ],
-        strict=True,
-    )
-)
-FOCUS = {
-    "precision": {
-        "name": "深研专长",
-        "description": "对应专业指标的观察误差减少 10%；临床专业作用于临床阶段全部指标。",
-    },
-    "efficiency": {
-        "name": "组织专长",
-        "description": "担任相关专业负责人时，阶段工期减少 8%；与角色特质合计最多减少 15%。",
-    },
-}
+from .content import DATA, STAGES, STATS
+
+ABILITIES = json.loads((DATA / "abilities.json").read_text())
+
+
+def value(h):
+    spec = ABILITIES[h["id"]]
+    return spec["advanced"] if h.get("personal") else spec["base"]
 
 
 def trait(key):
-    name = ASSIGNMENTS.get(key, "mentor")
-    return {"key": name, "name": TRAITS[name][0], "description": TRAITS[name][1]}
+    a = ABILITIES[key]
+    if a["kind"] == "work":
+        text = (
+            f"在{STAGES[a['stage']]['name']}额外贡献 {a['base']} 点{STATS[a['stat']]}开发量；"
+            f"个人课题后为 {a['advanced']} 点。"
+        )
+    elif a["kind"] == "schedule":
+        stage = STAGES[a["stage"]]["name"] if a["stage"] != "*" else "临床阶段"
+        text = f"{stage}排程缩短 {a['base']} 周；个人课题后为 {a['advanced']} 周。"
+    elif a["kind"] == "screen":
+        text = f"候选筛选多提供 {a['base']} 条备选线索；个人课题后为 {a['advanced']} 条。"
+    else:
+        text = f"导师课题使学徒额外获得 {a['base']} 点经验；个人课题后为 {a['advanced']} 点。"
+    return {"key": key, "name": a["name"], "description": text, "asset_id": a["asset_id"]}
 
 
-def has(s, ids, kind):
-    return any(ASSIGNMENTS.get(h["id"]) == kind for h in s["heroes"] if h["id"] in ids and h["employed"])
+def work_bonus(h, stage, stat):
+    a = ABILITIES[h["id"]]
+    return value(h) if a["kind"] == "work" and a["stage"] == stage and a["stat"] == stat else 0
+
+
+def bonus(s, ids, kind, stage=None):
+    return max(
+        (
+            value(h)
+            for h in s["heroes"]
+            if h["employed"]
+            and h["id"] in ids
+            and ABILITIES[h["id"]]["kind"] == kind
+            and (stage is None or ABILITIES[h["id"]]["stage"] in (stage, "*"))
+        ),
+        default=0,
+    )

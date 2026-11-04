@@ -1,12 +1,12 @@
-# 新药物语 · 协作课题版 v0.6
+# 新药物语 · 开发与证据版 v0.7
 
-从街角实验室开始的文字制药经营游戏。用鼠标安排研发、培养有专业分工的角色，经营仿制药现金流，挑战改良与创新，选择自主上市或授权合作，最终留下值得记住的科学成果。
+从街角实验室起步的文字制药经营游戏。用鼠标安排研究与团队，靠仿制药、技术服务或授权维持现金流，培养普通伙伴，挑战创新药和终局科学荣誉。
 
-[GitHub 仓库](https://github.com/LucasYL/drugstory) · [版本发布](https://github.com/LucasYL/drugstory/releases) · [本版模拟与试玩记录](design/v06-playtest.md) · [2.5D 视觉与交互设计](design/ui-v06/README.md)
+[当前玩法](design/game-design.md) · [内容与角色](design/content.md) · [技术接口](design/tech.md) · [本版试玩记录](design/v07-playtest.md) · [偏写实 2.5D 原型](design/ui-v07/README.md) · [GitHub Releases](https://github.com/LucasYL/drugstory/releases)
 
 ## 开始游玩
 
-需要 Python 3.12+ 和 [uv](https://docs.astral.sh/uv/)。
+需要 Python 3.12+ 与 uv：
 
 ```bash
 git clone https://github.com/LucasYL/drugstory.git
@@ -15,75 +15,52 @@ uv sync --dev
 ./scripts/run-career.sh
 ```
 
-打开 **http://127.0.0.1:8881/**。时间只在你点击推进时流动，成功操作后自动保存。
+打开 **http://127.0.0.1:8883/**。时间由按钮推进，成功操作后自动保存，新公司会先备份原局。
 
 ```bash
-# 自定义端口、种子和独立存档
-uv run drugstory-web --port 8881 --seed 42 --save-path saves/projects-autosave.json
-# 恢复同版本的导出存档
-uv run drugstory-web --load saves/my-v6.json --save-path saves/resumed-v6.json --port 8890
+uv run drugstory-web --port 8883 --seed 42 --save-path saves/development-autosave.json
+uv run drugstory-web --difficulty competition --port 8890 --save-path saves/challenge-v7.json
+uv run drugstory-web --load saves/my-v7.json --save-path saves/resumed-v7.json --port 8891
+uv run drugstory --scenario foundation --seed 42
 ```
 
-新开公司会先备份原局；页面顶部可导出 JSON。服务器只监听本机，占用中的端口会报错退出，不会替换已有服务。
+**v0.7 使用 v7 存档，不直接读取旧版存档。** 8880 的 v5、8881 的 v6 保持原目录和原进度；本版独立运行。服务只监听本机，不会抢占已使用的端口。
 
-**v0.6 使用 v6 存档，不直接读取 v5 或更早存档。** 请用对应版本继续旧局。现有本地 8877、8878、8879、8880 的服务、代码与存档独立保留；本版位于新的目录，默认使用 `saves/projects-autosave.json`。
+## 本版变化
 
-终端也使用同一套规则：`uv run drugstory --scenario foundation --seed 42`。输入 `help`、`view`、`next`；默认另存到 `saves/projects-cli.json`。
+- **开发与验证分开。** 分子优化、处方、质量工艺和改良设计由专业、阶位、成员和设备产生有限开发贡献，分三批呈现。临床只测量，不改善候选。
+- **角色培养有可见结果。** 20 位角色、5 个专业、见习到传奇四阶；每人一个招牌能力，个人课题升级它，取代多层小百分比加成。普通角色可以一直成长。
+- **恢复创新组合。** 24 个靶点 × 12 种分子类型，按靶点筛选、研究后记入手记。组合影响初始分布，靶点影响要求；仍有 6 个仿制与 3 个改良方案。288 个组合不等于 288 条独立剧情。
+- **阶段中途有数据。** 验证阶段四批读数逐步更新证据；临床期中看到前两批后继续或止损。扩大样本、人群选择在开工前确定，不能看完数据再买一次重抽。创新标准路径由 172 周降为 132 周（另加筛选，未计团队提速与额外研究）。
+- **给系统做减法。** 移除长期专长、维护档位和生产切换；产品统一委托生产。新增四个专业实验室的有限设备升级，每间最高三级。
+- **为场景接口打底。** 结构化工作/证据/晋阶事件，静态内容与动态状态拆开，版本化 JSON Schema 和生成的 TypeScript 类型，动作请求防重复。
 
-## 本版新内容与 2.5D 设计
+仍保留三种授权条款、产品差异、年度评奖、三条终局荣誉，以及开局可选的有限市场竞争模式。首局可从稳压片开始，保留工资和后续验证预算；失败时可以放弃候选，继续经营。
 
-- **20 个个人课题。** 每位伙伴有专业故事与指定搭档专业；选交叉复现或联合交接，完成后永久获得相应协作方法，并抵一项晋阶履历要求。
-- **临床中途选择。** I/II/III 期、改良桥接与价值确认各有一个执行检查点。可以维持方案，也可改变随访、中心网络、时间和观察精度；不能靠付钱改变药物自身性质。
-- **减少重复点击。** 阶段结果可直接安排下一阶段；一次可核对并安排 1–3 个技术服务订单。
-- **可选产业竞逐。** 新公司可选，模式开局后固定。更强对手、有限领域容量和固定平台维护费；可选择节约、常规或精密维护，审批要求不因年份或财富上涨。默认仍是舒展经营。
-- **9 个产品特性。** 仿制与改良分别关注供货、均匀性、溶出、储存稳定、小片易服、杂质、长效依从性、耐受与给药便利；强化验证增加投入，取得支持后才带来相应商业效果。
+**画面仍是文字经营。** 新的办公室与实验室图是视觉原型，尚未接入角色移动、动画或真实场景点击。旧微缩风格样稿保留为历史设计，不再作为新方向。
 
-**2.5D 先做设计。** 柔和微缩研究所概念图与可点选的交互样稿在 `design/ui-v06/`。它演示房间导航、人物课题和关键选择，使用示例数据，尚未接入真实存档或人物动画。真实玩法仍在当前文字界面。
-
-```bash
-# 独立视觉样稿，建议与游戏同时保留
-python -m http.server 8882 --bind 127.0.0.1 --directory design/ui-v06
-# 可选挑战开局：使用另一份新存档
-uv run drugstory-web --difficulty competition --port 8890 --save-path saves/challenge-v6.json
-```
-
-## 有什么可以玩
-
-- **20 位角色、5 个专业、4 个阶位。** 烧杯仔、小药丸等普通伙伴能成长为精英、大师和传奇；高阶专家需要公开条件和联合课题。真实项目履历、专业知识、导师带教都影响成长。
-- **角色有不同工作方式。** 9 种特质影响费用、观察误差、速度、优化或培养；精英以上可投入 90 万，永久选择深研或组织专长。能力帮助执行和判断，不能把不合格的候选直接变成好药。
-- **三条研发路径。** 6 个普通仿制方案、3 个改良方案、6 个创新方向。仿制研究工艺、质量与等效性；改良研究桥接与价值；创新逐步取得临床前、I/II/III 期和审评证据。
-- **取舍有后果。** 候选性质固定，研究可能揭示坏消息。定向优化最多两次且有代价；扩大研究改善精度，不保证过关。专业互补、成员效率、工资、临床槽位和生产线都需要安排。
-- **经营有多个出口。** 有限技术服务订单、产品导入与换代、自营或委托生产，以及现金优先、长期分成、共同开发三种交易。合作方后续也可能失败，里程碑不是签约即收款。
-- **每年有值得准备的大会。** 第 2 年起，每年报名一个方向：品质与供应、育才、转化合作、突破药物。年内第 46 周锁定，48 周年末评选。看真实年度成果，并显示对手分数；重复奖的奖金递减。
-- **三条终局荣誉。** 冲击「星火生命科学大奖」，建设「普惠药业桂冠」，或培养「薪火研究院」。最高科学奖需要高难创新药的两轮独立验证，以及从见习培养的传奇、专业大师、带教和年度认可。
-- **三家有风格的竞争者。** 规模制造、前沿创新、合作整合各有方向；研发会延迟、失败或调整。已上市产品影响同领域销售与报价，年度成绩影响评奖。相同种子可重现，刷新不能重抽。
-
-首局建议选“起步药坊”，从稳压片入手。用仿制药支持现金流，再补齐专业、培养角色、投入创新。经营满 20 年后仍可继续挑战终局。
-
-## 验证与开发
+## 验证与复现
 
 ```bash
 uv run pytest -q
 uv run ruff check .
 node --check src/drugstory/career/web/app.js
-node --check src/drugstory/career/web/honors.js
 node --check src/drugstory/career/web/projects.js
-node --check design/ui-v06/concept.js
-uv run python scripts/playtest-v06.py --seeds 6 --output .artifacts/v06-first
-# 六策略 × 两模式 × 六种子，各运行最多二十年
-uv run python scripts/prepare-v06-playtests.py   # 从上述正常操作生成鼠标试玩检查点
+node --check src/drugstory/career/web/honors.js
+uv run python scripts/generate-api-types.py
+uv run python scripts/benchmark-v07.py --seeds 400
+uv run python scripts/playtest-v07.py --seeds 6 --jobs 4
 ```
 
-规则位于 `src/drugstory/career/`。`engine.py` 是网页、终端、模拟共用的事务式入口；`science.py` 管证据，`economy.py` 管经营与成长；`talents.py`、`competition.py`、`honors.py` 管特质、对手与荣誉。预览与读取界面不修改存档；非法操作、过期请求和写盘失败不会提交新状态。
+所有模拟从新局生成，结果写入忽略的 `.artifacts/`，不读取玩家存档。对照实验与完整经营模拟的口径不同，详见试玩记录。自动策略的结果不等于人类玩家胜率；晚期现金、纯仿制路线的重复内容仍需继续打磨。
 
-多局模拟及 UI 检查点从新局开始，不注入资金、角色能力或候选质量。自动策略只能衡量可达性与节奏，不能证明真人一定觉得好玩。
+旧引擎、旧测试和旧模拟脚本在对应不可移动 tag 中保留。需要旧版时创建独立目录并手动启动，例如：
 
-- [研发与养成规格](design/growth-redesign.md)
-- [v0.4 试玩记录](design/v04-playtest.md)
-- [v0.5 设计判断、216 局模拟与鼠标试玩](design/v05-playtest.md)
-- [v0.6 多路线模拟、协作与临床决策](design/v06-playtest.md)
-- [微缩研究所设计、素材与分步实现方案](design/ui-v06/README.md)
-- [版本历史](CHANGELOG.md)
-- [发布与存档保护约定](AGENTS.md)
+```bash
+git worktree add --detach ../drugstory-v03 v0.3.0
+cd ../drugstory-v03
+uv sync --dev
+uv run drugstory-web --help
+```
 
-这是压缩时间尺度的经营游戏。概率、市场、角色和「星火生命科学大奖」均为游戏设定；最高奖是虚构的诺贝尔级挑战。竞争者采用不同风格的管线模拟，尚不是拥有完整财务和人才系统的公司 AI。复杂仿制药、生物类似药及完整监管细节尚未建模。
+从对应版本的 README 选择独立端口与存档路径；不要让旧程序打开新版存档。本仓库不自动关闭其他版本服务。

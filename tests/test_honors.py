@@ -1,6 +1,5 @@
 """v0.5 boundaries; crafted fixtures here are separate from resource-free play studies."""
 
-import copy
 import json
 
 import pytest
@@ -9,7 +8,7 @@ from drugstory.career import competition as rivals
 from drugstory.career import engine as g
 from drugstory.career import honors as h
 from drugstory.career import science as sc
-from drugstory.career.model import busy, dumps, make_hero, new_game
+from drugstory.career.model import busy, dumps, new_game
 from drugstory.career.view import snapshot
 from tests.test_career import complete_phase, ready
 
@@ -80,32 +79,6 @@ def test_declining_awards_do_not_mint_cash_without_an_entry():
     s = advance_until(s, s["season"]["year"] * 48)
     assert not s["awards"] and not s["income"].get("awards")
     assert all(r["reason"] == "未报名" for r in s["festivals"][-1]["results"])
-
-
-def test_specialization_requires_elite_is_once_and_keeps_hidden_properties():
-    s = ready()
-    before = copy.deepcopy(sc.selected(s["projects"][0])["truth"])
-    with pytest.raises(ValueError):
-        g.execute(s, "specialize", {"character": "pill", "track": "precision"})
-    s["heroes"][1]["rank"] = 2
-    old = sc.plan_phase(s, s["projects"][0], ["pill"])
-    s = g.execute(s, "specialize", {"character": "pill", "track": "precision"})
-    new = sc.plan_phase(s, s["projects"][0], ["pill"])
-    assert new["noise_by_stat"]["quality"] < old["noise_by_stat"]["quality"]
-    assert sc.selected(s["projects"][0])["truth"] == before
-    with pytest.raises(ValueError):
-        g.execute(s, "specialize", {"character": "pill", "track": "efficiency"})
-
-
-def test_personal_traits_are_real_and_do_not_stack_unrelated_stars():
-    s = ready()
-    p = s["projects"][0]
-    solo = sc.plan_phase(s, p, ["pill"])
-    team = sc.plan_phase(s, p, ["pill", "beaker"])
-    assert team["cost"] < solo["cost"]  # Beaker's thrift.
-    s["heroes"].append(make_hero("strategist"))
-    irrelevant = sc.plan_phase(s, p, ["pill", "strategist"])
-    assert irrelevant["weeks"] == solo["weeks"]  # Clinical speed cannot accelerate formulation.
 
 
 def test_independent_validation_requires_relevant_team_and_locks_duplicate_work():

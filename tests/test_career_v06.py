@@ -44,50 +44,16 @@ def test_personal_quest_occupies_two_people_grants_legacy_but_no_fake_cases():
     q = stories.options(s, s["heroes"][0])
     assert q["unlocked"] and q["partners"] == ["pill"]
     before_cases = list(s["heroes"][0]["cases"])
-    s = g.execute(s, "personal_project", {"character": "beaker", "partner": "pill", "choice": "handoff"})
+    s = g.execute(s, "personal_project", {"character": "beaker", "partner": "pill", "choice": "practice"})
     assert set(busy(s)) == {"beaker", "pill"}
     assert s["jobs"][0]["left"] == 8
     s = g.execute(s, "next_event")
-    assert s["heroes"][0]["personal"]["choice"] == "handoff"
+    assert s["heroes"][0]["personal"]["choice"] == "practice"
     assert s["heroes"][0]["cases"] == before_cases
     assert not busy(s)
     with pytest.raises(ValueError):
         g.execute(s, "personal_project", {"character": "beaker", "partner": "pill", "choice": "verify"})
     assert loads(dumps(s)) == s
-
-
-@pytest.mark.parametrize("choice", ["verify", "handoff"])
-def test_cooperation_needs_partner_and_relevant_profession(choice):
-    s = ready(strong=True)
-    p = s["projects"][0]
-    base = sc.plan_phase(s, p, ["beaker", "pill"])
-    solo = sc.plan_phase(s, p, ["beaker"])
-    truth = copy.deepcopy(sc.selected(p)["truth"])
-    s["heroes"][0]["personal"] = {"choice": choice}
-    assert sc.plan_phase(s, p, ["beaker"]) == solo
-    paired = sc.plan_phase(s, p, ["beaker", "pill"])
-    if choice == "handoff":
-        assert paired["cost"] == round(base["cost"] * 0.95, 2)
-    else:
-        # Formulation is quality-focused; chemistry precision cannot boost it.
-        assert paired["noise_by_stat"] == base["noise_by_stat"]
-        a = sc.plan_phase(s, p, ["beaker", "pill"], key="be")
-        s["heroes"][0].pop("personal")
-        b = sc.plan_phase(s, p, ["beaker", "pill"], key="be")
-        assert a["noise_by_stat"]["exposure"] == pytest.approx(b["noise_by_stat"]["exposure"] * 0.92)
-    assert sc.selected(p)["truth"] == truth
-
-
-def test_clinical_quest_improves_clinical_observation_not_lab_assays():
-    s = ready("innovative", strong=True)
-    ids = ["ruler", "sprout"]
-    p = s["projects"][0]
-    baseline = sc.plan_phase(s, p, ids, key="II")
-    lab = sc.plan_phase(s, p, ids, key="preclinical")
-    next(h for h in s["heroes"] if h["id"] == "ruler")["personal"] = {"choice": "verify"}
-    clinical = sc.plan_phase(s, p, ids, key="II")
-    assert clinical["noise"] == pytest.approx(baseline["noise"] * 0.92)
-    assert sc.plan_phase(s, p, ids, key="preclinical") == lab
 
 
 def test_checkpoint_is_persisted_readonly_and_pauses_without_releasing_staff_or_budget():
@@ -109,43 +75,6 @@ def test_checkpoint_is_persisted_readonly_and_pauses_without_releasing_staff_or_
     assert committed(s) == reserve
     assert s["expense"]["research"] == research_paid
     assert {"ruler", "bubble"} <= busy(s).keys()
-
-
-@pytest.mark.parametrize(
-    "key,choice", [("I", "monitor"), ("II", "representative"), ("III", "audit"), ("III", "remote")]
-)
-def test_trial_choice_changes_operations_not_candidate_and_cannot_repeat(key, choice):
-    s = checkpoint(key)
-    p = s["projects"][0]
-    before = copy.deepcopy(sc.selected(p))
-    reserve = committed(s)
-    old_cash = s["cash"]
-    s = g.execute(s, "trial_decision", {"project": "1", "choice": choice})
-    p = s["projects"][0]
-    assert sc.selected(p) == before
-    assert committed(s) == pytest.approx(reserve)
-    assert s["cash"] < old_cash
-    assert p["execution"]["probability"] == sc.phase_probability(
-        p, key, p["execution"]["plan"], p["execution"]["noise_by_stat"]
-    )
-    with pytest.raises(ValueError):
-        g.execute(s, "trial_decision", {"project": "1", "choice": choice})
-    s = g.execute(s, "advance", {"weeks": 48})
-    assert s["projects"][0]["status"] == "result"
-
-
-def test_keep_works_with_no_uncommitted_money_and_regional_restriction_persists():
-    s = checkpoint()
-    s["cash"] = committed(s)
-    free = g.execute(s, "trial_decision", {"project": "1", "choice": "keep"})
-    assert free["cash"] == s["cash"]
-    s = g.execute(s, "trial_decision", {"project": "1", "choice": "regional"})
-    assert s["projects"][0]["trial_reach"] == 0.85
-    s = g.execute(s, "advance", {"weeks": 48})
-    s["cash"] = 20000
-    s = g.execute(s, "continue_project", {"project": "1"})
-    s = complete_phase(s)
-    assert s["projects"][0]["trial_reach"] == 0.85
 
 
 def test_continue_and_run_preview_uses_next_stage_without_mutation_and_is_atomic():
@@ -175,23 +104,6 @@ def test_batch_services_roll_back_every_order_on_duplicate_worker():
         g.execute(s, "take_services", {"assignments": [item, item]})
     assert dumps(s) == before
     assert len(g.execute(s, "take_services", {"assignments": [item]})["jobs"]) == 1
-
-
-def test_challenge_upkeep_is_fixed_public_and_charged_as_forecast():
-    s = new_game(9, difficulty="competition")
-    s["facility"] = 2
-    s = g.execute(s, "platform_policy", {"policy_name": "frontier"})
-    assert challenge.upkeep(s) == 16 * 1.65
-    cost = e.costs_per_week(s)
-    out = g.execute(s, "advance", {"weeks": 1})
-    assert s["cash"] - out["cash"] == pytest.approx(cost)
-    assert out["expense"]["platform_maintenance"] == challenge.upkeep(s)
-    s["cash"] *= 100
-    assert challenge.upkeep(s) == 26.4
-    normal = new_game(9)
-    assert challenge.upkeep(normal) == 0
-    with pytest.raises(ValueError):
-        g.execute(normal, "platform_policy", {"policy_name": "lean"})
 
 
 def test_market_capacity_bounds_aggregate_sales_and_never_touches_approval_limits():
@@ -234,15 +146,6 @@ def test_enhanced_validation_changes_only_profile_stage_and_does_not_inflate_tru
     assert strong["noise"] == pytest.approx(basic["noise"] * 0.8)
     assert sc.plan_phase(s, p, ["beaker", "pill"]) == first
     assert sc.selected(p) == original
-
-
-def test_v5_save_rejected_and_v6_challenge_replay_identical():
-    with pytest.raises(ValueError, match="v6"):
-        loads('{"version":5}')
-    s = new_game(5, difficulty="competition")
-    s = g.execute(s, "platform_policy", {"policy_name": "lean"})
-    s = g.execute(s, "advance", {"weeks": 4})
-    assert g.replay(5, "foundation", s["actions"], difficulty="competition") == s
 
 
 def test_preview_unknown_project_returns_actionable_error():

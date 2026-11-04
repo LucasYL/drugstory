@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 
-from . import challenge, honors, product_design, stories, talents, trial_choices
+from . import challenge, development, events, honors, product_design, readouts, stories, trial_choices
 from . import economy as e
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
@@ -50,10 +50,19 @@ def catalog_requirements(s, key):
                 any(h["employed"] and h["rank"] >= 3 and h["profession"] in ("bio", "chem") for h in s["heroes"]),
             ),
         ]
+    if spec["kind"] == "innovative":
+        checks += [
+            (f"科研知识 {spec['knowledge']}", max(s["knowledge"]["bio"], s["knowledge"]["chem"]) >= spec["knowledge"]),
+            (
+                f"药化或生物设备 {spec['equipment_level']} 级",
+                max(s["equipment"]["bio"], s["equipment"]["chem"]) >= spec["equipment_level"],
+            ),
+        ]
     return checks
 
 
-def start_project(s, catalog: str, heroes: list, design: str = "standard"):
+def start_project(s, catalog: str, heroes: list, design: str = "standard", work_focus: str = "balanced"):
+    check(work_focus in development.FOCUSES, "请选择开发重心")
     check(design in ("standard", "validated"), "请选择产品验证路线")
     check(design == "standard" or product_design.profile(catalog), "该方案没有专项产品验证路线")
     check(catalog in CATALOG, "请选择研究路线")
@@ -73,6 +82,8 @@ def start_project(s, catalog: str, heroes: list, design: str = "standard"):
         "name": c["name"],
         "catalog": catalog,
         "design": design,
+        "work_focus": work_focus,
+        "readings": [],
         "kind": c["kind"],
         "status": "screening",
         "started": s["week"],
@@ -147,6 +158,8 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
         cost_per_week=execution["cost"] / execution["weeks"],
         mode=mode,
     )
+    development.initialize(s, p)
+    readouts.initialize(p)
     trial_choices.initialize(p)
     p["deferred"] = False
     p["contributors"] = sorted(set(p["contributors"] + heroes))
@@ -154,7 +167,14 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
         p["clinical_started"] = True
     if key == "I" and p["entered_I"] is None:
         p["entered_I"] = s["week"]
-    log(s, f"{p['name']}开始{STAGES[key]['name']}：{execution['weeks']} 周、¥{execution['cost']:.0f} 万。")
+    events.emit(
+        s,
+        "phase_started",
+        actors=heroes,
+        project=p["id"],
+        room="room_clinical" if key in CLINICAL else "room_lab",
+        data={"name": p["name"], "stage": STAGES[key]["name"], "weeks": execution["weeks"]},
+    )
 
 
 def continue_project(s, project: str):
@@ -361,7 +381,7 @@ def promote(s, character: str):
     available_money(s, cost)
     spend(s, cost, "promotion")
     h["rank"] += 1
-    log(s, f"角色突破：{h['name']}晋升{RANKS[h['rank']]}！专业能力与可承担的研究提升。")
+    events.emit(s, "character_promoted", actors=[character], data={"name": h["name"], "rank": RANKS[h["rank"]]})
 
 
 def mentor(s, teacher: str, pupil: str):
@@ -430,21 +450,23 @@ def upgrade(s):
     log(s, f"搬入{c['name']}：更多团队、自营临床席位和生产线，同时租金上升。")
 
 
-def set_production(s, product: str, mode: str):
-    d = find(s["products"], product)
-    check(mode in ("self", "contract", "suspended") and not d["partner"] and d["active"], "无法调整该产品的生产")
-    if mode == "self" and d["production"] != "self":
-        need = 2 if d["kind"] == "innovative" else 1
-        check(e.production_lines(s) + need <= FACILITIES[s["facility"]]["lines"], "自营生产线不足，可继续委托生产")
-        available_money(s, 80)
-        spend(s, 80, "production_setup")
-    d["production"] = mode
-
-
 def finish_phase(s, p):
     result = sc.evaluate(s, p, p["execution"], p["repairs"])
     p["results"].append(result)
     key = result["key"]
+    events.emit(
+        s,
+        "phase_finished",
+        actors=p["team"],
+        project=p["id"],
+        room="room_clinical" if key in CLINICAL else "room_lab",
+        data={
+            "name": p["name"],
+            "stage": STAGES[key]["name"],
+            "outcome": "取得支持证据" if result["passed"] else "未取得支持证据",
+        },
+        journal=False,
+    )
     gain_work(s, p["team"], p["catalog"] + "-" + key, 6 if key in CLINICAL else 5)
     if result["passed"]:
         p["status"] = "result"
@@ -529,6 +551,9 @@ def advance(s, weeks: int = 4):
             spend(s, p["cost_per_week"], "research")
             p["spent"] += p["cost_per_week"]
             p["left"] -= 1
+            if p["status"] == "running" and not p.get("experiment"):
+                development.tick(s, p)
+                readouts.tick(s, p)
             if p["status"] == "running" and trial_choices.reached(p):
                 p["status"] = "checkpoint"
                 p["deferred"] = False
@@ -537,6 +562,13 @@ def advance(s, weeks: int = 4):
                 continue
             if p["status"] == "screening":
                 p["status"] = "selecting"
+                spec = CATALOG[p["catalog"]]
+                if spec["kind"] == "innovative":
+                    s["notebook"][p["catalog"]] = {
+                        "tier": spec["combo_tier"],
+                        "reason": spec["combo_reason"],
+                        "week": s["week"],
+                    }
                 log(s, f"{p['name']}的候选资料准备好了。请比较证据和未知项。")
             elif p["experiment"]:
                 if p["experiment"]["kind"] == "rework":
@@ -575,7 +607,10 @@ def next_event(s):
     remaining += [p["left"] for p in s["projects"] if p["status"] in ("screening", "running")]
     remaining += [d["left"] for d in s["deals"] if d["status"] == "developing"]
     for _ in range(min([48, *remaining])):
+        prior_event = s["event_seq"]
         advance(s, 1)
+        if any(ev["id"] > prior_event and ev["type"] in ("work_completed", "evidence_received") for ev in s["events"]):
+            break
         if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
             break
 
@@ -587,16 +622,6 @@ def nominate(s, category: str):
     check(s["week"] % 48 < 46, "本届报名已截止，请准备下一年")
     s["season"]["entry"] = category
     log(s, f"已报名{option['name']}。本年只选一个方向；第 46 周起锁定，年末按实际成果评选。")
-
-
-def specialize(s, character: str, track: str):
-    h = hero(s, character)
-    check(track in talents.FOCUS and h["rank"] >= 2 and not h.get("focus"), "精英以上可选择一次长期专长")
-    free_team(s, [character])
-    available_money(s, 90)
-    spend(s, 90, "specialization")
-    h["focus"] = track
-    log(s, f"{h['name']}确立{talents.FOCUS[track]['name']}，形成长期研究风格。")
 
 
 def independent_study(s, product: str, heroes: list):
@@ -635,9 +660,8 @@ def trial_decision(s, project: str, choice: str):
     trial_choices.resolve(s, find(s["projects"], project), choice)
 
 
-def platform_policy(s, policy_name: str):
-    challenge.set_policy(s, policy_name)
-    log(s, "平台维护改为" + challenge.policy(s)["name"] + "，从下一周开始按新标准计费。")
+def upgrade_equipment(s, profession: str):
+    development.upgrade(s, profession)
 
 
 def continue_and_run(s, project: str, heroes: list, plan: str = "standard", mode: str = "internal"):
@@ -675,15 +699,13 @@ COMMANDS = {
         collaborate,
         take_service,
         upgrade,
-        set_production,
+        upgrade_equipment,
         advance,
         next_event,
         nominate,
-        specialize,
         independent_study,
         personal_project,
         trial_decision,
-        platform_policy,
         continue_and_run,
         take_services,
     ]
@@ -709,7 +731,12 @@ def execute(state, command, args=None):
         expected = {"str": str, "list": list, "int": int}.get(hint)
         check(expected is None or type(value) is expected, "操作参数类型不正确")
     candidate = copy.deepcopy(state)
+    candidate["transition_events"] = []
     fn(candidate, **args)
+    if candidate["cash"] != state["cash"]:
+        events.emit(
+            candidate, "cash_changed", data={"amount": round(candidate["cash"] - state["cash"], 2)}, journal=False
+        )
     for rank in (2, 3, 4):
         field = f"first_rank{rank}"
         if candidate[field] is None and any(h["employed"] and h["rank"] >= rank for h in candidate["heroes"]):

@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 from statistics import NormalDist
 
-from . import challenge, product_design, stories, talents
-from .content import CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
+from . import development, product_design, readouts, talents
+from .content import BUILD, CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
 from .model import ability, check, hero, power, rand
 
 NORMAL = NormalDist()
@@ -38,10 +38,17 @@ def generate_candidates(s, p):
     kind = p["kind"]
     science = max(power(s, p["team"], "bio"), power(s, p["team"], "chem"))
     # Scientific platforms improve the pool available at discovery, not a finished drug retroactively.
-    expertise = max(0, science - 40) * 0.10
-    means = {"generic": [86, 84, 76, 77], "improved": [70, 76, 73, 74], "innovative": [68 + expertise, 75, 73, 74]}[
-        kind
-    ]
+    expertise = max(0, science - 40) * 0.04
+    means = {
+        "generic": [86, 84, 76, 77],
+        "improved": [70, 76, 73, 74],
+        "innovative": [
+            58 + expertise + {-2: -24, -1: -12, 0: -3, 1: 2, 2: 6}.get(spec.get("combo_tier", 0), 0),
+            72,
+            70,
+            72,
+        ],
+    }[kind]
     deviations = {"generic": [4, 5, 10, 10], "improved": [10, 10, 11, 11], "innovative": [16, 12, 12, 11]}[kind]
     mechanism_key = spec["target"] + "|" + spec["indication"]
     if mechanism_key not in s["mechanisms"]:
@@ -57,6 +64,8 @@ def generate_candidates(s, p):
             ("稳定优先处方", {"quality": 5, "exposure": -2}),
             ("放大友好处方", {"quality": 7, "safety": -2}),
         ]
+    extra = talents.bonus(s, p["team"], "screen")
+    styles += [(f"备用线索 {i + 1}", {}) for i in range(extra)]
     for i, (label, offsets) in enumerate(styles):
         c = {
             "id": i,
@@ -78,7 +87,7 @@ def generate_candidates(s, p):
             c["truth"][stat] = min(98, max(15, actual))
             c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
             sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
-            sigma *= 0.9 if talents.has(s, p["team"], "screen") else 1
+
             observe(s, p, c, stat, sigma, "screen")
         p["candidates"].append(c)
 
@@ -90,7 +99,7 @@ def stage_key(p):
 def limits(p, key):
     out = dict(STAGES[key]["limits"])
     if "effect" in out and key in ("II", "III"):
-        out["effect"] += 4 * CATALOG[p["catalog"]]["difficulty"]
+        out["effect"] += CATALOG[p["catalog"]].get("threshold_bonus", 4 * CATALOG[p["catalog"]]["difficulty"])
     return product_design.adjust_limits(p, key, out)
 
 
@@ -103,13 +112,9 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         skill = 60
     members = sum(min(hero(s, h)["members"], 2 + hero(s, h)["rank"]) for h in ids)
     speed = 1 + min(0.45, members / max(1, len(ids)) * 0.10)
-    relevant = [h for h in s["heroes"] if h["id"] in ids and h["profession"] in d["roles"]]
-    efficiency = 0.08 * any(h.get("focus") == "efficiency" for h in relevant)
-    efficiency += 0.08 * talents.has(s, [h["id"] for h in relevant], "speed")
-    weeks = math.ceil(d["weeks"] * strategy["time"] * max(0.85, 1 - efficiency) / speed)
+    saving = talents.bonus(s, ids, "schedule", key) if key in CLINICAL and not partner else 0
+    weeks = max(4, math.ceil(d["weeks"] * strategy["time"] / speed) - saving)
     cost = d["cost"] * strategy["cost"] * (1.3 if cro and not partner else 1)
-    if key not in CLINICAL and talents.has(s, [h["id"] for h in relevant], "thrift"):
-        cost *= 0.95
     if p["kind"] == "innovative":
         cost *= 1.2 if CATALOG[p["catalog"]]["difficulty"] else 1
     if key == "review" and p["kind"] != "generic":
@@ -119,12 +124,6 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
     if enhanced:
         cost *= 1.25
         weeks += 2
-    allies = stories.active(s, ids)
-    if any(h["personal"]["choice"] == "handoff" and h["profession"] in d["roles"] for h in allies):
-        cost *= 0.95
-    maintenance = challenge.policy(s) if challenge.enabled(s) and s["facility"] > 0 and not partner else None
-    if maintenance:
-        cost *= maintenance["fee"]
     # Each endpoint benefits from its own specialist. Clinical operations and
     # scientific interpretation complement each other; unrelated stars cannot
     # replace a missing specialty merely by having the highest number.
@@ -139,31 +138,8 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         else:
             endpoint_skill = 0.7 * specialist + 0.3 * skill
         noise_by_stat[stat] = d["noise"] * strategy["noise"] * max(0.65, 1.2 - endpoint_skill / 160)
-    for stat in noise_by_stat:
-        precise = any(
-            h["id"] in ids
-            and h.get("focus") == "precision"
-            and (h["profession"] == STAT_ROLE[stat] or h["profession"] == "clinical" and key in CLINICAL)
-            for h in s["heroes"]
-        )
-        noise_by_stat[stat] *= 0.9 if precise else 1
-        if (stat == "quality" and talents.has(s, ids, "quality")) or (
-            stat == "safety" and talents.has(s, ids, "safety")
-        ):
-            noise_by_stat[stat] *= 0.94
-        if key in CLINICAL and talents.has(s, ids, "clinical"):
-            noise_by_stat[stat] *= 0.95
-    for stat in noise_by_stat:
-        if any(
-            h["personal"]["choice"] == "verify"
-            and (h["profession"] == STAT_ROLE[stat] or h["profession"] == "clinical" and key in CLINICAL)
-            for h in allies
-        ):
-            noise_by_stat[stat] *= 0.92
-        if enhanced:
-            noise_by_stat[stat] *= 0.8
-        if maintenance:
-            noise_by_stat[stat] *= maintenance["noise"]
+    if enhanced:
+        noise_by_stat = {stat: value * 0.8 for stat, value in noise_by_stat.items()}
     noise = sum(noise_by_stat.values()) / len(noise_by_stat)
     result = {
         "weeks": weeks,
@@ -174,9 +150,13 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         "key": key,
         "plan": plan,
         "mode": mode,
+        "category": d["category"],
+        "work": development.packages(s, p, ids, key) if p.get("chosen") is not None else [],
     }
     if p.get("chosen") is not None:
-        result["probability"] = phase_probability(p, key, plan, noise_by_stat)
+        result["probability"] = phase_probability(
+            development.projected(p, key, result["work"]), key, plan, noise_by_stat
+        )
     return result
 
 
@@ -236,10 +216,15 @@ def outlook(p, start=None):
 def evaluate(s, p, execution, attempt=0):
     c, key = selected(p), execution["key"]
     values, failures = {}, []
+    batch_values = readouts.aggregate(p) if execution.get("batches") and key not in BUILD else None
     for stat, threshold in limits(p, key).items():
         offset = c["subgroup"] if p.get("population") == "focused" and stat == "effect" else 0
         noise = execution.get("noise_by_stat", {}).get(stat, execution["noise"])
-        value = observe(s, p, c, stat, noise, f"phase-{key}-{attempt}", offset)
+        value = (
+            batch_values[stat]
+            if batch_values is not None
+            else observe(s, p, c, stat, noise, f"phase-{key}-{attempt}", offset)
+        )
         values[stat] = round(value, 1)
         if value < threshold:
             failures.append(stat)
@@ -295,7 +280,7 @@ def finish_experiment(s, p):
         line = "分层研究完成：已有亚组观察，仍需结合临床专业能力判断是否采用。"
     else:
         if kind == "refine":
-            delta = 3 + skill / 20 + (1 if talents.has(s, p["team"], "refine") else 0)
+            delta = 3 + skill / 20
             trade = {"effect": "safety", "safety": "effect", "exposure": "quality", "quality": "exposure"}[stat]
             if p["kind"] == "generic" and stat == "safety":
                 trade = "quality"

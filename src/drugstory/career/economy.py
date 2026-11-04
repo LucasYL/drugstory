@@ -191,7 +191,7 @@ def base_sales(s, d):
     share = 1 / (1 + 0.55 * competitors + 0.4 * siblings)
     price = max(0.65, 1 - age / 1800) if d["kind"] == "generic" else 1
     revenue = d["peak"] * curve * share * price * product_design.supply_factor(s, d)
-    margin = min(0.90, d["margin"] + (0.12 if d["production"] == "self" else 0))
+    margin = min(0.90, d["margin"])
     return revenue, revenue * margin
 
 
@@ -304,11 +304,11 @@ def finish_job(s, job):
     elif job["kind"] == "train":
         h = next(h for h in s["heroes"] if h["id"] == job["heroes"][0])
         h["training"] += 3
-        h["xp"] += 5 + (2 if talents.trait(h["id"])["key"] == "learner" else 0)
+        h["xp"] += 5
         log(s, f"{h['name']}完成培训。晋阶仍需要真实项目履历。")
     elif job["kind"] == "mentor":
         pupil = next(h for h in s["heroes"] if h["id"] == job["heroes"][1])
-        pupil["xp"] += 10 + (5 if talents.has(s, [job["heroes"][0]], "mentor") else 0)
+        pupil["xp"] += 10 + talents.bonus(s, [job["heroes"][0]], "mentor", "*")
         pupil["training"] += 2
         pupil["mentored"].append(job["heroes"][0])
         log(s, f"{pupil['name']}完成导师课题，专业经验增加；还需要自己的项目履历。")

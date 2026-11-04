@@ -1,0 +1,787 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/LucasYL/drugstory/api/state-v1",
+  "title": "GameState",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "api_version": {
+      "const": 1
+    },
+    "event_cursor": {
+      "type": "integer"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Event"
+      }
+    },
+    "transition_events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Event"
+      }
+    },
+    "equipment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "profession": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "profession",
+          "name",
+          "level",
+          "cost",
+          "available",
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "notebook": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "challenge": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "market_capacity": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "date": {
+      "type": "string"
+    },
+    "week": {
+      "type": "integer"
+    },
+    "cash": {
+      "type": "number"
+    },
+    "committed": {
+      "type": "number"
+    },
+    "available_cash": {
+      "type": "number"
+    },
+    "runway": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "payroll": {
+      "type": "number"
+    },
+    "costs_per_week": {
+      "type": "number"
+    },
+    "weekly_profit": {
+      "type": "number"
+    },
+    "weekly_royalty": {
+      "type": "number"
+    },
+    "reputation": {
+      "type": "number"
+    },
+    "knowledge": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "facility": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "next_facility": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "headcount": {
+      "type": "integer"
+    },
+    "clinical_used": {
+      "type": "integer"
+    },
+    "lines_used": {
+      "type": "integer"
+    },
+    "scenario": {
+      "type": "string"
+    },
+    "opening": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "goals": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "objective_done": {
+      "type": "boolean"
+    },
+    "heroes": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "roster": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Project"
+      }
+    },
+    "products": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "deals": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "rivals": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "honors": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "orders": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "jobs": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "journal": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "income": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "expense": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "report": {
+      "$ref": "#/$defs/JsonValue"
+    },
+    "game_over": {
+      "type": "boolean"
+    },
+    "career_done": {
+      "type": "boolean"
+    },
+    "pending": {
+      "type": "integer"
+    },
+    "catalog": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "competition": {
+            "type": "number"
+          },
+          "announced_rivals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "unlocked": {
+            "type": "boolean"
+          },
+          "occupied": {
+            "type": "boolean"
+          },
+          "discovery": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "tier": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "week": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "tier",
+                  "reason",
+                  "week"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "competition",
+          "announced_rivals",
+          "requirements",
+          "unlocked",
+          "occupied",
+          "discovery"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "revision": {
+      "type": "integer"
+    },
+    "token": {
+      "type": "string"
+    },
+    "saved_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "api_version",
+    "event_cursor",
+    "events",
+    "transition_events",
+    "equipment",
+    "notebook",
+    "challenge",
+    "market_capacity",
+    "date",
+    "week",
+    "cash",
+    "committed",
+    "available_cash",
+    "runway",
+    "payroll",
+    "costs_per_week",
+    "weekly_profit",
+    "weekly_royalty",
+    "reputation",
+    "knowledge",
+    "facility",
+    "next_facility",
+    "headcount",
+    "clinical_used",
+    "lines_used",
+    "scenario",
+    "opening",
+    "goals",
+    "objective_done",
+    "heroes",
+    "roster",
+    "projects",
+    "products",
+    "deals",
+    "rivals",
+    "honors",
+    "orders",
+    "jobs",
+    "journal",
+    "income",
+    "expense",
+    "report",
+    "game_over",
+    "career_done",
+    "pending",
+    "catalog",
+    "revision",
+    "token",
+    "saved_at"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        }
+      ]
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "id": {
+          "type": "integer"
+        },
+        "week": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "work_completed",
+            "evidence_received",
+            "phase_started",
+            "phase_finished",
+            "character_promoted",
+            "personal_completed",
+            "equipment_upgraded",
+            "cash_changed",
+            "notice"
+          ]
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "room": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "week",
+        "type",
+        "actors",
+        "project",
+        "room",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "Evidence": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mean": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "observations": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "mean",
+        "low",
+        "high",
+        "observations"
+      ],
+      "additionalProperties": false
+    },
+    "Belief": {
+      "type": "object",
+      "properties": {
+        "mean": {
+          "type": "number"
+        },
+        "variance": {
+          "type": "number"
+        },
+        "observations": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mean",
+        "variance",
+        "observations"
+      ],
+      "additionalProperties": false
+    },
+    "Candidate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "optimized": {
+          "type": "integer"
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "marker": {
+          "$ref": "#/$defs/Belief"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "evidence",
+        "optimized",
+        "checks",
+        "marker"
+      ],
+      "additionalProperties": false
+    },
+    "Work": {
+      "type": "object",
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "members": {
+          "type": "integer"
+        },
+        "amounts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "actor",
+        "role",
+        "members",
+        "amounts"
+      ],
+      "additionalProperties": false
+    },
+    "Reading": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "candidate": {
+          "type": "integer"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "week": {
+          "type": "integer"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "stage_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stage",
+        "candidate",
+        "index",
+        "week",
+        "values",
+        "stage_name"
+      ],
+      "additionalProperties": false
+    },
+    "Project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "catalog": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "chosen": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "left": {
+          "type": "integer"
+        },
+        "spent": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "team": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "results": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "feedback": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "repairs": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "population": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "mode": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "started": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "ended": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "kind_name": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "product_profile": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "design": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "work_focus": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "work": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Work"
+          }
+        },
+        "readings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Reading"
+          }
+        },
+        "interim_chance": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trial_decision": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "trial_history": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "next_stage": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "status_name": {
+          "type": "string"
+        },
+        "active": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "deferred": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "key": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Candidate"
+          }
+        },
+        "plans": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "quotes": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "recommended": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "recommended_mode": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "running_experiment": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "future_base_cost": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "outlook": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "can_focus": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "catalog",
+        "kind",
+        "status",
+        "index",
+        "chosen",
+        "left",
+        "spent",
+        "team",
+        "results",
+        "feedback",
+        "repairs",
+        "population",
+        "mode",
+        "started",
+        "ended",
+        "kind_name",
+        "product_profile",
+        "design",
+        "work_focus",
+        "work",
+        "readings",
+        "interim_chance",
+        "trial_decision",
+        "trial_history",
+        "next_stage",
+        "status_name",
+        "active",
+        "deferred",
+        "key",
+        "phase",
+        "question",
+        "path",
+        "candidates",
+        "plans",
+        "quotes",
+        "recommended",
+        "recommended_mode",
+        "running_experiment",
+        "future_base_cost",
+        "outlook",
+        "can_focus"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "beaker": {
+    "name": "路线小试",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "exposure",
+    "base": 3,
+    "advanced": 6,
+    "asset_id": "hero_beaker"
+  },
+  "pill": {
+    "name": "首批守护",
+    "kind": "work",
+    "stage": "formulation",
+    "stat": "quality",
+    "base": 3,
+    "advanced": 6,
+    "asset_id": "hero_pill"
+  },
+  "sprout": {
+    "name": "反例模型",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "effect",
+    "base": 3,
+    "advanced": 6,
+    "asset_id": "hero_sprout"
+  },
+  "bubble": {
+    "name": "杂质清单",
+    "kind": "work",
+    "stage": "quality",
+    "stat": "safety",
+    "base": 3,
+    "advanced": 6,
+    "asset_id": "hero_bubble"
+  },
+  "ruler": {
+    "name": "首期排程",
+    "kind": "schedule",
+    "stage": "I",
+    "stat": "",
+    "base": 2,
+    "advanced": 4,
+    "asset_id": "hero_ruler"
+  },
+  "catalyst": {
+    "name": "选择性改造",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "safety",
+    "base": 4,
+    "advanced": 7,
+    "asset_id": "hero_catalyst"
+  },
+  "shield": {
+    "name": "杂质追踪",
+    "kind": "work",
+    "stage": "quality",
+    "stat": "safety",
+    "base": 4,
+    "advanced": 8,
+    "asset_id": "hero_shield"
+  },
+  "crystal": {
+    "name": "晶型封装",
+    "kind": "work",
+    "stage": "design",
+    "stat": "quality",
+    "base": 4,
+    "advanced": 8,
+    "asset_id": "hero_crystal"
+  },
+  "scout": {
+    "name": "备用线索",
+    "kind": "screen",
+    "stage": "screen",
+    "stat": "",
+    "base": 1,
+    "advanced": 2,
+    "asset_id": "hero_scout"
+  },
+  "curve": {
+    "name": "中心协调",
+    "kind": "schedule",
+    "stage": "II",
+    "stat": "",
+    "base": 3,
+    "advanced": 5,
+    "asset_id": "hero_curve"
+  },
+  "wizard": {
+    "name": "暴露设计",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "exposure",
+    "base": 5,
+    "advanced": 9,
+    "asset_id": "hero_wizard"
+  },
+  "judge": {
+    "name": "安全边界",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "safety",
+    "base": 5,
+    "advanced": 9,
+    "asset_id": "hero_judge"
+  },
+  "forge": {
+    "name": "长效构筑",
+    "kind": "work",
+    "stage": "design",
+    "stat": "exposure",
+    "base": 5,
+    "advanced": 9,
+    "asset_id": "hero_forge"
+  },
+  "bridge": {
+    "name": "机制转化",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "effect",
+    "base": 5,
+    "advanced": 9,
+    "asset_id": "hero_bridge"
+  },
+  "strategist": {
+    "name": "多中心组织",
+    "kind": "schedule",
+    "stage": "III",
+    "stat": "",
+    "base": 4,
+    "advanced": 6,
+    "asset_id": "hero_strategist"
+  },
+  "star": {
+    "name": "机制攻坚",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "effect",
+    "base": 6,
+    "advanced": 10,
+    "asset_id": "hero_star"
+  },
+  "alchemist": {
+    "name": "公开教案",
+    "kind": "mentor",
+    "stage": "mentor",
+    "stat": "",
+    "base": 6,
+    "advanced": 12,
+    "asset_id": "hero_alchemist"
+  },
+  "guardian": {
+    "name": "安全设计",
+    "kind": "work",
+    "stage": "optimize",
+    "stat": "safety",
+    "base": 6,
+    "advanced": 10,
+    "asset_id": "hero_guardian"
+  },
+  "architect": {
+    "name": "放大蓝图",
+    "kind": "work",
+    "stage": "formulation",
+    "stat": "quality",
+    "base": 6,
+    "advanced": 10,
+    "asset_id": "hero_architect"
+  },
+  "oracle": {
+    "name": "研究排程",
+    "kind": "schedule",
+    "stage": "*",
+    "stat": "",
+    "base": 4,
+    "advanced": 6,
+    "asset_id": "hero_oracle"
+  }
+}

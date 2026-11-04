@@ -4,6 +4,10 @@ from . import challenge
 from .model import log, rand
 
 MARKETS = {
+    "blood": "血液疾病",
+    "neuro": "神经疾病",
+    "rare": "罕见疾病",
+    "infection": "感染与预防",
     "pressure": "血压管理",
     "lipid": "血脂管理",
     "pain": "疼痛管理",

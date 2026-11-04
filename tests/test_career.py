@@ -329,19 +329,6 @@ def test_competition_changes_sales_but_not_phase_requirements():
     assert e.expected_sales(s, d)[0] < old and sc.limits(p, "III") == limits
 
 
-def test_production_capacity_and_retirement_stop_revenue():
-    s = ready(strong=True)
-    d = e.make_product(s, s["projects"][0])
-    with pytest.raises(ValueError):
-        g.execute(s, "set_production", {"product": d["id"], "mode": "self"})
-    s["facility"] = 1
-    s = g.execute(s, "set_production", {"product": d["id"], "mode": "self"})
-    assert e.production_lines(s) == 1
-    s["week"] += 600
-    e.market_step(s)
-    assert not s["products"][0]["active"] and s["products"][0]["last_revenue"] == 0
-
-
 def test_replay_and_readonly_snapshot():
     s = ready()
     before = dumps(s)
@@ -351,7 +338,7 @@ def test_replay_and_readonly_snapshot():
 
 
 def test_old_save_rejected_and_new_session_backups(tmp_path):
-    with pytest.raises(ValueError, match="v6"):
+    with pytest.raises(ValueError, match="v7"):
         loads(json.dumps({"version": 3}))
     path = tmp_path / "career.json"
     session = GameSession(path)

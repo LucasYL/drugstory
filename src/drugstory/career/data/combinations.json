@@ -1,0 +1,2012 @@
+{
+  "targets": [
+    {
+      "key": "pd1",
+      "name": "PD-1",
+      "disease": "多种实体瘤",
+      "difficulty": 1.0,
+      "unlock": 0,
+      "category": "solid_tumor",
+      "market": 5
+    },
+    {
+      "key": "her2",
+      "name": "HER2",
+      "disease": "乳腺癌、胃癌",
+      "difficulty": 1.0,
+      "unlock": 60,
+      "category": "solid_tumor",
+      "market": 4
+    },
+    {
+      "key": "egfr",
+      "name": "EGFR",
+      "disease": "非小细胞肺癌",
+      "difficulty": 0.9,
+      "unlock": 0,
+      "category": "solid_tumor",
+      "market": 4
+    },
+    {
+      "key": "kras",
+      "name": "KRAS G12C",
+      "disease": "肺癌、结直肠癌",
+      "difficulty": 1.3,
+      "unlock": 150,
+      "category": "solid_tumor",
+      "market": 3
+    },
+    {
+      "key": "btk",
+      "name": "BTK",
+      "disease": "B 细胞淋巴瘤",
+      "difficulty": 0.9,
+      "unlock": 50,
+      "category": "heme",
+      "market": 3
+    },
+    {
+      "key": "parp",
+      "name": "PARP",
+      "disease": "卵巢癌（BRCA 突变）",
+      "difficulty": 1.0,
+      "unlock": 50,
+      "category": "solid_tumor",
+      "market": 3
+    },
+    {
+      "key": "cd19",
+      "name": "CD19",
+      "disease": "B 细胞白血病、淋巴瘤",
+      "difficulty": 1.0,
+      "unlock": 80,
+      "category": "heme",
+      "market": 3
+    },
+    {
+      "key": "bcma",
+      "name": "BCMA",
+      "disease": "多发性骨髓瘤",
+      "difficulty": 1.0,
+      "unlock": 80,
+      "category": "heme",
+      "market": 3
+    },
+    {
+      "key": "trop2",
+      "name": "TROP2",
+      "disease": "三阴性乳腺癌",
+      "difficulty": 1.1,
+      "unlock": 80,
+      "category": "solid_tumor",
+      "market": 3
+    },
+    {
+      "key": "cldn18",
+      "name": "Claudin 18.2",
+      "disease": "胃癌",
+      "difficulty": 1.1,
+      "unlock": 80,
+      "category": "solid_tumor",
+      "market": 3
+    },
+    {
+      "key": "glp1",
+      "name": "GLP-1 受体",
+      "disease": "2 型糖尿病、肥胖",
+      "difficulty": 1.1,
+      "unlock": 100,
+      "category": "metabolic",
+      "market": 5
+    },
+    {
+      "key": "pcsk9",
+      "name": "PCSK9",
+      "disease": "高胆固醇血症",
+      "difficulty": 1.0,
+      "unlock": 70,
+      "category": "lipid",
+      "market": 4
+    },
+    {
+      "key": "lpa",
+      "name": "Lp(a)",
+      "disease": "脂蛋白(a)升高",
+      "difficulty": 1.2,
+      "unlock": 100,
+      "category": "lipid",
+      "market": 4
+    },
+    {
+      "key": "abeta",
+      "name": "β-淀粉样蛋白",
+      "disease": "阿尔茨海默病",
+      "difficulty": 1.5,
+      "unlock": 200,
+      "category": "neuro",
+      "market": 5
+    },
+    {
+      "key": "cgrp",
+      "name": "CGRP",
+      "disease": "偏头痛",
+      "difficulty": 0.9,
+      "unlock": 50,
+      "category": "migraine",
+      "market": 3
+    },
+    {
+      "key": "smn",
+      "name": "SMN",
+      "disease": "脊髓性肌萎缩",
+      "difficulty": 0.9,
+      "unlock": 100,
+      "category": "rare",
+      "market": 2
+    },
+    {
+      "key": "tnf",
+      "name": "TNF-α",
+      "disease": "类风湿关节炎",
+      "difficulty": 0.9,
+      "unlock": 0,
+      "category": "autoimmune",
+      "market": 5
+    },
+    {
+      "key": "il23",
+      "name": "IL-23",
+      "disease": "银屑病",
+      "difficulty": 0.9,
+      "unlock": 60,
+      "category": "autoimmune",
+      "market": 4
+    },
+    {
+      "key": "jak",
+      "name": "JAK",
+      "disease": "类风湿关节炎、特应性皮炎",
+      "difficulty": 1.0,
+      "unlock": 0,
+      "category": "autoimmune",
+      "market": 4
+    },
+    {
+      "key": "il4r",
+      "name": "IL-4Rα",
+      "disease": "特应性皮炎、哮喘",
+      "difficulty": 0.9,
+      "unlock": 60,
+      "category": "autoimmune",
+      "market": 4
+    },
+    {
+      "key": "ttr",
+      "name": "TTR",
+      "disease": "转甲状腺素蛋白淀粉样变",
+      "difficulty": 1.0,
+      "unlock": 80,
+      "category": "rare",
+      "market": 2
+    },
+    {
+      "key": "resp",
+      "name": "呼吸道病毒",
+      "disease": "新发呼吸道传染病",
+      "difficulty": 1.0,
+      "unlock": 80,
+      "category": "vaccine",
+      "market": 3
+    },
+    {
+      "key": "hiv",
+      "name": "HIV",
+      "disease": "艾滋病",
+      "difficulty": 1.0,
+      "unlock": 80,
+      "category": "antiviral",
+      "market": 4
+    },
+    {
+      "key": "hbv",
+      "name": "乙肝病毒",
+      "disease": "慢性乙肝",
+      "difficulty": 1.4,
+      "unlock": 100,
+      "category": "antiviral",
+      "market": 4
+    }
+  ],
+  "modalities": [
+    {
+      "key": "small_molecule",
+      "name": "小分子",
+      "unlock": 0
+    },
+    {
+      "key": "mab",
+      "name": "单抗",
+      "unlock": 0
+    },
+    {
+      "key": "bispecific",
+      "name": "双抗",
+      "unlock": 80
+    },
+    {
+      "key": "adc",
+      "name": "ADC",
+      "unlock": 100
+    },
+    {
+      "key": "peptide",
+      "name": "多肽",
+      "unlock": 60
+    },
+    {
+      "key": "protein",
+      "name": "重组蛋白",
+      "unlock": 50
+    },
+    {
+      "key": "sirna",
+      "name": "siRNA",
+      "unlock": 120
+    },
+    {
+      "key": "aso",
+      "name": "ASO",
+      "unlock": 120
+    },
+    {
+      "key": "mrna",
+      "name": "mRNA",
+      "unlock": 150
+    },
+    {
+      "key": "cart",
+      "name": "CAR-T",
+      "unlock": 220
+    },
+    {
+      "key": "gene_therapy",
+      "name": "基因治疗",
+      "unlock": 300
+    },
+    {
+      "key": "degrader",
+      "name": "蛋白降解剂",
+      "unlock": 150
+    }
+  ],
+  "combinations": [
+    {
+      "target_id": "pd1",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "mab",
+      "tier": 2,
+      "reason": "单抗擅长抑制；细胞外、没有口袋的靶点正是抗体的主场"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "bispecific",
+      "tier": 1,
+      "reason": "PD-1/VEGF、PD-1/CTLA-4 双抗：一次打两条通路"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "adc",
+      "tier": -1,
+      "reason": "ADC不擅长抑制"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T不擅长抑制"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "pd1",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "已经有好用的抑制剂，降解剂优势不大；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长抑制/清除"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "bispecific",
+      "tier": 1,
+      "reason": "双抗擅长抑制/清除"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "adc",
+      "tier": 2,
+      "reason": "ADC擅长清除；很适合实体瘤"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制/清除"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制/清除"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制/清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T擅长清除；实体瘤里 CAR-T 很难发挥"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制/清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "her2",
+      "modality_id": "degrader",
+      "tier": -1,
+      "reason": "已经有好用的抑制剂，降解剂优势不大；降解剂主要对付细胞内的蛋白"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长抑制"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "bispecific",
+      "tier": 1,
+      "reason": "EGFR/MET 双抗（埃万妥单抗）"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "adc",
+      "tier": 0,
+      "reason": "ADC不擅长抑制；很适合实体瘤"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T不擅长抑制；实体瘤里 CAR-T 很难发挥"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "egfr",
+      "modality_id": "degrader",
+      "tier": -1,
+      "reason": "已经有好用的抑制剂，降解剂优势不大；降解剂主要对付细胞内的蛋白"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "small_molecule",
+      "tier": 0,
+      "reason": "小分子擅长抑制；口袋很难做"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "kras",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "降解剂能打，但还在早期，风险很高"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "btk",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "已经有好用的抑制剂，降解剂优势不大"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到实体瘤"
+    },
+    {
+      "target_id": "parp",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "已经有好用的抑制剂，降解剂优势不大"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长清除"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "bispecific",
+      "tier": 2,
+      "reason": "双抗擅长清除；拉来 T 细胞杀血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "adc",
+      "tier": 1,
+      "reason": "ADC擅长清除"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长清除"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长清除"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "aso",
+      "tier": -2,
+      "reason": "ASO不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "cart",
+      "tier": 2,
+      "reason": "CAR-T擅长清除；很适合血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "cd19",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂不擅长清除；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长清除"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "bispecific",
+      "tier": 2,
+      "reason": "双抗擅长清除；拉来 T 细胞杀血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "adc",
+      "tier": 1,
+      "reason": "ADC擅长清除"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长清除"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长清除"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "aso",
+      "tier": -2,
+      "reason": "ASO不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "cart",
+      "tier": 2,
+      "reason": "CAR-T擅长清除；很适合血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长清除；很难送到血液肿瘤"
+    },
+    {
+      "target_id": "bcma",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂不擅长清除；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "mab",
+      "tier": -1,
+      "reason": "裸抗体杀伤力不够，TROP2 的成功全靠 ADC"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "bispecific",
+      "tier": 1,
+      "reason": "双抗擅长清除"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "adc",
+      "tier": 2,
+      "reason": "ADC擅长清除；很适合实体瘤"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长清除"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长清除"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "aso",
+      "tier": -2,
+      "reason": "ASO不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T擅长清除；实体瘤里 CAR-T 很难发挥"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "trop2",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂不擅长清除；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长清除"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "bispecific",
+      "tier": 1,
+      "reason": "双抗擅长清除"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "adc",
+      "tier": 2,
+      "reason": "ADC擅长清除；很适合实体瘤"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长清除"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长清除"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "aso",
+      "tier": -2,
+      "reason": "ASO不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T擅长清除；实体瘤里 CAR-T 很难发挥"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长清除；很难送到实体瘤"
+    },
+    {
+      "target_id": "cldn18",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂不擅长清除；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "small_molecule",
+      "tier": 0,
+      "reason": "小分子擅长激活；口袋很难做"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "mab",
+      "tier": -1,
+      "reason": "单抗不擅长激活"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "bispecific",
+      "tier": -1,
+      "reason": "双抗不擅长激活"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "adc",
+      "tier": -1,
+      "reason": "ADC不擅长激活"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "peptide",
+      "tier": 2,
+      "reason": "多肽擅长激活；多肽激动受体是强项"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "protein",
+      "tier": 1,
+      "reason": "GLP-1 融合蛋白（度拉糖肽），一周一针"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长激活；很难送到全身"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "aso",
+      "tier": -2,
+      "reason": "ASO不擅长激活；很难送到全身"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长激活；很难送到全身"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T不擅长激活"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长激活；很难送到全身"
+    },
+    {
+      "target_id": "glp1",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂不擅长激活；降解剂主要对付细胞内的蛋白"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "small_molecule",
+      "tier": 0,
+      "reason": "小分子擅长抑制；口袋很难做"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长抑制"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "peptide",
+      "tier": 1,
+      "reason": "口服大环多肽已经能抑制 PCSK9"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "sirna",
+      "tier": 2,
+      "reason": "siRNA擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "aso",
+      "tier": 2,
+      "reason": "ASO擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "mrna",
+      "tier": -1,
+      "reason": "mRNA不擅长抑制"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "gene_therapy",
+      "tier": -1,
+      "reason": "基因治疗不擅长抑制"
+    },
+    {
+      "target_id": "pcsk9",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "small_molecule",
+      "tier": 0,
+      "reason": "小分子擅长抑制；口袋很难做"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "mab",
+      "tier": -1,
+      "reason": "血液里 Lp(a) 颗粒太多，抗体压不住"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "sirna",
+      "tier": 2,
+      "reason": "siRNA擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "aso",
+      "tier": 2,
+      "reason": "ASO擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "mrna",
+      "tier": -1,
+      "reason": "mRNA不擅长抑制"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "gene_therapy",
+      "tier": -1,
+      "reason": "基因治疗不擅长抑制"
+    },
+    {
+      "target_id": "lpa",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "mab",
+      "tier": 0,
+      "reason": "能清除斑块，但入脑的量很少，还有脑水肿风险（仑卡奈单抗、多奈单抗）"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "bispecific",
+      "tier": -1,
+      "reason": "双抗擅长清除；过不了血脑屏障"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽不擅长清除；过不了血脑屏障"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白不擅长清除；过不了血脑屏障"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长清除；过不了血脑屏障"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "aso",
+      "tier": 0,
+      "reason": "ASO不擅长清除；很适合中枢"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长清除；过不了血脑屏障"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "gene_therapy",
+      "tier": -1,
+      "reason": "基因治疗不擅长清除"
+    },
+    {
+      "target_id": "abeta",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长抑制"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "cgrp",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "small_molecule",
+      "tier": 1,
+      "reason": "利司扑兰：小分子也能调节 SMN2 的剪接"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗作用不到基因层面"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗作用不到基因层面"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽作用不到基因层面"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白作用不到基因层面"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "sirna",
+      "tier": -2,
+      "reason": "siRNA不擅长补上缺失的功能；过不了血脑屏障"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "aso",
+      "tier": 2,
+      "reason": "ASO擅长补上缺失的功能；很适合中枢"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA作用不到基因层面"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "gene_therapy",
+      "tier": 2,
+      "reason": "基因治疗擅长补上缺失的功能；直接补上缺失的基因"
+    },
+    {
+      "target_id": "smn",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "蛋白降解剂作用不到基因层面"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "mab",
+      "tier": 2,
+      "reason": "单抗擅长抑制；细胞外、没有口袋的靶点正是抗体的主场"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "protein",
+      "tier": 1,
+      "reason": "受体融合蛋白（依那西普）能中和 TNF-α"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "tnf",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "mab",
+      "tier": 2,
+      "reason": "单抗擅长抑制；细胞外、没有口袋的靶点正是抗体的主场"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "peptide",
+      "tier": 1,
+      "reason": "口服多肽可以阻断 IL-23 受体"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "il23",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "jak",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "已经有好用的抑制剂，降解剂优势不大"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "mab",
+      "tier": 2,
+      "reason": "单抗擅长抑制；细胞外、没有口袋的靶点正是抗体的主场"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "adc",
+      "tier": -1,
+      "reason": "ADC不擅长抑制"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T不擅长抑制"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "il4r",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "已经有好用的抑制剂，降解剂优势不大；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "单抗擅长抑制"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "protein",
+      "tier": -1,
+      "reason": "重组蛋白不擅长抑制"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "sirna",
+      "tier": 2,
+      "reason": "siRNA擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "aso",
+      "tier": 2,
+      "reason": "ASO擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "mrna",
+      "tier": -1,
+      "reason": "mRNA不擅长抑制"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "gene_therapy",
+      "tier": -1,
+      "reason": "基因治疗不擅长抑制"
+    },
+    {
+      "target_id": "ttr",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "降解剂对付不了分泌到细胞外的蛋白"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "small_molecule",
+      "tier": -2,
+      "reason": "没有能结合的口袋"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "mab",
+      "tier": 1,
+      "reason": "能中和病毒，但变异株容易逃逸"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "bispecific",
+      "tier": 0,
+      "reason": "双抗能打，但单个靶点用不上第二条臂"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "adc",
+      "tier": -1,
+      "reason": "ADC不擅长抑制/诱导免疫"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "peptide",
+      "tier": -1,
+      "reason": "多肽不擅长抑制/诱导免疫"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "protein",
+      "tier": 1,
+      "reason": "重组蛋白擅长诱导免疫"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到全身"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "mrna",
+      "tier": 2,
+      "reason": "mRNA擅长诱导免疫；mRNA 疫苗是强项"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "cart",
+      "tier": -1,
+      "reason": "CAR-T不擅长抑制/诱导免疫"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制/诱导免疫；很难送到全身"
+    },
+    {
+      "target_id": "resp",
+      "modality_id": "degrader",
+      "tier": -2,
+      "reason": "已经有好用的抑制剂，降解剂优势不大；降解剂主要对付细胞内的蛋白；先得找到能结合它的分子"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "sirna",
+      "tier": -1,
+      "reason": "siRNA擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "aso",
+      "tier": -1,
+      "reason": "ASO擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "mrna",
+      "tier": -2,
+      "reason": "mRNA不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "gene_therapy",
+      "tier": -2,
+      "reason": "基因治疗不擅长抑制；很难送到免疫细胞"
+    },
+    {
+      "target_id": "hiv",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "已经有好用的抑制剂，降解剂优势不大"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "small_molecule",
+      "tier": 2,
+      "reason": "小分子擅长抑制；有现成的口袋"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "mab",
+      "tier": -2,
+      "reason": "单抗进不了细胞"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "bispecific",
+      "tier": -2,
+      "reason": "双抗进不了细胞"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "adc",
+      "tier": -2,
+      "reason": "ADC需要细胞表面的靶点"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "peptide",
+      "tier": -2,
+      "reason": "多肽进不了细胞"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "protein",
+      "tier": -2,
+      "reason": "重组蛋白进不了细胞"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "sirna",
+      "tier": 2,
+      "reason": "siRNA擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "aso",
+      "tier": 2,
+      "reason": "ASO擅长抑制；很适合肝脏"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "mrna",
+      "tier": -1,
+      "reason": "mRNA不擅长抑制"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "cart",
+      "tier": -2,
+      "reason": "CAR-T需要细胞表面的靶点"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "gene_therapy",
+      "tier": -1,
+      "reason": "基因治疗不擅长抑制"
+    },
+    {
+      "target_id": "hbv",
+      "modality_id": "degrader",
+      "tier": 0,
+      "reason": "已经有好用的抑制剂，降解剂优势不大"
+    }
+  ]
+}

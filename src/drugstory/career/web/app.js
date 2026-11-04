@@ -1,3 +1,8 @@
+let staticContent;
+function hydrate(data) {
+ const library = new Map(staticContent.catalog.map(c=>[c.key,c]));
+ return {...staticContent,...data,catalog:data.catalog.map(c=>({...library.get(c.key),...c,requirements:c.requirements.map((ok,i)=>({ok,text:library.get(c.key).requirement_labels[i]}))}))};
+}
 const $ = (selector) => document.querySelector(selector);
 let state,
   activeTab = "pipeline",
@@ -44,17 +49,17 @@ async function send(name, args = {}) {
         "Content-Type": "application/json",
         "X-Game-Token": state.token,
       },
-      body: JSON.stringify({ name, args, revision: state.revision }),
+      body: JSON.stringify({ name, args, revision: state.revision, request_id: crypto.randomUUID() }),
     });
     const data = await response.json();
     if (!response.ok) {
       if (data.state) {
-        state = data.state;
+        state = hydrate(data.state);
         render();
       }
       throw new Error(data.error);
     }
-    state = data;
+    state = hydrate(data);
     $("#modal").close();
     render();
     $("#save-status").textContent = "✓ 进度已保存";
@@ -142,7 +147,7 @@ function projectCard(p) {
   if (p.status === "failed") action = resultTable(result);
   if (["screening", "running"].includes(p.status))
     action = `<div class="running"><span>${p.running_experiment ? "专项研究" : p.status === "screening" ? "候选筛选" : esc(p.phase)}</span><strong>还需 ${p.left} 周</strong><small>负责人：${p.team.map((id) => esc(state.heroes.find((h) => h.id === id)?.name || id)).join("、") || "合作临床团队"}</small></div>`;
-  return `<article class="project-card"><div class="card-title"><div><small>${esc(p.kind_name)} · 累计投入 ${money(p.spent)}</small><h3>${esc(p.name)}</h3></div><span class="badge ${p.status === "failed" ? "bad" : ""}">${esc(p.status_name)}${p.deferred ? " · 已暂缓" : ""}</span></div>${p.status === "licensed" ? '<p class="hint">后续开发由合作方推进。请在「产品与授权」查看里程碑、风险和分成。</p>' : `<div class="phase-track">${p.path.map((v, i) => `<span class="${i === p.index ? "current" : i < p.index ? "done" : ""}">${esc(v)}</span>`).join("")}</div>`}${current && p.active ? `<details><summary>查看候选 ${current.id + 1} 的证据 · 已优化 ${current.optimized}/2 次</summary>${evidence(current)}<small>范围随观察更新，追加验证也可能揭示不利证据。</small></details>` : ""}<p>${esc(p.feedback)}</p>${productNote(p)}${action}${p.active ? `<div class="card-footer">${["selecting", "ready", "result", "problem", "checkpoint"].includes(p.status) ? button(p.deferred ? "恢复提醒" : "暂缓决策，先经营其他业务", "defer", { project: p.id, waiting: p.deferred ? 0 : 1 }, "quiet") : ""}${modalButton("终止研究", "terminate", p.id, "danger quiet")}</div>` : ""}</article>`;
+  return `<article class="project-card"><div class="card-title"><div><small>${esc(p.kind_name)} · 累计投入 ${money(p.spent)}</small><h3>${esc(p.name)}</h3></div><span class="badge ${p.status === "failed" ? "bad" : ""}">${esc(p.status_name)}${p.deferred ? " · 已暂缓" : ""}</span></div>${p.status === "licensed" ? '<p class="hint">后续开发由合作方推进。请在「产品与授权」查看里程碑、风险和分成。</p>' : `<div class="phase-track">${p.path.map((v, i) => `<span class="${i === p.index ? "current" : i < p.index ? "done" : ""}">${esc(v)}</span>`).join("")}</div>`}${current && p.active ? `<details><summary>查看候选 ${current.id + 1} 的证据 · 已优化 ${current.optimized}/2 次</summary>${evidence(current)}<small>范围随观察更新，追加验证也可能揭示不利证据。</small></details>` : ""}<p>${esc(p.feedback)}</p>${productNote(p)}${workPanel(p)}${action}${p.active ? `<div class="card-footer">${["selecting", "ready", "result", "problem", "checkpoint"].includes(p.status) ? button(p.deferred ? "恢复提醒" : "暂缓决策，先经营其他业务", "defer", { project: p.id, waiting: p.deferred ? 0 : 1 }, "quiet") : ""}${modalButton("终止研究", "terminate", p.id, "danger quiet")}</div>` : ""}</article>`;
 }
 function resultTable(r) {
   if (!r) return "";
@@ -167,7 +172,7 @@ function characters() {
     )
     .join(
       "",
-    )}</div><div class="hero-grid">${state.heroes.map((h) => `<article class="hero-card ${rankClass(h.rank)}"><span class="rank-tag">${esc(h.rank_name)}</span><h3>${esc(h.name)}</h3><p>${esc(h.profession_name)} · 能力 ${h.ability}</p><p class="muted">${esc(h.story)}</p><p><b>${esc(h.trait.name)}</b> · ${esc(h.trait.description)}</p><p>${h.focus_info ? `专长：<b>${esc(h.focus_info.name)}</b> · ${esc(h.focus_info.description)}` : h.rank >= 2 ? modalButton("选择长期专长", "focus", h.id) : "晋升精英后可选择深研或组织专长。"}</p><div class="hero-numbers"><span>经验 <b>${h.xp}</b></span><span>项目履历 <b>${h.cases.length}</b></span><span>成员 <b>${h.members}</b></span></div><p>${h.ability >= 55 ? "已具备" : "成长方向"}：<b>${esc(h.skill)}</b>；高阶能力需要对应研究与资源。</p><p>${h.busy ? `正在负责：${esc(h.busy)}` : "目前空闲"} · 工资 ${money(h.weekly_salary)} / 周</p>${h.rank < 4 ? `<details><summary>晋升${["", "", "精英", "大师", "传奇"][h.rank + 1]}的条件</summary><p>${checks(h.promotion)}</p><p>晋阶费用 ${money(h.promotion_cost)}</p></details>` : '<p class="good">已达传奇阶位，可通过带教培养新的研究力量。</p>'}${personalCard(h)}<div class="actions">${button("专业培训", "train", { character: h.id }, "", !!h.busy)}${h.rank < 4 ? button("晋阶突破", "promote", { character: h.id }, "primary", !!h.busy || !h.promotion.every((c) => c.ok)) : ""}${modalButton("配置团队", "team", h.id)}${modalButton("导师课题", "mentor", h.id)}</div></article>`).join("")}</div><section class="project-card"><h3>${esc(state.facility.name)}</h3><p>人数 ${state.headcount}/${state.facility.capacity} · 自营临床 ${state.clinical_used}/${state.facility.slots} · 生产线 ${state.lines_used}/${state.facility.lines}</p>${state.next_facility ? `<p>下一级 ${esc(state.next_facility.name)}：${money(state.next_facility.cost)}，租金 ${money(state.next_facility.rent)} / 周${state.next_facility.upkeep ? `，维护 ${money(state.next_facility.upkeep)} / 周` : ""}。</p>${button("扩建研究场地", "upgrade", {}, "primary")}` : "已建成星火科学城。"}</section>${challengePanel()}`;
+    )}</div><div class="hero-grid">${state.heroes.map((h) => `<article class="hero-card ${rankClass(h.rank)}"><span class="rank-tag">${esc(h.rank_name)}</span><h3>${esc(h.name)}</h3><p>${esc(h.profession_name)} · 能力 ${h.ability}</p><p class="muted">${esc(h.story)}</p><p><b>${esc(h.trait.name)}</b> · ${esc(h.trait.description)}</p><p>当前招牌能力值：<b>${h.signature_value}</b> · 完成个人课题后升级。</p><div class="hero-numbers"><span>经验 <b>${h.xp}</b></span><span>项目履历 <b>${h.cases.length}</b></span><span>成员 <b>${h.members}</b></span></div><p>${h.ability >= 55 ? "已具备" : "成长方向"}：<b>${esc(h.skill)}</b>；高阶能力需要对应研究与资源。</p><p>${h.busy ? `正在负责：${esc(h.busy)}` : "目前空闲"} · 工资 ${money(h.weekly_salary)} / 周</p>${h.rank < 4 ? `<details><summary>晋升${["", "", "精英", "大师", "传奇"][h.rank + 1]}的条件</summary><p>${checks(h.promotion)}</p><p>晋阶费用 ${money(h.promotion_cost)}</p></details>` : '<p class="good">已达传奇阶位，可通过带教培养新的研究力量。</p>'}${personalCard(h)}<div class="actions">${button("专业培训", "train", { character: h.id }, "", !!h.busy)}${h.rank < 4 ? button("晋阶突破", "promote", { character: h.id }, "primary", !!h.busy || !h.promotion.every((c) => c.ok)) : ""}${modalButton("配置团队", "team", h.id)}${modalButton("导师课题", "mentor", h.id)}</div></article>`).join("")}</div><section class="project-card"><h3>${esc(state.facility.name)}</h3><p>人数 ${state.headcount}/${state.facility.capacity} · 自营临床 ${state.clinical_used}/${state.facility.slots}</p>${state.next_facility ? `<p>下一级 ${esc(state.next_facility.name)}：${money(state.next_facility.cost)}，租金 ${money(state.next_facility.rent)} / 周${state.next_facility.upkeep ? `，维护 ${money(state.next_facility.upkeep)} / 周` : ""}。</p>${button("扩建研究场地", "upgrade", {}, "primary")}` : "已建成星火科学城。"}</section>${equipmentPanel()}${challengePanel()}`;
 }
 function services() {
   return `<div class="section-head"><h2>让专业，也能支持现金流</h2>${modalButton("批量安排空闲伙伴", "batch")}</div><p class="muted">每 12 周更新有限的订单。服务会占用负责人，重复常规任务的成长逐渐减少。</p><div class="card-grid">${state.orders.map((o) => `<article class="project-card"><h3>${esc(o.name)}</h3><p>交付 ${o.weeks} 周 · 回款 ${money(o.reward)} · 材料 ${money(o.cost)}</p><p>需要 ${esc(state.professions[o.profession])} 能力 ${o.requirement}</p>${o.taken ? '<span class="badge">本期已接受</span>' : modalButton("安排交付", "service", o.id, "primary")}</article>`).join("")}</div><h3>正在进行的课题与订单</h3>${state.jobs.length ? state.jobs.map((j) => `<div class="job-line"><b>${esc(j.name)}</b><span>剩余 ${j.left} 周</span></div>`).join("") : empty("暂时没有进行中的订单或培训。")}`;
@@ -207,7 +212,7 @@ function market() {
       .filter((d) => !d.partner)
       .map(
         (d) =>
-          `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周</p><p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p><p>生产方式：${{ contract: "委托生产", self: "自营生产", suspended: "暂停供货" }[d.production]} · ${d.kind === "innovative" ? 2 : 1} 条自营线需求</p>${d.active ? `<div class="actions">${button("委托生产", "set_production", { product: d.id, mode: "contract" }, "", d.production === "contract")}${button("自营生产 · ¥80 万准备费", "set_production", { product: d.id, mode: "self" }, "", d.production === "self")}${button("暂停供货", "set_production", { product: d.id, mode: "suspended" }, "", d.production === "suspended")}</div>` : ""}</article>`,
+          `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周</p><p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p><p>委托合规生产；供货与生命周期按产品规则结算。</p></article>`,
       )
       .join("") ||
     empty("第一款产品上市后，会在这里看到导入、现金回流与生命周期。")
@@ -252,17 +257,8 @@ function showModal(type, id = "") {
     html = formFrame(
       type,
       "新建研究计划",
-      `<label>研究方案<select name="catalog">${state.catalog.map((c) => `<option value="${c.key}" ${!c.unlocked || c.occupied ? "disabled" : ""}>${esc(c.kind_name)} · ${esc(c.name)} ${c.occupied ? "（已在研或在售）" : !c.unlocked ? "（尚未解锁）" : ""}</option>`).join("")}</select></label><div id="catalog-note"></div><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><details><summary>查看待解锁的研究方向</summary>${
-        state.catalog
-          .filter((c) => !c.unlocked)
-          .map((c) => `<h4>${esc(c.name)}</h4><p>${checks(c.requirements)}</p>`)
-          .join("") || "当前方向均已解锁"
-      }</details><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。研发期间需安排对应专业负责人。</p>${teamPicker(
-        state.heroes
-          .filter((h) => !h.busy && ["proc", "chem"].includes(h.profession))
-          .slice(0, 2)
-          .map((h) => h.id),
-      )}`,
+      `${catalogPicker()}<div id="catalog-note"></div><label>开发侧重<select name="work_focus">${Object.entries(state.work_focuses).map(([k,v])=>`<option value="${k}">${esc(v.name)} · ${esc(v.text)}</option>`).join("")}</select></label><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。组合适配程度在筛选后记录进手记。</p>${teamPicker(state.heroes.filter(h=>!h.busy && ["proc","chem"].includes(h.profession)).slice(0,2).map(h=>h.id))}`,
+
     );
   if (type === "phase")
     html = formFrame(
@@ -313,7 +309,7 @@ function showModal(type, id = "") {
     html = formFrame(
       type,
       "让第一批产品走向市场",
-      `<p>上市准备费 ${money(p.kind === "generic" ? 80 : 180)}。先采用委托生产，销售会逐渐形成；之后可以分配自营生产线。</p><label>药品名字<input name="name" maxlength="30" value="${esc(p.name)}"></label>`,
+      `<p>上市准备费 ${money(p.kind === "generic" ? 80 : 180)}。先采用委托生产，销售会逐渐形成；按产品生命周期和市场需求结算。</p><label>药品名字<input name="name" maxlength="30" value="${esc(p.name)}"></label>`,
       id,
     );
   if (type === "terminate")
@@ -336,7 +332,7 @@ function showModal(type, id = "") {
     html = formFrame(
       type,
       h.title + " · 配置团队",
-      `<p>负责人决定专业和研究手段，成员改善执行速度。有效成员最多 ${2 + h.rank} 位；更多成员仍有工资。</p><label>成员人数<input name="members" type="number" min="0" max="6" value="${h.members}" required></label><p>每人每周 ¥0.42 万，增减每人一次性 ¥4 万。</p>${button("暂离公司 · 保留角色履历", "dismiss", { character: id }, "danger", !!h.busy)}`,
+      `<p>负责人决定专业和开发上限；成员增加开发贡献并缩短执行时间，收益递减。有效成员最多 ${2 + h.rank} 位；更多成员仍有工资。</p><label>成员人数<input name="members" type="number" min="0" max="6" value="${h.members}" required></label><p>每人每周 ¥0.42 万，增减每人一次性 ¥4 万。</p>${button("暂离公司 · 保留角色履历", "dismiss", { character: id }, "danger", !!h.busy)}`,
       id,
     );
   if (type === "mentor")
@@ -388,7 +384,7 @@ function showModal(type, id = "") {
         )}</select></label><p>模式开局后固定。当前进度先备份到本地，新版使用独立存档。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
     );
   if (type === "help")
-    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。成员主要改善执行速度；人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>当前版本的时间、指标和经济数值为游戏规则，流程参考研发逻辑。8880 荣誉版保留独立运行。本版在 8881 使用独立存档；2.5D 交互样稿另行展示。</p>`;
+    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。开发阶段由专业与成员共同改善候选；临床阶段只收集证据。人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>当前版本的时间、指标和经济数值为游戏规则，流程参考研发逻辑。8880 荣誉版保留独立运行。本版在 8883 使用独立存档；偏写实场景目前仅为视觉原型。</p>`;
   $("#modal-body").innerHTML = html;
   if (!$("#modal").open) $("#modal").showModal();
   if (type === "phase") updatePreview();
@@ -397,6 +393,7 @@ function showModal(type, id = "") {
     if ([...teacher.options].some((o) => o.value === id)) teacher.value = id;
     updateMentor();
   }
+  if (type === "project") filterCatalog();
   if (type === "project" || type === "experiment") updateNotes();
 }
 function formArgs(form) {
@@ -414,6 +411,7 @@ function formArgs(form) {
         catalog: data.get("catalog"),
         heroes,
         design: data.get("design") || "standard",
+        work_focus: data.get("work_focus") || "balanced",
       },
     ],
     phase: [
@@ -478,7 +476,7 @@ async function updatePreview() {
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = !response.ok;
     $("#phase-preview").innerHTML = response.ok
-      ? `<b>${v.weeks} 周 · ${money(v.cost)} · 本阶段 ${esc(v.chance)}</b><p>安排后可用现金 ${money(v.reserve)}，仍需预留工资和后续阶段。</p><small>${esc(v.note)}</small>`
+      ? `<b>${v.weeks} 周 · ${money(v.cost)} · 本阶段 ${esc(v.chance)}</b><p>安排后可用现金 ${money(v.reserve)}，仍需预留工资和后续阶段。</p>${workList(v.work)}<small>${esc(v.note)}</small>`
       : `<b>${esc(v.error)}</b>`;
   } catch (error) {
     if ($("#phase-preview"))
@@ -515,11 +513,12 @@ function updateNotes() {
       (c) => c.key === new FormData(cf).get("catalog"),
     );
     if (c) {
+      cf.querySelector('button[type="submit"]').disabled = !c.unlocked || c.occupied;
       const design = cf.elements.design;
       design.disabled = !c.product_profile;
       if (!c.product_profile) design.value = "standard";
       $("#catalog-note").innerHTML =
-        `<p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>${productNote(c)}`;
+        `<p>${checks(c.requirements)}</p><p>${c.discovery ? "组合发现：" + esc(c.discovery.reason) + "（档位 " + c.discovery.tier + "）" : c.kind === "innovative" ? "组合尚未研究，筛选后留下适配记录。" : ""}</p><p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>${productNote(c)}`;
     }
   }
   const ef = $('form[data-form="experiment"]');
@@ -566,10 +565,10 @@ document.addEventListener("change", (event) => {
   if (event.target.name === "teacher") updateMentor();
   updateNotes();
 });
-fetch("/api/state")
+fetch("/api/content").then(r=>r.json()).then(c=>{staticContent=c;return fetch("/api/state");})
   .then((r) => r.json())
   .then((data) => {
-    state = data;
+    state = hydrate(data);
     render();
     $("#save-status").textContent = "本地进度已载入";
   })

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 6
+VERSION = 7
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
@@ -27,8 +27,9 @@ def rand(s, *keys):
 
 
 def log(s, text):
-    s["journal"].append({"week": s["week"], "text": text})
-    s["journal"] = s["journal"][-600:]
+    from .events import emit
+
+    emit(s, "notice", data={"text": text})
 
 
 def earn(s, amount, category):
@@ -161,7 +162,11 @@ def new_game(seed=42, scenario="foundation", difficulty="standard"):
         "seed": seed,
         "scenario": scenario,
         "difficulty": difficulty,
-        "platform_policy": "balanced",
+        "equipment": dict.fromkeys(PROFESSIONS, 0),
+        "notebook": {},
+        "event_seq": 0,
+        "events": [],
+        "transition_events": [],
         "week": 0,
         "capital": c["cash"],
         "cash": float(c["cash"]),
@@ -214,7 +219,7 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") == VERSION,
-            "课题版只读取独立 v6 存档；v5 请在 8880 继续游玩，其他旧版保留原入口",
+            "开发版只读取独立 v7 存档；v6 请在 8881、v5 请在 8880 继续游玩",
         )
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")

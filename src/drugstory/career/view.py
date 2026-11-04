@@ -4,7 +4,18 @@ from __future__ import annotations
 
 import math
 
-from . import challenge, competition, engine, honors, product_design, stories, talents, trial_choices
+from . import (
+    challenge,
+    competition,
+    development,
+    engine,
+    honors,
+    product_design,
+    readouts,
+    stories,
+    talents,
+    trial_choices,
+)
 from . import economy as e
 from . import science as sc
 from .content import (
@@ -99,7 +110,7 @@ def project_view(s, p):
                     **execution,
                     "name": PLANS[plan]["name"],
                     "text": PLANS[plan]["text"],
-                    "chance": chance_range(sc.phase_probability(p, key, plan, execution["noise_by_stat"])),
+                    "chance": chance_range(execution["probability"]),
                 }
             )
     candidates = (
@@ -147,6 +158,22 @@ def project_view(s, p):
         "kind_name": KINDS[p["kind"]],
         "product_profile": product_design.profile(p["catalog"]),
         "design": p.get("design", "standard"),
+        "work_focus": p.get("work_focus", "balanced"),
+        "work": p.get("execution", {}).get("work", []),
+        "readings": [
+            {
+                "stage": r["stage"],
+                "stage_name": STAGES[r["stage"]]["name"],
+                "candidate": r["candidate"],
+                "index": r["index"],
+                "week": r["week"],
+                "values": {k: round(v, 1) for k, v in r["values"].items()},
+            }
+            for r in p.get("readings", [])
+        ][-16:],
+        "interim_chance": chance_range(readouts.forecast(p))
+        if p["status"] in ("running", "checkpoint") and readouts.forecast(p) is not None
+        else None,
         "trial_decision": trial_choices.view(p),
         "trial_history": p.get("trial_history", []),
         "next_stage": next_stage,
@@ -180,7 +207,7 @@ def snapshot(s):
             continue
         heroes.append(
             {
-                **h,
+                **{k: h[k] for k in ("id", "name", "profession", "rank", "xp", "members", "cases", "mentored")},
                 "ability": ability(h),
                 "profession_name": PROFESSIONS[h["profession"]],
                 "rank_name": RANKS[h["rank"]],
@@ -193,7 +220,7 @@ def snapshot(s):
                 "story": ROSTER[h["id"]]["story"],
                 "trait": talents.trait(h["id"]),
                 "personal_project": stories.options(s, h),
-                "focus_info": talents.FOCUS.get(h.get("focus")),
+                "signature_value": talents.value(h),
             }
         )
     roster = []
@@ -218,7 +245,8 @@ def snapshot(s):
         )
     catalogs = [
         {
-            **c,
+            **{k: v for k, v in c.items() if k not in ("combo_tier", "combo_reason")},
+            "discovery": s["notebook"].get(k),
             "kind_name": KINDS[c["kind"]],
             "product_profile": product_design.profile(c["key"]),
             "competition": round(competition.pressure(s, c["market"]), 2),
@@ -237,7 +265,13 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.6",
+        "version": "0.7",
+        "api_version": 1,
+        "event_cursor": s["event_seq"],
+        "events": s["events"][-32:],
+        "transition_events": s.get("transition_events", []),
+        "equipment": development.view(s),
+        "notebook": s["notebook"],
         "challenge": challenge.view(s),
         "market_capacity": {k: e.market_capacity(s, k) for k in challenge.CAPACITY},
         "date": date(s["week"]),
@@ -275,7 +309,7 @@ def snapshot(s):
         "deals": [{k: v for k, v in d.items() if k != "execution"} for d in s["deals"]],
         "rivals": competition.public(s),
         "honors": honors.view(s),
-        "focuses": talents.FOCUS,
+        "work_focuses": development.FOCUSES,
         "orders": e.orders(s),
         "jobs": s["jobs"],
         "journal": s["journal"][-30:],
@@ -301,9 +335,8 @@ def phase_preview(s, args):
     return {
         "weeks": execution["weeks"],
         "cost": execution["cost"],
-        "chance": chance_range(
-            sc.phase_probability(p, execution["key"], execution["plan"], execution["noise_by_stat"])
-        ),
+        "chance": chance_range(execution["probability"]),
+        "work": execution["work"],
         "reserve": simulated["cash"] - committed(simulated),
         "note": "基于现有证据的本阶段估计，后续仍有不确定性；负面结果也会更新判断。",
     }

@@ -12,14 +12,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from drugstory.career import engine
+from drugstory.career import api, engine
 from drugstory.career.content import SCENARIOS
 from drugstory.career.model import dumps as to_json
 from drugstory.career.model import load, new_game
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/projects-autosave.json")
+DEFAULT_SAVE = Path("saves/development-autosave.json")
 
 
 class Conflict(ValueError):
@@ -48,6 +48,7 @@ class GameSession:
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
+        self.requests = {}
         source = load_path or (save_path if save_path.exists() else None)
         self.state = load(source) if source else new_game(seed, scenario, difficulty)
         snapshot(self.state)
@@ -59,6 +60,14 @@ class GameSession:
 
     def execute(self, command):
         with self.lock:
+            request_id = command.get("request_id")
+            if request_id is not None:
+                if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
+                    raise ValueError("请求编号格式错误")
+                if request_id in self.requests:
+                    if self.requests[request_id] != command:
+                        raise Conflict("同一请求编号不能用于不同操作")
+                    return self.view()
             if command.get("revision") != self.revision:
                 raise Conflict("进度已经变化，请查看最新状态后再操作。")
             candidate = engine.execute(self.state, command.get("name"), command.get("args", {}))
@@ -68,13 +77,17 @@ class GameSession:
                 backup = self.path.with_name(f"{self.path.stem}-before-new-{stamp}.json")
                 atomic_write(backup, to_json(self.state))
             atomic_write(self.path, to_json(candidate))
+            if request_id:
+                self.requests[request_id] = dict(command)
+                if len(self.requests) > 256:
+                    del self.requests[next(iter(self.requests))]
             self.state = candidate
             self.revision += 1
             self.saved_at = datetime.now().astimezone().isoformat(timespec="seconds")
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8881) -> ThreadingHTTPServer:
+def create_server(session: GameSession, port: int = 8883) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
@@ -109,7 +122,9 @@ def create_server(session: GameSession, port: int = 8881) -> ThreadingHTTPServer
                 return
             path = urlsplit(self.path).path
             if path == "/api/state":
-                self.send_json(session.view())
+                self.send_json(api.state(session.view()))
+            elif path == "/api/content":
+                self.send_json(api.content())
             elif path == "/api/save":
                 with session.lock:
                     self.send_bytes(
@@ -146,9 +161,9 @@ def create_server(session: GameSession, port: int = 8881) -> ThreadingHTTPServer
                             raise Conflict("进度已经变化，请重新选择方案。")
                         self.send_json(phase_preview(session.state, data.get("args", {})))
                 else:
-                    self.send_json(session.execute(data))
+                    self.send_json(api.state(session.execute(data)))
             except Conflict as e:
-                self.send_json({"error": str(e), "state": session.view()}, 409)
+                self.send_json({"error": str(e), "state": api.state(session.view())}, 409)
             except (ValueError, TypeError, KeyError) as e:
                 self.send_json({"error": str(e)}, 400)
             except OSError:
@@ -158,8 +173,8 @@ def create_server(session: GameSession, port: int = 8881) -> ThreadingHTTPServer
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 协作课题版 v0.6")
-    parser.add_argument("--port", type=int, default=8881)
+    parser = argparse.ArgumentParser(description="新药物语 · 开发与证据版 v0.7")
+    parser.add_argument("--port", type=int, default=8883)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
