@@ -69,11 +69,11 @@ design/                   设计文档；design/tools/combo.py 用引擎的规�
 
 ```python
 while not state.game_over:
-    advance(state, max_weeks=4)        # 一周一周推进，出现待决定的事就停
+    advance(state, max_weeks=4)  # 一周一周推进，出现待决定的事就停
     ui.show(state)
-    for decision in state.pending:     # 一件件问玩家
-        ui.resolve(decision)           # 通过 actions 修改状态
-    ui.menu()                          # 立项、招聘、管理团队……
+    for decision in state.pending:  # 一件件问玩家
+        ui.resolve(decision)  # 通过 actions 修改状态
+    ui.menu()  # 立项、招聘、管理团队……
 ```
 
 - `step_week(state)` 按固定顺序调用各个系统：研发 → 外包 → 临床 → 市场 → 招聘 → 周数 +1 → 月底结算 → 年底结算 → 成就检查。顺序固定，结果才是确定的。

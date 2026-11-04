@@ -1,0 +1,56 @@
+# 外包单。和 design/content.md 第 7 节是同一份内容。
+# attr：要求的负责人属性（bio / chem / tox / proc）；weeks 基础周数；reward 报酬（万）；data 研究数据
+
+[[contracts]]
+key = "synthesis"
+name = "化合物合成"
+attr = "chem"
+requirement = 40
+weeks = 6
+reward = 120
+data = 15
+
+[[contracts]]
+key = "tox_testing"
+name = "毒理检测"
+attr = "tox"
+requirement = 40
+weeks = 4
+reward = 80
+data = 10
+
+[[contracts]]
+key = "scale_up"
+name = "工艺放大"
+attr = "proc"
+requirement = 50
+weeks = 8
+reward = 200
+data = 20
+
+[[contracts]]
+key = "target_validation"
+name = "靶点验证"
+attr = "bio"
+requirement = 40
+weeks = 6
+reward = 100
+data = 15
+
+[[contracts]]
+key = "humanization"
+name = "抗体人源化"
+attr = "bio"
+requirement = 55
+weeks = 8
+reward = 180
+data = 20
+
+[[contracts]]
+key = "formulation"
+name = "制剂开发"
+attr = "chem"
+requirement = 55
+weeks = 6
+reward = 150
+data = 15
