@@ -1622,3 +1622,49 @@ summary {
     font-size: 22px;
   }
 }
+
+.festival-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 14px 18px;
+  background: #f5ecda;
+  border: 1px solid #decfae;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.legacy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.legacy-won {
+  border-color: #b89640;
+  background: #fffaf0;
+}
+.achievement-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0;
+}
+.ceremony {
+  text-align: center;
+  padding: 18px 10px;
+}
+.ceremony .award-emblem {
+  display: block;
+  color: #b18d34;
+  font-size: 58px;
+}
+.ceremony h2 {
+  font-size: 28px;
+  line-height: 1.5;
+  margin: 15px 0 22px;
+}
+.ceremony details {
+  text-align: left;
+  margin: 20px 0;
+}

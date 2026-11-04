@@ -36,6 +36,7 @@ function notice(text, bad = false) {
 async function send(name, args = {}) {
   if (requestBusy) return;
   requestBusy = true;
+  const priorFestivalYear = state?.honors?.festivals.at(-1)?.year || 0;
   try {
     const response = await fetch("/api/action", {
       method: "POST",
@@ -57,6 +58,8 @@ async function send(name, args = {}) {
     $("#modal").close();
     render();
     $("#save-status").textContent = "✓ 进度已保存";
+    if ((data.honors.festivals.at(-1)?.year || 0) > priorFestivalYear)
+      showModal("ceremony");
   } catch (error) {
     notice(error.message, true);
   } finally {
@@ -78,6 +81,7 @@ function render() {
       <div><span>研究成果</span><strong>${Object.values(s.report.approvals).reduce((a, b) => a + b, 0)} <small>款自主产品</small></strong><small>创新 ${s.report.approvals.innovative} 款 · 授权 ${s.deals.length} 项</small></div>
       <div><span>专业积累</span><strong>${num(Object.values(s.knowledge).reduce((a, b) => a + b, 0))}</strong><small>最高阶位：${["", "见习", "精英", "大师", "传奇"][s.report.highest_rank]}</small></div>
     </section>
+    <div class="festival-strip"><span>第 ${s.honors.year} 届研究大会 · 距年末 ${s.honors.deadline - s.week} 周 · ${s.honors.entry ? "已报名 " + s.honors.categories.find((c) => c.key === s.honors.entry).name : "尚未报名"}</span><button data-tab="honors">荣誉与终局 →</button></div>
     <section class="goal-strip"><div><b>${esc(s.opening.name)} · ${s.objective_done ? "目标已达成" : "公司目标"}</b><p>${esc(s.opening.goal)}</p></div>${modalButton("选择开局路线", "new")}</section>
     ${s.game_over ? `<div class="warning"><b>公司已停止经营</b><p>连续三个月月底资金为负。研究履历仍可查看，新开局会先备份当前记录。</p>${modalButton("备份并开始新公司", "new")}</div>` : ""}
     ${s.career_done ? `<div class="hint">二十年回顾已开启 · 当前 ${s.report.score} 分。可以继续经营，或在「经营复盘」查看这段研究旅程。</div>` : ""}
@@ -86,6 +90,8 @@ function render() {
       ["characters", "研究社"],
       ["services", "技术服务"],
       ["market", "产品与授权"],
+      ["competition", "产业动态"],
+      ["honors", "荣誉与终局"],
       ["journal", "经营复盘"],
     ]
       .map(
@@ -94,7 +100,7 @@ function render() {
       )
       .join(
         "",
-      )}</nav><div id="view">${{ pipeline: pipeline, characters: characters, services: services, market: market, journal: journal }[activeTab]()}</div></section>
+      )}</nav><div id="view">${{ pipeline: pipeline, characters: characters, services: services, market: market, competition: competitionView, honors: honorsView, journal: journal }[activeTab]()}</div></section>
     <aside><section class="side-note"><h2>给社长的便签</h2><p>${hint()}</p><h3>现金流 / 每周</h3><p>工资 ${money(s.payroll)}<br>工资、租金与在研支出 ${money(s.costs_per_week)}<br>自有产品利润 ${money(s.weekly_profit)}<br>授权销售分成 ${money(s.weekly_royalty)}</p><small>当前现金流不包含未来新阶段、服务交付和条件里程碑。临床估计基于已有证据，不能保证后续成功。</small></section><h2>研究社日志</h2><ol class="journal-list">${s.journal
       .slice(-12)
       .reverse()
@@ -160,7 +166,7 @@ function characters() {
     )
     .join(
       "",
-    )}</div><div class="hero-grid">${state.heroes.map((h) => `<article class="hero-card ${rankClass(h.rank)}"><span class="rank-tag">${esc(h.rank_name)}</span><h3>${esc(h.name)}</h3><p>${esc(h.profession_name)} · 能力 ${h.ability}</p><p class="muted">${esc(h.story)}</p><div class="hero-numbers"><span>经验 <b>${h.xp}</b></span><span>项目履历 <b>${h.cases.length}</b></span><span>成员 <b>${h.members}</b></span></div><p>${h.ability >= 55 ? "已具备" : "成长方向"}：<b>${esc(h.skill)}</b>；高阶能力需要对应研究与资源。</p><p>${h.busy ? `正在负责：${esc(h.busy)}` : "目前空闲"} · 工资 ${money(h.weekly_salary)} / 周</p>${h.rank < 4 ? `<details><summary>晋升${["", "", "精英", "大师", "传奇"][h.rank + 1]}的条件</summary><p>${checks(h.promotion)}</p><p>晋阶费用 ${money(h.promotion_cost)}</p></details>` : '<p class="good">已达传奇阶位，可通过带教培养新的研究力量。</p>'}<div class="actions">${button("专业培训", "train", { character: h.id }, "", !!h.busy)}${h.rank < 4 ? button("晋阶突破", "promote", { character: h.id }, "primary", !!h.busy || !h.promotion.every((c) => c.ok)) : ""}${modalButton("配置团队", "team", h.id)}${modalButton("导师课题", "mentor", h.id)}</div></article>`).join("")}</div><section class="project-card"><h3>${esc(state.facility.name)}</h3><p>人数 ${state.headcount}/${state.facility.capacity} · 自营临床 ${state.clinical_used}/${state.facility.slots} · 生产线 ${state.lines_used}/${state.facility.lines}</p>${state.next_facility ? `<p>下一级 ${esc(state.next_facility.name)}：${money(state.next_facility.cost)}，租金 ${money(state.next_facility.rent)} / 周。</p>${button("扩建研究场地", "upgrade", {}, "primary")}` : "已建成星火科学城。"}</section>`;
+    )}</div><div class="hero-grid">${state.heroes.map((h) => `<article class="hero-card ${rankClass(h.rank)}"><span class="rank-tag">${esc(h.rank_name)}</span><h3>${esc(h.name)}</h3><p>${esc(h.profession_name)} · 能力 ${h.ability}</p><p class="muted">${esc(h.story)}</p><p><b>${esc(h.trait.name)}</b> · ${esc(h.trait.description)}</p><p>${h.focus_info ? `专长：<b>${esc(h.focus_info.name)}</b> · ${esc(h.focus_info.description)}` : h.rank >= 2 ? modalButton("选择长期专长", "focus", h.id) : "晋升精英后可选择深研或组织专长。"}</p><div class="hero-numbers"><span>经验 <b>${h.xp}</b></span><span>项目履历 <b>${h.cases.length}</b></span><span>成员 <b>${h.members}</b></span></div><p>${h.ability >= 55 ? "已具备" : "成长方向"}：<b>${esc(h.skill)}</b>；高阶能力需要对应研究与资源。</p><p>${h.busy ? `正在负责：${esc(h.busy)}` : "目前空闲"} · 工资 ${money(h.weekly_salary)} / 周</p>${h.rank < 4 ? `<details><summary>晋升${["", "", "精英", "大师", "传奇"][h.rank + 1]}的条件</summary><p>${checks(h.promotion)}</p><p>晋阶费用 ${money(h.promotion_cost)}</p></details>` : '<p class="good">已达传奇阶位，可通过带教培养新的研究力量。</p>'}<div class="actions">${button("专业培训", "train", { character: h.id }, "", !!h.busy)}${h.rank < 4 ? button("晋阶突破", "promote", { character: h.id }, "primary", !!h.busy || !h.promotion.every((c) => c.ok)) : ""}${modalButton("配置团队", "team", h.id)}${modalButton("导师课题", "mentor", h.id)}</div></article>`).join("")}</div><section class="project-card"><h3>${esc(state.facility.name)}</h3><p>人数 ${state.headcount}/${state.facility.capacity} · 自营临床 ${state.clinical_used}/${state.facility.slots} · 生产线 ${state.lines_used}/${state.facility.lines}</p>${state.next_facility ? `<p>下一级 ${esc(state.next_facility.name)}：${money(state.next_facility.cost)}，租金 ${money(state.next_facility.rent)} / 周。</p>${button("扩建研究场地", "upgrade", {}, "primary")}` : "已建成星火科学城。"}</section>`;
 }
 function services() {
   return `<h2>让专业，也能支持现金流</h2><p class="muted">每 12 周更新有限的订单。服务会占用负责人，重复常规任务的成长逐渐减少。</p><div class="card-grid">${state.orders.map((o) => `<article class="project-card"><h3>${esc(o.name)}</h3><p>交付 ${o.weeks} 周 · 回款 ${money(o.reward)} · 材料 ${money(o.cost)}</p><p>需要 ${esc(state.professions[o.profession])} 能力 ${o.requirement}</p>${o.taken ? '<span class="badge">本期已接受</span>' : modalButton("安排交付", "service", o.id, "primary")}</article>`).join("")}</div><h3>正在进行的课题与订单</h3>${state.jobs.length ? state.jobs.map((j) => `<div class="job-line"><b>${esc(j.name)}</b><span>剩余 ${j.left} 周</span></div>`).join("") : empty("暂时没有进行中的订单或培训。")}`;
@@ -187,6 +193,9 @@ const categoryNames = {
   collaboration: "合作课题",
   staffing: "团队调整",
   severance: "离职安排",
+  awards: "年度奖金",
+  specialization: "角色专长",
+  independent_research: "独立复核与随访",
 };
 function market() {
   return `<h2>产品与合作</h2><p class="muted">成功带来长期回报。合同总额与未来销售都不等于今天的现金。</p><div class="business-totals"><div>首付款<strong>${money(state.income.upfront)}</strong></div><div>里程碑已到账<strong>${money(state.income.milestones)}</strong></div><div>累计销售分成<strong>${money(state.income.royalties)}</strong></div></div><h3>自主产品</h3>${
@@ -198,7 +207,7 @@ function market() {
       )
       .join("") ||
     empty("第一款产品上市后，会在这里看到导入、现金回流与生命周期。")
-  }<h3>授权与共同开发</h3>${state.deals.map((d) => `<article class="project-card"><div class="card-title"><h3>${esc(state.projects.find((p) => p.id === d.project)?.name)}</h3><span class="badge">${{ developing: "合作方开发中", approved: "已获批，按销售分成", failed: "开发未成功" }[d.status]}</span></div><p>${esc(d.partner)} · ${esc(d.name)} · 销售额分成 ${num(d.royalty * 100)}%</p><p>首付款 ${money(d.upfront)} 已到账 · 已收里程碑 ${money(d.received_milestones)}<br>累计分成 ${money(d.royalties)} · 当前 ${money(d.weekly_royalty)} / 周</p><p>我方后续费用比例 ${num(d.cost_share * 100)}% · 剩余承诺 ${money(d.remaining_cost * d.cost_share)} · 已付 ${money(d.owner_spent)}</p>${d.status === "developing" ? `<p>当前阶段还需 ${d.left} 周，获批前仍可能失败。</p>` : ""}</article>`).join("") || empty("创新项目通过临床前或 II 期后，可在阶段结果中比较合作报价。")}<h3>公开竞争管线</h3><div class="card-grid">${state.rivals.map((r) => `<article class="project-card"><h3>${esc(r.name)}</h3><p>${esc({ lung: "肺癌", lipid: "血脂管理", inflammation: "炎症疾病" }[r.market] || r.market)} · ${r.active ? "当前在售" : `预计第 ${Math.floor(r.launch / 48) + 1} 年进入市场`}</p><small>分流相应领域销售；审批标准不随年份无限上涨。</small></article>`).join("")}</div>`;
+  }<h3>授权与共同开发</h3>${state.deals.map((d) => `<article class="project-card"><div class="card-title"><h3>${esc(state.projects.find((p) => p.id === d.project)?.name)}</h3><span class="badge">${{ developing: "合作方开发中", approved: "已获批，按销售分成", failed: "开发未成功" }[d.status]}</span></div><p>${esc(d.partner)} · ${esc(d.name)} · 销售额分成 ${num(d.royalty * 100)}%</p><p>首付款 ${money(d.upfront)} 已到账 · 已收里程碑 ${money(d.received_milestones)}<br>累计分成 ${money(d.royalties)} · 当前 ${money(d.weekly_royalty)} / 周</p><p>我方后续费用比例 ${num(d.cost_share * 100)}% · 剩余承诺 ${money(d.remaining_cost * d.cost_share)} · 已付 ${money(d.owner_spent)}</p>${d.status === "developing" ? `<p>当前阶段还需 ${d.left} 周，获批前仍可能失败。</p>` : ""}</article>`).join("") || empty("创新项目通过临床前或 II 期后，可在阶段结果中比较合作报价。")}<p>产业动态会公布对手的方向、阶段、延迟与失败。</p><button data-tab="competition">查看产业动态 →</button>`;
 }
 function journal() {
   const r = state.report;
@@ -230,7 +239,7 @@ function formFrame(type, title, body, id = "") {
 function showModal(type, id = "") {
   const p = state.projects.find((p) => p.id === id),
     h = state.heroes.find((h) => h.id === id);
-  let html = "";
+  let html = extensionModal(type, h, id);
   if (type === "project")
     html = formFrame(
       type,
@@ -347,7 +356,7 @@ function showModal(type, id = "") {
     );
   }
   if (type === "roster")
-    html = `<h2 id="modal-title">伙伴图鉴 · 从见习到传奇</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><p>所有加入条件公开。专业成果会吸引更强的伙伴，普通角色也可通过晋阶走到传奇。</p><div class="roster-grid">${state.roster.map((c) => `<article class="hero-card ${rankClass(c.tier)}"><span class="rank-tag">${esc(c.rank_name)}</span><h3>${esc(c.name)}</h3><p>${esc(c.profession_name)} · 能力 ${c.ability}</p><p>${esc(c.story)}</p><p>${checks(c.requirements)}</p><p>签约 ${money(c.cost)}</p>${c.connecting ? '<span class="badge">联合课题进行中</span>' : c.tier >= 3 && !c.connected ? `<button data-modal="collaborate" data-id="${c.key}" ${!c.unlocked ? "disabled" : ""}>合作课题 · ¥120 万</button>` : button("邀请加入", "hire", { character: c.key }, "primary", !c.unlocked)}</article>`).join("")}</div>`;
+    html = `<h2 id="modal-title">伙伴图鉴 · 从见习到传奇</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><p>所有加入条件公开。专业成果会吸引更强的伙伴，普通角色也可通过晋阶走到传奇。</p><div class="roster-grid">${state.roster.map((c) => `<article class="hero-card ${rankClass(c.tier)}"><span class="rank-tag">${esc(c.rank_name)}</span><h3>${esc(c.name)}</h3><p>${esc(c.profession_name)} · 能力 ${c.ability}</p><p>${esc(c.story)}</p><p><b>${esc(c.trait.name)}</b> · ${esc(c.trait.description)}</p><p>${checks(c.requirements)}</p><p>签约 ${money(c.cost)}</p>${c.connecting ? '<span class="badge">联合课题进行中</span>' : c.tier >= 3 && !c.connected ? `<button data-modal="collaborate" data-id="${c.key}" ${!c.unlocked ? "disabled" : ""}>合作课题 · ¥120 万</button>` : button("邀请加入", "hire", { character: c.key }, "primary", !c.unlocked)}</article>`).join("")}</div>`;
   if (type === "new")
     html = formFrame(
       type,
@@ -362,7 +371,7 @@ function showModal(type, id = "") {
         )}</div><p>当前进度先备份到本地，新版使用独立存档。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
     );
   if (type === "help")
-    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。成员主要改善执行速度；人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>当前版本的时间、指标和经济数值为游戏规则，流程参考研发逻辑。原版 8877 和 v0.3 的 8878 保留独立运行。</p>`;
+    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。成员主要改善执行速度；人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>当前版本的时间、指标和经济数值为游戏规则，流程参考研发逻辑。旧版 8877、8878、8879 保留独立运行。荣誉版在 8880 使用独立存档。</p>`;
   $("#modal-body").innerHTML = html;
   if (!$("#modal").open) $("#modal").showModal();
   if (type === "phase") updatePreview();
@@ -379,6 +388,7 @@ function formArgs(form) {
     id = form.dataset.id;
   const heroes = data.getAll("heroes");
   const mapping = {
+    study: ["independent_study", { product: id, heroes }],
     project: ["start_project", { catalog: data.get("catalog"), heroes }],
     phase: [
       "run_phase",
@@ -474,7 +484,7 @@ function updateNotes() {
     );
     if (c)
       $("#catalog-note").innerHTML =
-        `<p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>`;
+        `<p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>`;
   }
   const ef = $('form[data-form="experiment"]');
   if (ef) {

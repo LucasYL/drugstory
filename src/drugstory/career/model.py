@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 4
+VERSION = 5
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem"}
@@ -190,19 +190,10 @@ def new_game(seed=42, scenario="foundation"):
     }
     if scenario == "platform":
         s["knowledge"]["proc"] = 8
-    for index, (name, market) in enumerate(
-        [("银叶制药", "lipid"), ("赤杉研究所", "inflammation"), ("蓝鲸药业", "lung")]
-    ):
-        s["rivals"].append(
-            {
-                "name": name,
-                "market": market,
-                "launch": 192 + index * 48,
-                "end": 432 + index * 48,
-                "active": False,
-                "cycles": 0,
-            }
-        )
+    from . import competition, honors
+
+    competition.initialize(s)
+    honors.initialize(s)
     log(s, "街角实验室开张了。普通角色也能成长；先积累现金流和真正的专业经验。")
     return s
 
@@ -216,7 +207,7 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") == VERSION,
-            "养成版只读取独立 v4 存档；旧版请继续在 8877 或 8878 游玩",
+            "荣誉版只读取独立 v5 存档；v4 请在 8879 继续游玩，其他旧版保留原入口",
         )
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")

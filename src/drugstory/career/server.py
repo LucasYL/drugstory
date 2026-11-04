@@ -19,7 +19,7 @@ from drugstory.career.model import load, new_game
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/career-autosave.json")
+DEFAULT_SAVE = Path("saves/honors-autosave.json")
 
 
 class Conflict(ValueError):
@@ -74,7 +74,7 @@ class GameSession:
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8879) -> ThreadingHTTPServer:
+def create_server(session: GameSession, port: int = 8880) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
@@ -117,7 +117,7 @@ def create_server(session: GameSession, port: int = 8879) -> ThreadingHTTPServer
                         "application/json; charset=utf-8",
                         download=f"drugstory-week-{session.state['week']}.json",
                     )
-            elif path in ("/", "/app.js", "/style.css"):
+            elif path in ("/", "/app.js", "/honors.js", "/style.css"):
                 name = {"/": "index.html"}.get(path, path.lstrip("/"))
                 kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
                 self.send_bytes((ASSETS / name).read_bytes(), f"{kind}; charset=utf-8")
@@ -158,8 +158,8 @@ def create_server(session: GameSession, port: int = 8879) -> ThreadingHTTPServer
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 研究社养成版 v0.4")
-    parser.add_argument("--port", type=int, default=8879)
+    parser = argparse.ArgumentParser(description="新药物语 · 年度荣誉版 v0.5")
+    parser.add_argument("--port", type=int, default=8880)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)

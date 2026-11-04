@@ -6,6 +6,7 @@ import copy
 import inspect
 
 from . import economy as e
+from . import honors, talents
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
 from .model import (
@@ -545,6 +546,7 @@ def advance(s, weeks: int = 4):
                 finish_phase(s, p)
         partner_step(s)
         e.market_step(s)
+        honors.annual(s)
         s["minimum_cash"] = min(s["minimum_cash"], s["cash"])
         if s["week"] % 4 == 0:
             s["negative_months"] = s["negative_months"] + 1 if s["cash"] < 0 else 0
@@ -560,13 +562,60 @@ def advance(s, weeks: int = 4):
 
 def next_event(s):
     """Stop when someone becomes available, including non-blocking jobs and partner data."""
-    remaining = [j["left"] for j in s["jobs"]]
+    remaining = [48 - s["week"] % 48, *[j["left"] for j in s["jobs"]]]
     remaining += [p["left"] for p in s["projects"] if p["status"] in ("screening", "running")]
     remaining += [d["left"] for d in s["deals"] if d["status"] == "developing"]
     for _ in range(min([48, *remaining])):
         advance(s, 1)
         if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
             break
+
+
+def nominate(s, category: str):
+    check(category in honors.AWARDS, "请选择年度奖项")
+    option = next(c for c in honors.categories(s) if c["key"] == category)
+    check(option["eligible"], option["requirement"])
+    check(s["week"] % 48 < 46, "本届报名已截止，请准备下一年")
+    s["season"]["entry"] = category
+    log(s, f"已报名{option['name']}。本年只选一个方向；第 46 周起锁定，年末按实际成果评选。")
+
+
+def specialize(s, character: str, track: str):
+    h = hero(s, character)
+    check(track in talents.FOCUS and h["rank"] >= 2 and not h.get("focus"), "精英以上可选择一次长期专长")
+    free_team(s, [character])
+    available_money(s, 90)
+    spend(s, 90, "specialization")
+    h["focus"] = track
+    log(s, f"{h['name']}确立{talents.FOCUS[track]['name']}，形成长期研究风格。")
+
+
+def independent_study(s, product: str, heroes: list):
+    option = next((v for v in honors.proof_options(s) if v["product"] == product), None)
+    check(option is not None and option["available"], "这款产品尚未满足独立验证条件，或已有不能重复的验证结果")
+    free_team(s, heroes)
+    roles = ("bio", "clinical") if option["step"] == 0 else ("clinical", "tox")
+    for role in roles:
+        check(
+            any(
+                hero(s, key)["profession"] == role and hero(s, key)["rank"] >= 3 and ability(hero(s, key)) >= 60
+                for key in heroes
+            ),
+            "需要两位对应专业、能力至少 60 的大师",
+        )
+    available_money(s, option["cost"])
+    spend(s, option["cost"], "independent_research")
+    s["jobs"].append(
+        {
+            "kind": "independent",
+            "name": option["name"] + " · " + option["title"],
+            "product": product,
+            "step": option["step"],
+            "heroes": heroes,
+            "left": option["weeks"],
+        }
+    )
+    log(s, f"启动{option['title']}：{option['weeks']} 周、¥{option['cost']} 万；阴性结果同样留档。")
 
 
 COMMANDS = {
@@ -595,6 +644,9 @@ COMMANDS = {
         set_production,
         advance,
         next_event,
+        nominate,
+        specialize,
+        independent_study,
     ]
 }
 
@@ -627,6 +679,7 @@ def execute(state, command, args=None):
     if done and not candidate["objective_done"]:
         candidate["objective_done"] = True
         log(candidate, "公司路线目标达成！获得 100 经营分，可以继续培养团队、探索新项目。")
+    honors.update(candidate)
     candidate["actions"].append({"week": state["week"], "command": command, "args": copy.deepcopy(args)})
     return candidate
 

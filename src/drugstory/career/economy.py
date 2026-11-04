@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+from . import competition, honors, talents
 from .content import CATALOG, FACILITIES, PATHS, PROFESSIONS, PROMOTION, RANKS, ROSTER, TERMS
 from .model import earn, gain_work, log, payroll, rand, spend
 from .science import outlook, plan_phase, selected
@@ -79,7 +80,7 @@ def quote(s, p, kind):
     if chance < 0.12 or c["belief"]["effect"]["mean"] < 57:
         return None
     spec, t = CATALOG[p["catalog"]], TERMS[kind]
-    rivalry = sum(1 for r in s["rivals"] if r["active"] and r["market"] == spec["market"])
+    rivalry = competition.pressure(s, spec["market"])
     occupancy = sum(1 for d in s["products"] if d["active"] and d["market"] == spec["market"])
     market = (1 + spec["difficulty"] * 0.35) / (1 + 0.20 * (rivalry + occupancy))
     value = (0.7 + min(0.7, chance)) * market
@@ -166,7 +167,7 @@ def expected_sales(s, d):
         return 0, 0
     ramp = 12 if d["kind"] == "generic" else 40
     curve = min(1, (age + 1) / ramp) * max(0.2, 1 - max(0, age - life * 0.65) / (life * 0.5))
-    competitors = sum(1 for r in s["rivals"] if r["active"] and r["market"] == d["market"])
+    competitors = competition.pressure(s, d["market"])
     siblings = sum(
         1
         for x in s["products"]
@@ -180,16 +181,7 @@ def expected_sales(s, d):
 
 
 def market_step(s):
-    for r in s["rivals"]:
-        if not r["active"] and s["week"] >= r["launch"]:
-            r["active"] = True
-            log(s, f"竞争动态：{r['name']}的 {r['market']} 产品进入市场，影响同领域销售，不改变临床判定。")
-        elif r["active"] and s["week"] >= r["end"]:
-            r["active"] = False
-            r["cycles"] += 1
-            r["launch"] = s["week"] + 96
-            r["end"] = r["launch"] + 240
-            log(s, f"竞争动态：{r['name']}旧产品退出；新管线预计 96 周后上市。")
+    competition.step(s)
     for d in s["products"]:
         life = {"generic": 576, "improved": 432, "innovative": 480}[d["kind"]]
         if d["active"] and s["week"] - d["launched"] >= life:
@@ -247,6 +239,8 @@ def company_score(s):
         + role_points
         + sum(s["knowledge"].values()) / 5
         + len(s["deals"]) * 30
+        + len(s["awards"]) * 20
+        + len(s["legacies"]) * 500
         + (100 if s["objective_done"] else 0)
         + max(0, s["cash"] - s["capital"]) / 1500
     )
@@ -262,6 +256,10 @@ def costs_per_week(s):
 
 
 def finish_job(s, job):
+    if job["kind"] == "independent":
+        honors.finish_proof(s, job)
+        gain_work(s, job["heroes"], "independent-" + job["product"] + str(job["step"]), 10)
+        return
     if job["kind"] == "service":
         earn(s, job["reward"], "services")
         s["services_done"] += 1
@@ -272,11 +270,11 @@ def finish_job(s, job):
     elif job["kind"] == "train":
         h = next(h for h in s["heroes"] if h["id"] == job["heroes"][0])
         h["training"] += 3
-        h["xp"] += 5
+        h["xp"] += 5 + (2 if talents.trait(h["id"])["key"] == "learner" else 0)
         log(s, f"{h['name']}完成培训。晋阶仍需要真实项目履历。")
     elif job["kind"] == "mentor":
         pupil = next(h for h in s["heroes"] if h["id"] == job["heroes"][1])
-        pupil["xp"] += 10
+        pupil["xp"] += 10 + (5 if talents.has(s, [job["heroes"][0]], "mentor") else 0)
         pupil["training"] += 2
         pupil["mentored"].append(job["heroes"][0])
         log(s, f"{pupil['name']}完成导师课题，专业经验增加；还需要自己的项目履历。")

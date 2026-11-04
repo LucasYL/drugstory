@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from statistics import NormalDist
 
+from . import talents
 from .content import CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
 from .model import ability, check, hero, power, rand
 
@@ -77,6 +78,7 @@ def generate_candidates(s, p):
             c["truth"][stat] = min(98, max(15, actual))
             c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
             sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
+            sigma *= 0.9 if talents.has(s, p["team"], "screen") else 1
             observe(s, p, c, stat, sigma, "screen")
         p["candidates"].append(c)
 
@@ -101,8 +103,13 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         skill = 60
     members = sum(min(hero(s, h)["members"], 2 + hero(s, h)["rank"]) for h in ids)
     speed = 1 + min(0.45, members / max(1, len(ids)) * 0.10)
-    weeks = math.ceil(d["weeks"] * strategy["time"] / speed)
+    relevant = [h for h in s["heroes"] if h["id"] in ids and h["profession"] in d["roles"]]
+    efficiency = 0.08 * any(h.get("focus") == "efficiency" for h in relevant)
+    efficiency += 0.08 * talents.has(s, [h["id"] for h in relevant], "speed")
+    weeks = math.ceil(d["weeks"] * strategy["time"] * max(0.85, 1 - efficiency) / speed)
     cost = d["cost"] * strategy["cost"] * (1.3 if cro and not partner else 1)
+    if key not in CLINICAL and talents.has(s, [h["id"] for h in relevant], "thrift"):
+        cost *= 0.95
     if p["kind"] == "innovative":
         cost *= 1.2 if CATALOG[p["catalog"]]["difficulty"] else 1
     if key == "review" and p["kind"] != "generic":
@@ -121,6 +128,20 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         else:
             endpoint_skill = 0.7 * specialist + 0.3 * skill
         noise_by_stat[stat] = d["noise"] * strategy["noise"] * max(0.65, 1.2 - endpoint_skill / 160)
+    for stat in noise_by_stat:
+        precise = any(
+            h["id"] in ids
+            and h.get("focus") == "precision"
+            and (h["profession"] == STAT_ROLE[stat] or h["profession"] == "clinical" and key in CLINICAL)
+            for h in s["heroes"]
+        )
+        noise_by_stat[stat] *= 0.9 if precise else 1
+        if (stat == "quality" and talents.has(s, ids, "quality")) or (
+            stat == "safety" and talents.has(s, ids, "safety")
+        ):
+            noise_by_stat[stat] *= 0.94
+        if key in CLINICAL and talents.has(s, ids, "clinical"):
+            noise_by_stat[stat] *= 0.95
     noise = sum(noise_by_stat.values()) / len(noise_by_stat)
     result = {
         "weeks": weeks,
@@ -252,7 +273,7 @@ def finish_experiment(s, p):
         line = "分层研究完成：已有亚组观察，仍需结合临床专业能力判断是否采用。"
     else:
         if kind == "refine":
-            delta = 3 + skill / 20
+            delta = 3 + skill / 20 + (1 if talents.has(s, p["team"], "refine") else 0)
             trade = {"effect": "safety", "safety": "effect", "exposure": "quality", "quality": "exposure"}[stat]
             if p["kind"] == "generic" and stat == "safety":
                 trade = "quality"

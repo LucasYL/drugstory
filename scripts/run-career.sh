@@ -7,4 +7,4 @@ if [ ! -x "$CAREER_ROOT/.venv/bin/python3" ]; then
     exit 1
 fi
 exec "$CAREER_ROOT/.venv/bin/python3" -m drugstory.career.server \
-    --port 8879 --save-path "$CAREER_ROOT/saves/career-autosave.json" "$@"
+    --port 8880 --save-path "$CAREER_ROOT/saves/honors-autosave.json" "$@"

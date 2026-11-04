@@ -1,7 +1,7 @@
 [project]
 name = "drugstory"
-version = "0.4.0"
-description = "新药物语（暂定名）：开罗式的制药经营游戏"
+version = "0.5.0"
+description = "新药物语：角色养成、药物研发与产业竞争的文字经营游戏"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []

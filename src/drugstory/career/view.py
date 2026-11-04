@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 
+from . import competition, engine, honors, talents
 from . import economy as e
-from . import engine
 from . import science as sc
 from .content import (
     CATALOG,
@@ -181,6 +181,8 @@ def snapshot(s):
                 "promotion_cost": PROMOTION[h["rank"] + 1]["cost"] if h["rank"] < 4 else 0,
                 "weekly_salary": round(1.3 + h["rank"] * 0.65 + ability(h) * 0.018 + h["members"] * 0.42, 1),
                 "story": ROSTER[h["id"]]["story"],
+                "trait": talents.trait(h["id"]),
+                "focus_info": talents.FOCUS.get(h.get("focus")),
             }
         )
     roster = []
@@ -200,12 +202,17 @@ def snapshot(s):
                 "connected": key in s["connections"],
                 "connecting": any(j.get("target") == key for j in s["jobs"]),
                 "skill": SKILLS[c["profession"]],
+                "trait": talents.trait(key),
             }
         )
     catalogs = [
         {
             **c,
             "kind_name": KINDS[c["kind"]],
+            "competition": round(competition.pressure(s, c["market"]), 2),
+            "announced_rivals": [
+                r["name"] for r in s["rivals"] if r["status"] == "developing" and r["pipeline_market"] == c["market"]
+            ],
             "requirements": [{"text": label, "ok": ok} for label, ok in engine.catalog_requirements(s, k)],
             "unlocked": all(ok for _, ok in engine.catalog_requirements(s, k)),
             "occupied": any(p["catalog"] == k and p["status"] in ACTIVE for p in s["projects"])
@@ -218,7 +225,7 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.4",
+        "version": "0.5",
         "date": date(s["week"]),
         "week": s["week"],
         "cash": s["cash"],
@@ -247,7 +254,9 @@ def snapshot(s):
         "projects": [project_view(s, p) for p in s["projects"]],
         "products": s["products"],
         "deals": [{k: v for k, v in d.items() if k != "execution"} for d in s["deals"]],
-        "rivals": s["rivals"],
+        "rivals": competition.public(s),
+        "honors": honors.view(s),
+        "focuses": talents.FOCUS,
         "orders": e.orders(s),
         "jobs": s["jobs"],
         "journal": s["journal"][-30:],
