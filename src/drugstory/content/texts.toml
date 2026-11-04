@@ -9,6 +9,19 @@ tiers = { "2" = "绝配", "1" = "好", "0" = "一般", "-1" = "差", "-2" = "很
 actions = { inhibit = "抑制", activate = "激活", deplete = "清除", restore = "补上缺失的功能", immunize = "诱导免疫" }
 tissues = { systemic = "全身", liver = "肝脏", cns = "中枢", solid_tumor = "实体瘤", blood = "血液肿瘤", immune = "免疫细胞" }
 
+# 第 11 节 成就
+[achievements]
+first_approval = { name = "第一个批文", desc = "第一次有药获批" }
+perfect_match = { name = "天作之合", desc = "笔记本里第一次记下绝配" }
+hall_of_fame = { name = "名留青史", desc = "第一个进名人堂的药" }
+revenue_100m = { name = "亿元俱乐部", desc = "某一年的营收超过 1 亿" }
+revenue_1b = { name = "十亿大药", desc = "某一年的营收超过 10 亿" }
+staff_100 = { name = "百人团队", desc = "总人数超过 100" }
+pipeline_5 = { name = "管线齐头并进", desc = "同时有 5 个项目在研发或临床" }
+all_modalities = { name = "全能平台", desc = "解锁全部分子类型" }
+rare_disease = { name = "罕见病的希望", desc = "一个罕见病的药获批" }
+alzheimer = { name = "攻克阿尔茨海默", desc = "一个阿尔茨海默的药进名人堂" }
+
 # 第 6 节 隐患：通用的按属性分，分子类型专属的会和通用的一起抽
 [hazards.general]
 safety = ["代谢产物有肝毒性", "心脏毒性（hERG 信号）", "骨髓抑制", "致畸风险"]

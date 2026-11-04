@@ -8,7 +8,7 @@ career_years = 20
 
 # 第 12 节 新手期
 [start]
-cash = 3000
+cash = 4000
 facility = "incubator"
 targets = ["egfr", "pd1", "tnf", "jak"]
 modalities = ["small_molecule", "mab"]
@@ -34,8 +34,10 @@ members = 2
 # 5.1、5.2 节 负责人与团队
 [team]
 output_divisor = 40
-member_weight = 0.5
+member_weight = 0.7           # 规模系数 = 1 + 0.7 × 有效人数 ^ 0.5
+member_exponent = 0.5
 overflow_weight = 0.5
+max_per_project = 4
 member_salary = 1.5
 member_hire_fee = 2
 member_severance = 1.5
@@ -77,19 +79,21 @@ tier_multipliers = [0.4, 0.7, 1.0, 1.2, 1.5]
 
 # 8.2、8.5 节 打分
 [scoring]
-base_standard = 250
-yearly_growth = 0.06
+base_standard = 380
+yearly_growth = 0.09
+standard_of_care_step = 0.25  # 同靶点每多一个已上市的药，III 期疗效标准再高 25%
 score_scale = 7
+noise = 1                    # 每位专家的分数随机 -1、0、+1
 min_score = 1
 max_score = 10
-hall_of_fame = 85
+hall_of_fame = 90
 
 # 8.1 节 临床各期和审评。standard 是阶段系数；pass 是单项过关线；pass_total 是总分过关线
 [[phases]]
 key = "I"
 name = "I 期"
 weeks = 8
-cost = 150
+cost = 100
 data = 5
 weight = 1
 experts = ["safety", "druggability"]
@@ -100,7 +104,7 @@ pass = { safety = 4 }
 key = "II"
 name = "II 期"
 weeks = 16
-cost = 400
+cost = 250
 data = 10
 weight = 2
 experts = ["efficacy", "safety"]
@@ -111,18 +115,19 @@ pass = { efficacy = 5 }
 key = "III"
 name = "III 期"
 weeks = 24
-cost = 700
+cost = 450
 data = 15
 weight = 3
 experts = ["efficacy", "safety"]
 standard = { efficacy = 1.15, safety = 1.0 }
-pass = { efficacy = 6, safety = 5 }
+pass = { efficacy = 6, safety = 4 }
+vs_standard_of_care = true
 
 [[phases]]
 key = "NDA"
 name = "上市审评"
 weeks = 8
-cost = 50
+cost = 40
 data = 5
 weight = 4
 experts = ["efficacy", "druggability", "safety", "manufacturability"]
@@ -224,6 +229,14 @@ bonus_per_10 = 0.10
 
 [finance]
 bankrupt_months = 3
+
+# 第 11 节 成就的门槛（营收按万元算）
+[achievements]
+revenue_100m = 10000
+revenue_1b = 100000
+staff = 100
+pipeline = 5
+alzheimer_target = "abeta"
 
 # 第 11 节 20 年结算：总分 = 累计利润（亿元）× 10 + 获批数 × 20 + 名人堂数 × 50 + 成就数 × 30
 [final_score]

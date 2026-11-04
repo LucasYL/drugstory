@@ -27,7 +27,7 @@ def test_balance_overrides_change_numbers_without_touching_files():
     c = load_content(balance_overrides={"scoring.yearly_growth": 0.01, "start.cash": 9999})
     assert c.balance.scoring.yearly_growth == 0.01
     assert c.balance.start.cash == 9999
-    assert default_content().balance.start.cash == 3000
+    assert default_content().balance.start.cash != 9999  # 默认内容不受影响
     with pytest.raises(ContentError, match="balance 里没有 scoring.nope"):
         load_content(balance_overrides={"scoring.nope": 1})
 
