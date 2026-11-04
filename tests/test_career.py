@@ -38,8 +38,11 @@ def complete_phase(s, ids=None, mode="internal", plan="standard"):
         ids = ["beaker", "pill"] if sc.stage_key(p) not in ("I", "II", "III", "bridge", "confirm", "be") else []
         mode = "cro" if not ids else mode
     s = g.execute(s, "run_phase", {"project": "1", "heroes": ids, "mode": mode, "plan": plan})
-    while s["projects"][0]["status"] == "running":
-        s = g.execute(s, "advance", {"weeks": 48})
+    while s["projects"][0]["status"] in ("running", "checkpoint"):
+        if s["projects"][0]["status"] == "checkpoint":
+            s = g.execute(s, "trial_decision", {"project": "1", "choice": "keep"})
+        else:
+            s = g.execute(s, "advance", {"weeks": 48})
     return s
 
 
@@ -348,7 +351,7 @@ def test_replay_and_readonly_snapshot():
 
 
 def test_old_save_rejected_and_new_session_backups(tmp_path):
-    with pytest.raises(ValueError, match="v4"):
+    with pytest.raises(ValueError, match="v6"):
         loads(json.dumps({"version": 3}))
     path = tmp_path / "career.json"
     session = GameSession(path)

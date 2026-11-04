@@ -23,6 +23,8 @@ def choose(s, novice=False, remaining=960):
     cash = s["cash"] - committed(s)
     for p in s["projects"]:
         pid, status = p["id"], p["status"]
+        if status == "checkpoint":
+            return g.execute(s, "trial_decision", {"project": pid, "choice": "keep"})
         if status == "selecting":
             scores = []
             for i in range(3):

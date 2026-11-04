@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from . import competition, engine, honors, talents
+from . import challenge, competition, engine, honors, product_design, stories, talents, trial_choices
 from . import economy as e
 from . import science as sc
 from .content import (
@@ -25,10 +25,11 @@ from .content import (
     STATS,
     TERMS,
 )
-from .model import ACTIVE, DECISIONS, ability, busy, committed, date, payroll
+from .model import ACTIVE, DECISIONS, ability, busy, check, committed, date, payroll
 
 STATUS = {
     "screening": "筛选中",
+    "checkpoint": "临床中途决策",
     "selecting": "选择候选",
     "ready": "准备研究",
     "running": "研究进行中",
@@ -117,6 +118,10 @@ def project_view(s, p):
         else []
     )
     quotes = [q for kind in TERMS if (q := e.quote(s, p, kind)) is not None]
+    next_stage = None
+    if p["status"] == "result" and key != "review":
+        following = project_view(s, {**p, "index": p["index"] + 1, "status": "ready"})
+        next_stage = {k: following[k] for k in ("key", "phase", "question", "plans", "recommended", "recommended_mode")}
     return {
         k: p[k]
         for k in (
@@ -140,6 +145,11 @@ def project_view(s, p):
         )
     } | {
         "kind_name": KINDS[p["kind"]],
+        "product_profile": product_design.profile(p["catalog"]),
+        "design": p.get("design", "standard"),
+        "trial_decision": trial_choices.view(p),
+        "trial_history": p.get("trial_history", []),
+        "next_stage": next_stage,
         "status_name": STATUS[p["status"]],
         "active": p["status"] in ACTIVE,
         "deferred": p.get("deferred", False),
@@ -182,6 +192,7 @@ def snapshot(s):
                 "weekly_salary": round(1.3 + h["rank"] * 0.65 + ability(h) * 0.018 + h["members"] * 0.42, 1),
                 "story": ROSTER[h["id"]]["story"],
                 "trait": talents.trait(h["id"]),
+                "personal_project": stories.options(s, h),
                 "focus_info": talents.FOCUS.get(h.get("focus")),
             }
         )
@@ -209,6 +220,7 @@ def snapshot(s):
         {
             **c,
             "kind_name": KINDS[c["kind"]],
+            "product_profile": product_design.profile(c["key"]),
             "competition": round(competition.pressure(s, c["market"]), 2),
             "announced_rivals": [
                 r["name"] for r in s["rivals"] if r["status"] == "developing" and r["pipeline_market"] == c["market"]
@@ -225,7 +237,9 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.5",
+        "version": "0.6",
+        "challenge": challenge.view(s),
+        "market_capacity": {k: e.market_capacity(s, k) for k in challenge.CAPACITY},
         "date": date(s["week"]),
         "week": s["week"],
         "cash": s["cash"],
@@ -239,7 +253,12 @@ def snapshot(s):
         "reputation": s["reputation"],
         "knowledge": s["knowledge"],
         "facility": {**FACILITIES[s["facility"]], "level": s["facility"]},
-        "next_facility": FACILITIES[s["facility"] + 1] if s["facility"] < 3 else None,
+        "next_facility": {
+            **FACILITIES[s["facility"] + 1],
+            "upkeep": challenge.upkeep({**s, "facility": s["facility"] + 1}),
+        }
+        if s["facility"] < 3
+        else None,
         "headcount": engine.headcount(s),
         "clinical_used": engine.internal_usage(s),
         "lines_used": e.production_lines(s),
@@ -273,7 +292,10 @@ def snapshot(s):
 
 
 def phase_preview(s, args):
-    simulated = engine.execute(s, "run_phase", args)
+    p = next((p for p in s["projects"] if p["id"] == args["project"]), None)
+    check(p is not None, "没有这个研究项目")
+    command = "continue_and_run" if p["status"] == "result" else "run_phase"
+    simulated = engine.execute(s, command, args)
     p = next(p for p in simulated["projects"] if p["id"] == args["project"])
     execution = p["execution"]
     return {

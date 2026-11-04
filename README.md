@@ -1,8 +1,8 @@
-# 新药物语 · 年度荣誉版 v0.5
+# 新药物语 · 协作课题版 v0.6
 
 从街角实验室开始的文字制药经营游戏。用鼠标安排研发、培养有专业分工的角色，经营仿制药现金流，挑战改良与创新，选择自主上市或授权合作，最终留下值得记住的科学成果。
 
-[GitHub 仓库](https://github.com/LucasYL/drugstory) · [版本发布](https://github.com/LucasYL/drugstory/releases) · [本版模拟与试玩记录](design/v05-playtest.md)
+[GitHub 仓库](https://github.com/LucasYL/drugstory) · [版本发布](https://github.com/LucasYL/drugstory/releases) · [本版模拟与试玩记录](design/v06-playtest.md) · [2.5D 视觉与交互设计](design/ui-v06/README.md)
 
 ## 开始游玩
 
@@ -15,20 +15,37 @@ uv sync --dev
 ./scripts/run-career.sh
 ```
 
-打开 **http://127.0.0.1:8880/**。时间只在你点击推进时流动，成功操作后自动保存。
+打开 **http://127.0.0.1:8881/**。时间只在你点击推进时流动，成功操作后自动保存。
 
 ```bash
 # 自定义端口、种子和独立存档
-uv run drugstory-web --port 8880 --seed 42 --save-path saves/honors-autosave.json
+uv run drugstory-web --port 8881 --seed 42 --save-path saves/projects-autosave.json
 # 恢复同版本的导出存档
-uv run drugstory-web --load saves/my-v5.json --save-path saves/resumed-v5.json --port 8881
+uv run drugstory-web --load saves/my-v6.json --save-path saves/resumed-v6.json --port 8890
 ```
 
 新开公司会先备份原局；页面顶部可导出 JSON。服务器只监听本机，占用中的端口会报错退出，不会替换已有服务。
 
-**v0.5 使用 v5 存档，不直接读取 v4 或更早存档。** 请用对应版本继续旧局。现有本地 8877、8878、8879 的服务、代码与存档独立保留；本版位于新的目录，默认使用 `saves/honors-autosave.json`。
+**v0.6 使用 v6 存档，不直接读取 v5 或更早存档。** 请用对应版本继续旧局。现有本地 8877、8878、8879、8880 的服务、代码与存档独立保留；本版位于新的目录，默认使用 `saves/projects-autosave.json`。
 
-终端也使用同一套规则：`uv run drugstory --scenario foundation --seed 42`。输入 `help`、`view`、`next`；默认另存到 `saves/honors-cli.json`。
+终端也使用同一套规则：`uv run drugstory --scenario foundation --seed 42`。输入 `help`、`view`、`next`；默认另存到 `saves/projects-cli.json`。
+
+## 本版新内容与 2.5D 设计
+
+- **20 个个人课题。** 每位伙伴有专业故事与指定搭档专业；选交叉复现或联合交接，完成后永久获得相应协作方法，并抵一项晋阶履历要求。
+- **临床中途选择。** I/II/III 期、改良桥接与价值确认各有一个执行检查点。可以维持方案，也可改变随访、中心网络、时间和观察精度；不能靠付钱改变药物自身性质。
+- **减少重复点击。** 阶段结果可直接安排下一阶段；一次可核对并安排 1–3 个技术服务订单。
+- **可选产业竞逐。** 新公司可选，模式开局后固定。更强对手、有限领域容量和固定平台维护费；可选择节约、常规或精密维护，审批要求不因年份或财富上涨。默认仍是舒展经营。
+- **9 个产品特性。** 仿制与改良分别关注供货、均匀性、溶出、储存稳定、小片易服、杂质、长效依从性、耐受与给药便利；强化验证增加投入，取得支持后才带来相应商业效果。
+
+**2.5D 先做设计。** 柔和微缩研究所概念图与可点选的交互样稿在 `design/ui-v06/`。它演示房间导航、人物课题和关键选择，使用示例数据，尚未接入真实存档或人物动画。真实玩法仍在当前文字界面。
+
+```bash
+# 独立视觉样稿，建议与游戏同时保留
+python -m http.server 8882 --bind 127.0.0.1 --directory design/ui-v06
+# 可选挑战开局：使用另一份新存档
+uv run drugstory-web --difficulty competition --port 8890 --save-path saves/challenge-v6.json
+```
 
 ## 有什么可以玩
 
@@ -50,8 +67,11 @@ uv run pytest -q
 uv run ruff check .
 node --check src/drugstory/career/web/app.js
 node --check src/drugstory/career/web/honors.js
-uv run python scripts/playtest-v05.py --seeds 12  # 六种经营策略，各运行最多二十年
-uv run python scripts/prepare-v05-playtests.py   # 正常操作生成鼠标试玩检查点
+node --check src/drugstory/career/web/projects.js
+node --check design/ui-v06/concept.js
+uv run python scripts/playtest-v06.py --seeds 6 --output .artifacts/v06-first
+# 六策略 × 两模式 × 六种子，各运行最多二十年
+uv run python scripts/prepare-v06-playtests.py   # 从上述正常操作生成鼠标试玩检查点
 ```
 
 规则位于 `src/drugstory/career/`。`engine.py` 是网页、终端、模拟共用的事务式入口；`science.py` 管证据，`economy.py` 管经营与成长；`talents.py`、`competition.py`、`honors.py` 管特质、对手与荣誉。预览与读取界面不修改存档；非法操作、过期请求和写盘失败不会提交新状态。
@@ -61,6 +81,8 @@ uv run python scripts/prepare-v05-playtests.py   # 正常操作生成鼠标试�
 - [研发与养成规格](design/growth-redesign.md)
 - [v0.4 试玩记录](design/v04-playtest.md)
 - [v0.5 设计判断、216 局模拟与鼠标试玩](design/v05-playtest.md)
+- [v0.6 多路线模拟、协作与临床决策](design/v06-playtest.md)
+- [微缩研究所设计、素材与分步实现方案](design/ui-v06/README.md)
 - [版本历史](CHANGELOG.md)
 - [发布与存档保护约定](AGENTS.md)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from statistics import NormalDist
 
-from . import talents
+from . import challenge, product_design, stories, talents
 from .content import CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
 from .model import ability, check, hero, power, rand
 
@@ -91,7 +91,7 @@ def limits(p, key):
     out = dict(STAGES[key]["limits"])
     if "effect" in out and key in ("II", "III"):
         out["effect"] += 4 * CATALOG[p["catalog"]]["difficulty"]
-    return out
+    return product_design.adjust_limits(p, key, out)
 
 
 def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=False):
@@ -114,6 +114,17 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         cost *= 1.2 if CATALOG[p["catalog"]]["difficulty"] else 1
     if key == "review" and p["kind"] != "generic":
         cost *= 2
+    profile = product_design.profile(p["catalog"])
+    enhanced = bool(profile and profile["stage"] == key and p.get("design") == "validated")
+    if enhanced:
+        cost *= 1.25
+        weeks += 2
+    allies = stories.active(s, ids)
+    if any(h["personal"]["choice"] == "handoff" and h["profession"] in d["roles"] for h in allies):
+        cost *= 0.95
+    maintenance = challenge.policy(s) if challenge.enabled(s) and s["facility"] > 0 and not partner else None
+    if maintenance:
+        cost *= maintenance["fee"]
     # Each endpoint benefits from its own specialist. Clinical operations and
     # scientific interpretation complement each other; unrelated stars cannot
     # replace a missing specialty merely by having the highest number.
@@ -142,6 +153,17 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
             noise_by_stat[stat] *= 0.94
         if key in CLINICAL and talents.has(s, ids, "clinical"):
             noise_by_stat[stat] *= 0.95
+    for stat in noise_by_stat:
+        if any(
+            h["personal"]["choice"] == "verify"
+            and (h["profession"] == STAT_ROLE[stat] or h["profession"] == "clinical" and key in CLINICAL)
+            for h in allies
+        ):
+            noise_by_stat[stat] *= 0.92
+        if enhanced:
+            noise_by_stat[stat] *= 0.8
+        if maintenance:
+            noise_by_stat[stat] *= maintenance["noise"]
     noise = sum(noise_by_stat.values()) / len(noise_by_stat)
     result = {
         "weeks": weeks,

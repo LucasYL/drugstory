@@ -1,5 +1,6 @@
 """Annual contests, verifiable scientific legacy and a persistent trophy cabinet."""
 
+from . import challenge
 from .content import CATALOG, PROFESSIONS
 from .model import ability, busy, earn, find, log, rand
 from .science import observe, selected
@@ -60,6 +61,7 @@ def rival_score(s, r, category):
     }[r["style"]][category]
     # Seeded variation is visible as each year's field; never reads the player's hidden candidate.
     base = rand(s, "annual-field", s["season"]["year"], r["id"], category).uniform(24, 44)
+    base += 6 if challenge.enabled(s) else 0
     return round(min(80, (base + min(20, r["year_points"] * 0.4)) * affinity), 1)
 
 

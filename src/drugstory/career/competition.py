@@ -1,5 +1,6 @@
 """Seeded rivals with visible milestones, finite commercial impact and no approval inflation."""
 
+from . import challenge
 from .model import log, rand
 
 MARKETS = {
@@ -74,6 +75,8 @@ def start_stage(s, r):
             spec["weeks"][r["stage"]] * rand(s, "rival-duration", r["id"], r["cycles"], r["stage"]).uniform(0.8, 1.25)
         ),
     )
+    if challenge.enabled(s):
+        duration = max(10, round(duration * 0.85))
     r["due"] = s["week"] + duration
     remaining = sum(spec["weeks"][r["stage"] + 1 :])
     r["eta_low"] = r["due"] + round(remaining * 0.8)
@@ -111,7 +114,8 @@ def step(s):
         spec = STYLES[r["style"]]
         rng = rand(s, "rival-result", r["id"], r["cycles"], r["stage"])
         roll = rng.random()
-        if roll > spec["odds"][r["stage"]]:
+        odds = min(0.96, spec["odds"][r["stage"]] + (0.04 if challenge.enabled(s) else 0))
+        if roll > odds:
             r["status"] = "rebuilding"
             r["due"] = s["week"] + rng.randint(24, 56)
             r["last_update"] = r["phase"] + "未获支持，调整方向"
@@ -133,7 +137,7 @@ def step(s):
                         "market": r["market"],
                         "active": True,
                         "end": r["end"],
-                        "strength": spec["strength"],
+                        "strength": spec["strength"] * (1.25 if challenge.enabled(s) else 1),
                         "launched": s["week"],
                     }
                 )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from . import competition, honors, talents
+from . import challenge, competition, honors, product_design, stories, talents
 from .content import CATALOG, FACILITIES, PATHS, PROFESSIONS, PROMOTION, RANKS, ROSTER, TERMS
 from .model import earn, gain_work, log, payroll, rand, spend
 from .science import outlook, plan_phase, selected
@@ -35,7 +35,8 @@ def recruit_cost(key):
 def promotion_requirements(s, h):
     if h["rank"] == 4:
         return []
-    c = PROMOTION[h["rank"] + 1]
+    c = dict(PROMOTION[h["rank"] + 1])
+    c["cases"] -= 1 if h.get("personal") else 0
     return [
         (f"专业经验 {h['xp']}/{c['xp']}", h["xp"] >= c["xp"]),
         (f"有效项目履历 {len(h['cases'])}/{c['cases']}", len(h["cases"]) >= c["cases"]),
@@ -102,7 +103,9 @@ def quote(s, p, kind):
 
 
 def product_life(d):
-    return {"generic": 576, "improved": 432, "innovative": 480}[d["kind"]]
+    return {"generic": 576, "improved": 432, "innovative": 480}[d["kind"]] + (
+        48 if d.get("design_reward") == "stability" else 0
+    )
 
 
 def catalog_in_market(s, catalog):
@@ -119,13 +122,17 @@ def make_product(s, p, partner=False, name=None):
     benefit = max(0.65, min(1.45, 0.85 + (values["effect"] - 65) / 70))
     if p["kind"] == "generic":
         benefit = 1
-    reach = 0.65 if p.get("population") == "focused" else 1
+    reach = (0.65 if p.get("population") == "focused" else 1) * p.get("trial_reach", 1)
+    benefit_design = product_design.reward(p)
+    reach *= 1.08 if benefit_design == "adherence" else 1.10 if benefit_design == "tolerability" else 1
     product = {
         "id": f"drug-{p['id']}",
         "project": p["id"],
         "catalog": p["catalog"],
         "name": name or p["name"],
         "kind": p["kind"],
+        "design_reward": benefit_design,
+        "design": p.get("design", "standard"),
         "market": spec["market"],
         "launched": s["week"],
         "peak": spec["peak"] * benefit * reach,
@@ -141,6 +148,8 @@ def make_product(s, p, partner=False, name=None):
         "last_profit": 0.0,
         "benefit": round(benefit, 2),
     }
+    if benefit_design == "quality":
+        product["margin"] = min(0.85, product["margin"] + 0.03)
     if not partner:
         for old in s["products"]:
             if old["catalog"] == p["catalog"] and old["active"] and not old["partner"]:
@@ -160,30 +169,51 @@ def production_lines(s):
     )
 
 
-def expected_sales(s, d):
+def base_sales(s, d):
     age = s["week"] - d["launched"]
-    life = {"generic": 576, "improved": 432, "innovative": 480}[d["kind"]]
+    life = product_life(d)
     if not d["active"] or age >= life or d["production"] == "suspended":
         return 0, 0
     ramp = 12 if d["kind"] == "generic" else 40
+    if d.get("design_reward") == "adherence":
+        ramp *= 0.75
     curve = min(1, (age + 1) / ramp) * max(0.2, 1 - max(0, age - life * 0.65) / (life * 0.5))
     competitors = competition.pressure(s, d["market"])
     siblings = sum(
         1
         for x in s["products"]
-        if x["id"] != d["id"] and x["active"] and x["production"] != "suspended" and x["market"] == d["market"]
+        if x["id"] != d["id"]
+        and x["active"]
+        and s["week"] - x["launched"] < product_life(x)
+        and x["production"] != "suspended"
+        and x["market"] == d["market"]
     )
     share = 1 / (1 + 0.55 * competitors + 0.4 * siblings)
     price = max(0.65, 1 - age / 1800) if d["kind"] == "generic" else 1
-    revenue = d["peak"] * curve * share * price
+    revenue = d["peak"] * curve * share * price * product_design.supply_factor(s, d)
     margin = min(0.90, d["margin"] + (0.12 if d["production"] == "self" else 0))
     return revenue, revenue * margin
+
+
+def market_capacity(s, market):
+    if not challenge.enabled(s):
+        return {"capacity": None, "demand": 0, "factor": 1}
+    capacity = challenge.CAPACITY[market]
+    demand = sum(base_sales(s, d)[0] for d in s["products"] if d["market"] == market)
+    demand += competition.pressure(s, market) * 40
+    return {"capacity": capacity, "demand": round(demand, 1), "factor": min(1, capacity / max(1, demand))}
+
+
+def expected_sales(s, d):
+    revenue, profit = base_sales(s, d)
+    factor = market_capacity(s, d["market"])["factor"]
+    return revenue * factor, profit * factor
 
 
 def market_step(s):
     competition.step(s)
     for d in s["products"]:
-        life = {"generic": 576, "improved": 432, "innovative": 480}[d["kind"]]
+        life = product_life(d)
         if d["active"] and s["week"] - d["launched"] >= life:
             d["active"] = False
             log(s, f"{d['name']}进入生命周期末端，退出销售；相关分成同步停止。")
@@ -250,12 +280,16 @@ def costs_per_week(s):
     return (
         payroll(s)
         + FACILITIES[s["facility"]]["rent"]
+        + challenge.upkeep(s)
         + sum(p.get("cost_per_week", 0) for p in s["projects"] if p["status"] in ("screening", "running"))
         + sum(d.get("cost_per_week", 0) * d["cost_share"] for d in s["deals"] if d["status"] == "developing")
     )
 
 
 def finish_job(s, job):
+    if job["kind"] == "personal":
+        stories.finish(s, job)
+        return
     if job["kind"] == "independent":
         honors.finish_proof(s, job)
         gain_work(s, job["heroes"], "independent-" + job["product"] + str(job["step"]), 10)

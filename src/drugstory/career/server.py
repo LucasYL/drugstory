@@ -19,7 +19,7 @@ from drugstory.career.model import load, new_game
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/honors-autosave.json")
+DEFAULT_SAVE = Path("saves/projects-autosave.json")
 
 
 class Conflict(ValueError):
@@ -43,13 +43,13 @@ def atomic_write(path: Path, text: str) -> None:
 
 
 class GameSession:
-    def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation"):
+    def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation", difficulty="standard"):
         self.path = save_path
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
         source = load_path or (save_path if save_path.exists() else None)
-        self.state = load(source) if source else new_game(seed, scenario)
+        self.state = load(source) if source else new_game(seed, scenario, difficulty)
         snapshot(self.state)
         self.saved_at = None
 
@@ -74,7 +74,7 @@ class GameSession:
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8880) -> ThreadingHTTPServer:
+def create_server(session: GameSession, port: int = 8881) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
@@ -117,7 +117,7 @@ def create_server(session: GameSession, port: int = 8880) -> ThreadingHTTPServer
                         "application/json; charset=utf-8",
                         download=f"drugstory-week-{session.state['week']}.json",
                     )
-            elif path in ("/", "/app.js", "/honors.js", "/style.css"):
+            elif path in ("/", "/app.js", "/honors.js", "/projects.js", "/style.css"):
                 name = {"/": "index.html"}.get(path, path.lstrip("/"))
                 kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
                 self.send_bytes((ASSETS / name).read_bytes(), f"{kind}; charset=utf-8")
@@ -158,15 +158,16 @@ def create_server(session: GameSession, port: int = 8880) -> ThreadingHTTPServer
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 年度荣誉版 v0.5")
-    parser.add_argument("--port", type=int, default=8880)
+    parser = argparse.ArgumentParser(description="新药物语 · 协作课题版 v0.6")
+    parser.add_argument("--port", type=int, default=8881)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
+    parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     args = parser.parse_args(argv)
     try:
-        session = GameSession(args.save_path, args.seed, args.load, args.scenario)
+        session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty)
         server = create_server(session, args.port)
     except (OSError, ValueError) as e:
         parser.exit(1, f"启动失败：{e}\n")

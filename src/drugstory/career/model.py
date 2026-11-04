@@ -10,10 +10,10 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 5
+VERSION = 6
 FORMAT = "drugstory-career"
-ACTIVE = {"screening", "selecting", "ready", "running", "result", "problem"}
-DECISIONS = {"selecting", "ready", "result", "problem"}
+ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
+DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
 
 
 def check(condition, message):
@@ -72,7 +72,7 @@ def power(s, ids, profession, cro=False):
 def busy(s):
     result = {}
     for p in s["projects"]:
-        if p["status"] in ("running", "screening"):
+        if p["status"] in ("running", "screening", "checkpoint"):
             for key in p["team"]:
                 result[key] = p["name"]
     for job in s["jobs"]:
@@ -89,7 +89,9 @@ def payroll(s):
 
 def committed(s):
     phases = sum(
-        p.get("cost_per_week", 0) * p.get("left", 0) for p in s["projects"] if p["status"] in ("running", "screening")
+        p.get("cost_per_week", 0) * p.get("left", 0)
+        for p in s["projects"]
+        if p["status"] in ("running", "screening", "checkpoint")
     )
     partners = sum(d.get("remaining_cost", 0) * d["cost_share"] for d in s["deals"] if d["status"] == "developing")
     return phases + partners
@@ -146,7 +148,10 @@ def date(week):
     return f"第 {week // 48 + 1} 年 {(week % 48) // 4 + 1} 月"
 
 
-def new_game(seed=42, scenario="foundation"):
+def new_game(seed=42, scenario="foundation", difficulty="standard"):
+    from .challenge import MODES
+
+    check(isinstance(difficulty, str) and difficulty in MODES, "请选择经营难度")
     check(type(seed) is int and 0 <= seed <= 999999999, "种子应为 0 至 999999999 的整数")
     check(isinstance(scenario, str) and scenario in SCENARIOS, "没有这个开局路线")
     c = SCENARIOS[scenario]
@@ -155,6 +160,8 @@ def new_game(seed=42, scenario="foundation"):
         "version": VERSION,
         "seed": seed,
         "scenario": scenario,
+        "difficulty": difficulty,
+        "platform_policy": "balanced",
         "week": 0,
         "capital": c["cash"],
         "cash": float(c["cash"]),
@@ -207,7 +214,7 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") == VERSION,
-            "荣誉版只读取独立 v5 存档；v4 请在 8879 继续游玩，其他旧版保留原入口",
+            "课题版只读取独立 v6 存档；v5 请在 8880 继续游玩，其他旧版保留原入口",
         )
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")

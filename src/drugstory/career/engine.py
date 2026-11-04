@@ -5,8 +5,8 @@ from __future__ import annotations
 import copy
 import inspect
 
+from . import challenge, honors, product_design, stories, talents, trial_choices
 from . import economy as e
-from . import honors, talents
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
 from .model import (
@@ -53,7 +53,9 @@ def catalog_requirements(s, key):
     return checks
 
 
-def start_project(s, catalog: str, heroes: list):
+def start_project(s, catalog: str, heroes: list, design: str = "standard"):
+    check(design in ("standard", "validated"), "请选择产品验证路线")
+    check(design == "standard" or product_design.profile(catalog), "该方案没有专项产品验证路线")
     check(catalog in CATALOG, "请选择研究路线")
     check(all(ok for _, ok in catalog_requirements(s, catalog)), "还没有满足这条路线的研究条件")
     check(not any(p["catalog"] == catalog and p["status"] in ACTIVE for p in s["projects"]), "同一方案已有在研计划")
@@ -70,6 +72,7 @@ def start_project(s, catalog: str, heroes: list):
         "id": pid,
         "name": c["name"],
         "catalog": catalog,
+        "design": design,
         "kind": c["kind"],
         "status": "screening",
         "started": s["week"],
@@ -144,6 +147,7 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
         cost_per_week=execution["cost"] / execution["weeks"],
         mode=mode,
     )
+    trial_choices.initialize(p)
     p["deferred"] = False
     p["contributors"] = sorted(set(p["contributors"] + heroes))
     if key in CLINICAL:
@@ -513,6 +517,7 @@ def advance(s, weeks: int = 4):
         s["week"] += 1
         spend(s, payroll(s), "payroll")
         spend(s, FACILITIES[s["facility"]]["rent"], "rent")
+        spend(s, challenge.upkeep(s), "platform_maintenance")
         for job in list(s["jobs"]):
             job["left"] -= 1
             if job["left"] <= 0:
@@ -524,6 +529,10 @@ def advance(s, weeks: int = 4):
             spend(s, p["cost_per_week"], "research")
             p["spent"] += p["cost_per_week"]
             p["left"] -= 1
+            if p["status"] == "running" and trial_choices.reached(p):
+                p["status"] = "checkpoint"
+                p["deferred"] = False
+                log(s, p["name"] + "到达临床中途检查点，请选择后半程安排。")
             if p["left"] > 0:
                 continue
             if p["status"] == "screening":
@@ -618,6 +627,31 @@ def independent_study(s, product: str, heroes: list):
     log(s, f"启动{option['title']}：{option['weeks']} 周、¥{option['cost']} 万；阴性结果同样留档。")
 
 
+def personal_project(s, character: str, partner: str, choice: str):
+    stories.begin(s, character, partner, choice)
+
+
+def trial_decision(s, project: str, choice: str):
+    trial_choices.resolve(s, find(s["projects"], project), choice)
+
+
+def platform_policy(s, policy_name: str):
+    challenge.set_policy(s, policy_name)
+    log(s, "平台维护改为" + challenge.policy(s)["name"] + "，从下一周开始按新标准计费。")
+
+
+def continue_and_run(s, project: str, heroes: list, plan: str = "standard", mode: str = "internal"):
+    continue_project(s, project)
+    run_phase(s, project, heroes, plan, mode)
+
+
+def take_services(s, assignments: list):
+    check(1 <= len(assignments) <= 3, "一次安排一至三个服务订单")
+    for item in assignments:
+        check(isinstance(item, dict) and set(item) == {"order", "character"}, "请检查订单与角色")
+        take_service(s, **item)
+
+
 COMMANDS = {
     fn.__name__: fn
     for fn in [
@@ -647,6 +681,11 @@ COMMANDS = {
         nominate,
         specialize,
         independent_study,
+        personal_project,
+        trial_decision,
+        platform_policy,
+        continue_and_run,
+        take_services,
     ]
 }
 
@@ -684,8 +723,8 @@ def execute(state, command, args=None):
     return candidate
 
 
-def replay(seed, scenario, actions):
-    s = new_game(seed, scenario)
+def replay(seed, scenario, actions, difficulty="standard"):
+    s = new_game(seed, scenario, difficulty)
     for entry in actions:
         check(s["week"] == entry["week"], "回放周数不一致")
         s = execute(s, entry["command"], entry["args"])

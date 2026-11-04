@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>新药物语 · 微缩研究所交互样稿</title>
+    <link rel="stylesheet" href="concept.css" />
+    <script src="concept.js" defer></script>
+  </head>
+  <body>
+    <div class="prototype">
+      <span>交互设计样稿 <b>01</b> · 示例数据，不读取游戏存档</span
+      ><button id="reset">重置样稿</button>
+    </div>
+    <header>
+      <a class="brand" href="./"
+        ><span class="seal">药</span
+        ><span>新药物语<small>一间小小研究所，一件值得做的事。</small></span></a
+      >
+      <div class="resources">
+        <span
+          >星火研究社<small>第 3 年 · <b id="week">12</b> 周</small></span
+        ><span
+          >可用资金<small>¥ <b id="cash">2,860</b> 万</small></span
+        ><span>研究团队<small>5 位伙伴 · 2 项研究</small></span>
+      </div>
+    </header>
+    <main>
+      <section class="world" aria-label="研究所场景">
+        <div class="scene-caption">
+          <span class="eyebrow">我们的研究所</span>
+          <h1>今天，也向前一点。</h1>
+          <p>点房间安排研究，点伙伴看看他的心愿。</p>
+        </div>
+        <div class="diorama">
+          <img
+            src="research-institute-concept.png"
+            alt="柔和微缩模型风的现代研究所：四个房间、低墙、玻璃隔断和五位伙伴"
+            draggable="false"
+          />
+          <button class="hotspot clinical" data-room="clinical">
+            <i></i>临床办公室<span>1 项待决定</span>
+          </button>
+          <button class="hotspot academy" data-room="academy">
+            <i></i>共研教室<span>个人课题</span>
+          </button>
+          <button class="hotspot discovery" data-room="discovery">
+            <i></i>发现实验室<span>模型复核已完成</span>
+          </button>
+          <button class="hotspot quality" data-room="quality">
+            <i></i>制剂与质量室<span>工艺验证中</span>
+          </button>
+          <button
+            class="character-pin"
+            data-person="ruler"
+            aria-label="查看刻度喵的个人课题"
+          >
+            心愿 <span>刻度喵</span>
+          </button>
+        </div>
+        <div id="scene-message" class="scene-message" role="status">
+          临床团队等你做一个决定。
+        </div>
+        <div class="dock" aria-label="研究团队">
+          <span class="dock-title">伙伴们<small>点击查看</small></span
+          ><button data-person="beaker">
+            <i>烧</i><span>烧杯仔<small>化学 · 精英</small></span></button
+          ><button data-person="pill">
+            <i>丸</i><span>小药丸<small>工艺 · 精英</small></span></button
+          ><button data-person="sprout">
+            <i>芽</i><span>豆芽博士<small>生物 · 见习</small></span></button
+          ><button data-person="bubble">
+            <i>泡</i><span>泡泡鼠<small>毒理 · 见习</small></span></button
+          ><button data-person="ruler">
+            <i>喵</i
+            ><span>刻度喵<small id="ruler-status">临床 · 有新心愿</small></span>
+          </button>
+        </div>
+      </section>
+      <aside id="panel" aria-label="当前选择详情" aria-live="polite"></aside>
+    </main>
+    <footer>
+      <div>
+        <span class="pause-dot"></span><b id="time-state">等你安排</b
+        ><span>操作时暂停，推进后再看大家的进展。</span>
+      </div>
+      <button id="advance" class="primary">推进 4 周 <span>→</span></button>
+    </footer>
+    <dialog id="celebration">
+      <div class="award-icon">✧</div>
+      <p class="eyebrow">一段成长，留下来了</p>
+      <h2>曲线里的空白</h2>
+      <p>“漂亮的曲线，也要听见没有被记录的声音。”</p>
+      <p id="award-detail"></p>
+      <button id="close-award" class="primary">把这一页留在手记里</button>
+    </dialog>
+  </body>
+</html>
