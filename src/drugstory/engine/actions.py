@@ -22,6 +22,7 @@ from drugstory.engine.state import (
     ON_CONTRACT,
     ON_PROJECT,
     PHASE_REVIEW,
+    QUEUED,
     RD_REVIEW,
     RESEARCH,
     TERMINATED,
@@ -141,6 +142,8 @@ def start_project(state: GameState, content: Content, target: str, modality: str
         stage=RESEARCH,
         team_ids=[],
         rd_weeks=research.rd_weeks(t, m),
+        base_rd_weeks=research.rd_weeks(t, m),
+        extension_count=0,
         stats={s: 0.0 for s in STATS},
         started_week=state.week,
     )
@@ -167,7 +170,7 @@ def set_project_teams(state: GameState, content: Content, project_id: int, team_
 @action
 def cancel_project(state: GameState, content: Content, project_id: int) -> None:
     project = _project(state, project_id)
-    _require(project.stage == RESEARCH, "只能取消研发中的项目")
+    _require(project.stage in (RESEARCH, QUEUED), "只能取消研发中或临床排队中的项目")
     for d in decisions.for_project(state, project.id):
         decisions.remove(state, d)
     research.release_teams(state, project)
@@ -177,19 +180,27 @@ def cancel_project(state: GameState, content: Content, project_id: int) -> None:
 
 
 @action
-def choose_milestone_team(state: GameState, content: Content, decision_id: int, team_id: int) -> float:
+def choose_milestone_team(
+    state: GameState, content: Content, decision_id: int, team_id: int, plan: str = "boost"
+) -> float:
     decision = _decision(state, decision_id, decisions.MILESTONE)
     project = _project(state, decision.project_id)
     team = _team(state, team_id)
     _require(team.id in project.team_ids, "只能派这个项目上的团队攻关")
-    bonus = research.apply_milestone(state, project, team, content)
+    _require(plan in ("boost", "validate", "fast"), "不认识的攻关方案")
+    effect = research.milestone_plan(state, project, team, plan, content)
+    _require(not effect["problem"], effect["problem"])
+    if effect["cost"]:
+        _pay(state, effect["cost"], "research", "攻关专项费用")
+    project.spent += effect["cost"]
+    bonus = research.apply_milestone(state, project, team, content, plan)
     decisions.remove(state, decision)
     return bonus
 
 
 @action
 def resolve_rd_end(state: GameState, content: Content, decision_id: int, choice: str) -> None:
-    """choice：extend 多磨 4 周 / proceed 进入临床 / terminate 终止。"""
+    """研发结束：打磨、专项排险、自营排队、委托临床或终止。"""
     decision = _decision(state, decision_id, decisions.RD_END)
     project = _project(state, decision.project_id)
     _require(project.stage == RD_REVIEW, "这个项目不在研发结束的阶段")
@@ -200,11 +211,35 @@ def resolve_rd_end(state: GameState, content: Content, decision_id: int, choice:
             "已达到打磨上限，请根据临床预估进入临床或终止项目",
         )
         research.extend(state, project, content)
-    elif choice == "proceed":
+    elif choice == "validate":
+        _require(project.validation_count < content.balance.research.max_validations, "已达到专项排险次数上限")
+        _require(bool(project.team_ids) and bool(project.hazards), "需要有团队和待处理隐患")
+        cost = len(project.hazards) * content.balance.research.final_validation_cost
+        _pay(state, cost, "research", "专项排险")
+        project.spent += cost
+        if project.extension_count < 0:
+            project.extension_count = research.extensions_used(project, content)
+        project.hazards.clear()
+        project.validation_count += 1
+        project.validation_weeks_left = content.balance.research.validate_weeks
+        project.rd_weeks += project.validation_weeks_left
+        project.stage = RESEARCH
+        say(state, f"{project_label(project, content)} 专项排险：{project.validation_weeks_left} 周，"
+            "不加点、不产生新隐患")
+    elif choice in ("proceed", "contract"):
         research.record_in_notebook(state, project, content)
         research.release_teams(state, project)
         clinical.assign_hazards(state, project, content)
-        clinical.start_phase(state, project, content.phase_keys[0], content)
+        if choice == "contract":
+            project.clinical_mode = "contract"
+            clinical.start_phase(state, project, content.phase_keys[0], content)
+        else:
+            project.clinical_mode = "internal"
+            project.stage = QUEUED
+            project.queued_week = state.week
+            clinical.promote_queue(state, content)
+            if project.stage == QUEUED:
+                say(state, f"{project_label(project, content)} 加入临床队列；研发团队已释放，等待不收临床费")
     elif choice == "terminate":
         research.record_in_notebook(state, project, content)
         research.release_teams(state, project)
@@ -215,6 +250,14 @@ def resolve_rd_end(state: GameState, content: Content, decision_id: int, choice:
     else:
         raise ActionError(f"不认识的选择：{choice}")
     decisions.remove(state, decision)
+
+
+@action
+def outsource_clinical(state: GameState, content: Content, project_id: int) -> None:
+    project = _project(state, project_id)
+    _require(project.stage == QUEUED, "只有排队中的项目可以转为委托临床")
+    project.clinical_mode = "contract"
+    clinical.start_phase(state, project, content.phase_keys[0], content)
 
 
 @action
@@ -236,6 +279,7 @@ def resolve_phase(state: GameState, content: Content, decision_id: int, choice: 
     else:
         raise ActionError(f"不认识的选择：{choice}")
     decisions.remove(state, decision)
+    clinical.promote_queue(state, content)
 
 
 @action
@@ -409,4 +453,5 @@ def build_facility(state: GameState, content: Content) -> None:
     assert nxt is not None
     _pay(state, nxt.cost, "facility", f"建{nxt.name}")
     state.facility = nxt.key
+    clinical.promote_queue(state, content)
     say(state, f"搬进了{nxt.name}，可以容纳 {nxt.capacity} 人")

@@ -68,6 +68,16 @@ milestones = [0.2, 0.4, 0.6, 0.8]
 milestone_multiplier = 8
 extension_weeks = 4
 max_extensions = 6           # 最多追加 24 周；及时判断继续还是止损
+decision_milestones = [1, 2] # 分子优化、安全性评价；其他节点自动由合适团队完成
+boost_cost = 35
+boost_weeks = 2
+boost_factor = 1.5
+validate_cost = 35
+validate_weeks = 2
+validation_attr = 30
+fast_weeks = 3
+max_validations = 2
+final_validation_cost = 40
 quality_knee = 1.0           # 达到同靶点基础审评标准后，新增点数的收益递减
 quality_ceiling = 1.35       # 研发属性渐近上限；不降低老存档已经取得的属性
 data_per_team_week = 1
@@ -158,6 +168,22 @@ oral_chronic_bonus = 1.2
 margin_base = 0.40
 margin_per_point = 0.045
 
+[clinical_operations]
+contract_multiplier = 1.3
+
+[traits.rigorous]
+name = "严谨验证"
+description = "专项验证最多排除 2 项隐患，但额外多用 1 周。"
+[traits.iterative]
+name = "快速迭代"
+description = "深挖性能少用 1 周，但加点降低 15%；尽快定型可多节省 1 周。"
+[traits.optimizer]
+name = "深度优化"
+description = "深挖性能的研究投入增加 25%，费用增加 25%，多用 1 周。"
+[traits.frugal]
+name = "成本意识"
+description = "攻关专项费用降低 20%，深挖性能加点降低 10%。"
+
 [reputation]
 max = 100
 approval_offset = 50
@@ -168,6 +194,7 @@ failure_penalty = 1
 # 5.3 节 场地，只能按顺序逐级升级
 [[facilities]]
 key = "incubator"
+clinical_slots = 1
 name = "孵化器实验室"
 capacity = 20
 cost = 0
@@ -175,6 +202,7 @@ rent = 5
 
 [[facilities]]
 key = "center"
+clinical_slots = 2
 name = "研发中心"
 capacity = 60
 cost = 2000
@@ -182,6 +210,7 @@ rent = 20
 
 [[facilities]]
 key = "campus"
+clinical_slots = 4
 name = "研发园区"
 capacity = 150
 cost = 8000
@@ -189,6 +218,7 @@ rent = 60
 
 [[facilities]]
 key = "hq"
+clinical_slots = 6
 name = "总部大楼"
 capacity = 400
 cost = 25000

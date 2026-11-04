@@ -26,7 +26,7 @@ from drugstory.engine.rules.combo import compat, multiplier
 from drugstory.engine.rules.scoring import expected_scores, passed
 from drugstory.engine.state import RESEARCH, GameState, Project, Team
 from drugstory.engine.systems.clinical import prior_approvals
-from drugstory.engine.systems.research import best_team
+from drugstory.engine.systems.research import milestone_plan
 from drugstory.engine.systems.teams import capacity, lead_salary, payroll, training_cost
 
 
@@ -220,10 +220,25 @@ class Bot:
         kind = decision.kind
         if kind == D.MILESTONE:
             project = state.project(decision.project_id)
-            team = best_team(state, project, decision.data["stat"], content)
-            A.choose_milestone_team(state, content, decision_id=decision.id, team_id=team.id)
+            choices = [(t, key, milestone_plan(state, project, t, key, content))
+                       for t in (state.team(i) for i in project.team_ids) for key in ("boost", "validate", "fast")]
+            choices = [x for x in choices if not x[2]["problem"] and (not x[2]["cost"] or x[2]["cost"] <= state.cash)]
+            if not choices:
+                A.cancel_project(state, content, project_id=project.id)
+                return
+            severe = {h.id for h in project.hazards if h.severity >= 2}
+            team, plan, _ = max(choices, key=lambda x: (
+                len(severe.intersection(x[2]["hazard_ids"])), x[2]["bonus"], -x[2]["weeks"], -x[0].id,
+            ))
+            A.choose_milestone_team(state, content, decision_id=decision.id, team_id=team.id, plan=plan)
         elif kind == D.RD_END:
-            A.resolve_rd_end(state, content, decision_id=decision.id, choice=self.rd_choice(state, content, decision))
+            p = state.project(decision.project_id)
+            r = content.balance.research
+            choice = self.rd_choice(state, content, decision)
+            if (any(h.severity >= 2 for h in p.hazards) and p.validation_count < r.max_validations
+                    and state.cash >= len(p.hazards) * r.final_validation_cost):
+                choice = "validate"
+            A.resolve_rd_end(state, content, decision_id=decision.id, choice=choice)
         elif kind == D.PHASE_RESULT:
             choice = self.phase_choice(state, content, decision) if decision.data["passed"] else "ack"
             A.resolve_phase(state, content, decision_id=decision.id, choice=choice)

@@ -8,7 +8,7 @@ from drugstory.engine import decisions as D
 from drugstory.engine.game import new_game
 from drugstory.engine.loop import advance
 from drugstory.engine.state import CLINICAL, ON_PROJECT, RD_REVIEW, RESEARCH, TERMINATED, Hazard
-from drugstory.engine.systems.research import milestone_bonus, point_multiplier, project_teams
+from drugstory.engine.systems.research import milestone_plan, point_multiplier, project_teams
 from drugstory.engine.systems.teams import weekly_output
 
 
@@ -60,12 +60,13 @@ def test_milestones_come_at_twenty_forty_sixty_eighty_percent(quiet):
             assert d.kind == D.MILESTONE
             seen.append((p.rd_done, d.data["stat"]))
             team = max(project_teams(s, p), key=lambda t: weekly_output(t, d.data["stat"], quiet))
-            bonus = milestone_bonus(s, p, team, d.data["stat"], quiet)
+            bonus = milestone_plan(s, p, team, "boost", quiet)["bonus"]
             before = p.stats[d.data["stat"]]
             A.choose_milestone_team(s, quiet, decision_id=d.id, team_id=team.id)
             assert p.stats[d.data["stat"]] == pytest.approx(before + bonus)
-    weeks = [math.ceil(f * p.rd_weeks) for f in quiet.balance.research.milestones]
-    assert seen == list(zip(weeks, STATS, strict=True))
+    indices = quiet.balance.research.decision_milestones
+    assert seen == [(math.ceil(quiet.balance.research.milestones[i] * p.base_rd_weeks), STATS[i]) for i in indices]
+    assert p.milestones_done == 4
     assert p.stage == RD_REVIEW
     assert [d.kind for d in s.pending] == [D.RD_END]
 

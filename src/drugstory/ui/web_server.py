@@ -22,7 +22,7 @@ from drugstory.engine.save import SaveError, from_json, load, to_json
 from drugstory.ui.web_view import snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/web-autosave.json")
+DEFAULT_SAVE = Path("saves/next-autosave.json")
 
 
 class Conflict(ValueError):
@@ -121,7 +121,7 @@ class GameSession:
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8877) -> ThreadingHTTPServer:
+def create_server(session: GameSession, port: int = 8878) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
@@ -195,7 +195,7 @@ def create_server(session: GameSession, port: int = 8877) -> ThreadingHTTPServer
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="新药物语 · 本地鼠标操作界面")
-    parser.add_argument("--port", type=int, default=8877)
+    parser.add_argument("--port", type=int, default=8878)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")

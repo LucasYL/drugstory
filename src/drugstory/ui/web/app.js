@@ -4,6 +4,8 @@ let state;
 let activeView = "pipeline";
 let busy = false;
 let noticeTimer;
+let selectedMilestone = null;
+let selectedPlan = "boost";
 const app = document.querySelector("#app");
 const modal = document.querySelector("#modal");
 const modalBody = document.querySelector("#modal-body");
@@ -25,6 +27,7 @@ const stageNames = {
   research: "研发中",
   rd_review: "研发评估",
   clinical: "临床中",
+  clinical_queue: "临床排队",
   phase_review: "阶段决策",
   naming: "等待上市",
   approved: "已获批",
@@ -285,13 +288,42 @@ function renderDecision() {
     body = "";
   if (d.kind === "milestone") {
     title = state.names.milestones[d.data.stat];
-    const best = Math.max(...d.options.map((o) => o.bonus));
-    body = `<p class="small muted">选择一位负责人带队攻关，为${e(state.names.stats[d.data.stat])}加点。</p><div class="choice-grid">${d.options.map((o) => actionButton(`${e(o.name)} · ${e(o.type)}<strong>+${number(o.bonus, 1)} 点</strong><span class="small">${o.bonus === best ? "推荐 · 本项产出最高" : "选择这个团队"}</span>`, "choose_milestone_team", { ...args, team_id: o.team_id }, o.bonus === best ? 'class="recommended"' : "")).join("")}</div>`;
+    if (selectedMilestone !== d.id) {
+      selectedMilestone = d.id;
+      selectedPlan = "boost";
+    }
+    const labels = {
+      boost: "深挖性能",
+      validate: "专项验证",
+      fast: "尽快定型",
+    };
+    const descriptions = {
+      boost: "提高本项属性，追加研发时间和专项费用。",
+      validate: "排除已知隐患，放弃本次属性加成；对应专业需 ≥30。",
+      fast: "缩短剩余研发时间，放弃本次属性加成，保留未解决风险。",
+    };
+    body = `<p>先选方案，再选负责人。负责人特长会改变时间、费用与效果。</p><div class="actions">${Object.entries(
+      labels,
+    )
+      .map(
+        ([key, label]) =>
+          `<button data-milestone-plan="${key}" aria-pressed="${key === selectedPlan}" class="${key === selectedPlan ? "primary" : ""}">${label}</button>`,
+      )
+      .join(
+        "",
+      )}</div><p class="small muted">${descriptions[selectedPlan]}</p>${p.hazards.length ? `<div class="hint warn">待解决：${p.hazards.map((h) => `${e(h.text)}（${h.severity >= 2 ? "严重，需专项处理" : "轻微"}）`).join("、")}</div>` : ""}<div class="choice-grid">${d.options
+      .map((o) => {
+        const x = o.plans[selectedPlan];
+        return `<div class="card"><h3>${e(o.name)} · ${e(o.type)}</h3><p class="small"><b>${e(o.trait.name)}</b>：${e(o.trait.description)}</p><p>${e(state.names.stats[d.data.stat])} +${number(x.bonus, 1)}<br>研发工期 ${x.weeks > 0 ? "+" : ""}${x.weeks} 周 · 专项费用 ${money(x.cost)}<br>排除 ${x.hazard_ids.length} 项隐患</p>${x.problem ? `<p class="small fail">${e(x.problem)}</p>` : ""}${actionButton(`由${e(o.name)}执行${labels[selectedPlan]}`, "choose_milestone_team", { ...args, team_id: o.team_id, plan: selectedPlan }, disabled(Boolean(x.problem) || (x.cost > 0 && state.cash < x.cost)))}</div>`;
+      })
+      .join(
+        "",
+      )}</div><p class="small muted">专项费用之外，增减工期也会改变研发费、工资和租金；例行药效验证与工艺节点会自动完成。</p>`;
   } else if (d.kind === "rd_end") {
     title = "研发结束，准备进入临床吗？";
     const total = p.forecasts.reduce((a, f) => a + f.cost, 0),
       weeks = p.forecasts.reduce((a, f) => a + f.weeks, 0);
-    body = `${routeNote(p.route)}${statGrid(p.stats)}${p.hazards.length ? `<div class="hint warn">剩余隐患：${p.hazards.map((h) => `${e(h.text)}（${e(state.names.stats[h.stat])} −${h.severity}）`).join("、")}</div>` : '<div class="hint">目前没有未解决的隐患。</div>'}${forecastTable(p)}${polishNote(p)}${fundingNote(p)}<p class="small">后续临床与审评约 <b>${weeks} 周 / ${money(total)}</b>。进入临床后，这个项目的团队全部空出来。</p><div class="actions">${actionButton("进入临床 →", "resolve_rd_end", { ...args, choice: "proceed" }, 'class="primary"')}${actionButton(`再打磨 ${state.extension_weeks} 周（剩 ${p.polish.remaining} 次）`, "resolve_rd_end", { ...args, choice: "extend" }, disabled(!p.team_ids.length || !p.polish.remaining))}${actionButton("终止项目", "resolve_rd_end", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后不再花钱，已花费用不会退回，熟练度照常增加。"')}</div>`;
+    body = `${routeNote(p.route)}${statGrid(p.stats)}${p.hazards.length ? `<div class="hint warn">剩余隐患：${p.hazards.map((h) => `${e(h.text)}（${e(state.names.stats[h.stat])} −${h.severity}${h.severity >= 2 ? "，需专项排险" : ""}）`).join("、")}</div>` : '<div class="hint">目前没有未解决的隐患。</div>'}${forecastTable(p)}${polishNote(p)}${fundingNote(p)}<p class="small">后续临床与审评约 <b>${weeks} 周 / ${money(total)}</b>。自营临床空余 ${state.clinical_operations.available} 个席位；委托临床费用高 30%，无需等待且不提高通过分数。排队或进入临床后，研发团队全部空出来。</p><div class="actions">${actionButton(state.clinical_operations.available ? "进入自营临床 →" : "加入临床队列 →", "resolve_rd_end", { ...args, choice: "proceed" }, 'class="primary"')}${actionButton(`委托临床 · 全程约 ${money(p.contract_cost)}`, "resolve_rd_end", { ...args, choice: "contract" })}${p.validation.available ? actionButton(`专项排险 ${p.validation.weeks} 周 · ${money(p.validation.cost)}`, "resolve_rd_end", { ...args, choice: "validate" }, disabled(state.cash < p.validation.cost)) : ""}${actionButton(`再打磨 ${state.extension_weeks} 周（剩 ${p.polish.remaining} 次）`, "resolve_rd_end", { ...args, choice: "extend" }, disabled(!p.team_ids.length || !p.polish.remaining))}${actionButton("终止项目", "resolve_rd_end", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后不再花钱，已花费用不会退回，熟练度照常增加。"')}</div>`;
   } else if (d.kind === "phase_result") {
     const result = p.results.findLast((r) => r.phase === d.data.phase);
     title = `${p.phase_name}结果 · ${d.data.passed ? "通过" : "未通过"}`;
@@ -300,14 +332,14 @@ function renderDecision() {
       const next = p.forecasts[0];
       body += `<p class="small">下一步：<b>${e(next.name)}</b>，${next.weeks} 周 / ${money(next.cost)}。</p>${forecastTable(p)}<div class="actions">${actionButton(`继续${e(next.name)} →`, "resolve_phase", { ...args, choice: "continue" }, 'class="primary"')}${actionButton("到此为止", "resolve_phase", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后无法恢复这个项目，熟练度照常增加。"')}</div>`;
     } else
-      body += `<div class="hint">这次尝试积累的研究数据和熟练度会留下来。可以查看项目记录，调整下一次的团队配置。</div><div class="actions">${actionButton("记下经验，继续", "resolve_phase", { ...args, choice: "ack" }, 'class="primary"')}</div>`;
+      body += `<div class="hint warn">未过关原因：${d.failure_reasons.map(e).join("；")}。</div><div class="hint">这次尝试积累的研究数据和熟练度会留下来。可以查看项目记录，调整下一次的团队配置。</div><div class="actions">${actionButton("记下经验，继续", "resolve_phase", { ...args, choice: "ack" }, 'class="primary"')}</div>`;
   } else if (d.kind === "approval") {
     title = "新药获批，给它起个名字";
     body = `${resultBlock(p.results.at(-1))}<p class="positive">综合分 <b>${number(p.composite, 1)}</b> / 100</p><form id="name-form" class="name-form"><label class="field">药物名称<input name="name" maxlength="40" required value="${e(d.data.suggested)}"></label><button class="primary" type="submit">正式上市 →</button></form>`;
   } else if (d.kind === "candidates") {
     title = "候选人到了";
     subtitle = "签约时可配 3 位成员一起入职，也可以只签负责人。";
-    body = `<div class="choice-grid">${d.candidates.map((lead, index) => `<div class="card"><h3>${e(lead.name)}</h3><p class="small muted">${e(lead.type)} · 带队 ${lead.leadership} 人</p>${statGrid(lead, attrs)}<p class="small">月薪 ${money(lead.salary)}<br>签约费 ${money(lead.fee)}</p>${actionButton("签约＋3 位成员", "hire_candidate", { ...args, index, members: 3 }, `class="primary"${disabled(state.cash < lead.fee + 3 * state.team_rules.member_hire_fee || state.headcount + 4 > state.capacity)}`)}<p class="small muted">含成员签约 ${money(lead.fee + 3 * state.team_rules.member_hire_fee)} · 团队月薪 ${money(lead.salary + 3 * state.team_rules.member_salary)}</p>${actionButton("只签负责人", "hire_candidate", { ...args, index }, disabled(state.cash < lead.fee || state.headcount >= state.capacity))}</div>`).join("")}</div>${state.headcount >= state.capacity ? '<div class="hint warn">场地已满。可以先在「经营手记」升级场地，或在「团队」调整人数。</div>' : ""}<div class="actions">${actionButton("这次都不签", "hire_candidate", { ...args, index: -1 })}</div>`;
+    body = `<div class="choice-grid">${d.candidates.map((lead, index) => `<div class="card"><h3>${e(lead.name)}</h3><p class="small muted">${e(lead.type)} · 带队 ${lead.leadership} 人</p><p class="small"><b>${e(lead.trait_info.name)}</b>：${e(lead.trait_info.description)}</p>${statGrid(lead, attrs)}<p class="small">月薪 ${money(lead.salary)}<br>签约费 ${money(lead.fee)}</p>${actionButton("签约＋3 位成员", "hire_candidate", { ...args, index, members: 3 }, `class="primary"${disabled(state.cash < lead.fee + 3 * state.team_rules.member_hire_fee || state.headcount + 4 > state.capacity)}`)}<p class="small muted">含成员签约 ${money(lead.fee + 3 * state.team_rules.member_hire_fee)} · 团队月薪 ${money(lead.salary + 3 * state.team_rules.member_salary)}</p>${actionButton("只签负责人", "hire_candidate", { ...args, index }, disabled(state.cash < lead.fee || state.headcount >= state.capacity))}</div>`).join("")}</div>${state.headcount >= state.capacity ? '<div class="hint warn">场地已满。可以先在「经营手记」升级场地，或在「团队」调整人数。</div>' : ""}<div class="actions">${actionButton("这次都不签", "hire_candidate", { ...args, index: -1 })}</div>`;
   } else if (d.kind === "cash_negative") {
     title = "现金告急";
     subtitle = `当前现金 ${money(state.cash)}`;
@@ -337,7 +369,8 @@ function projectCard(p) {
   const waiting = state.pending.some((d) => d.project_id === p.id);
   return `<article class="card"><div class="card-head"><div><span class="eyebrow">项目 ${String(p.id).padStart(3, "0")}</span><h3>${e(p.label)}</h3><span class="small muted">${e(state.targets.find((t) => t.key === p.target)?.disease)} · ${e(p.known_tier)}</span></div>${badge(stageNames[p.stage], p.stage === "failed" ? "red" : waiting ? "amber" : "green")}</div>
     <div class="project-stages">${stages.map((s, i) => `${i ? '<span aria-hidden="true">›</span>' : ""}<span class="${i === stage ? "current" : i < stage ? "done" : ""}">${s}</span>`).join("")}</div>
-    ${p.active && p.stage !== "naming" ? `<progress value="${done}" max="${total || 1}" aria-label="${e(p.label)}进度"></progress><div class="progress-caption"><span>${rd ? "研发" : e(p.phase_name)} ${done} / ${total} 周${rd && !p.team_ids.length ? " · 未配团队，已暂停" : ""}</span><span>累计花费 ${money(p.spent)}</span></div>` : ""}
+    ${p.stage === "clinical_queue" ? `<div class="hint">临床排队第 ${p.queue_position} 位 · 不收临床费，不占用研发团队。席位空出后自动开始；等待期间属性不下降。</div><div class="actions">${actionButton(`转委托临床 · 全程约 ${money(p.contract_cost)}`, "outsource_clinical", { project_id: p.id })}${actionButton("取消排队项目", "cancel_project", { project_id: p.id }, 'class="danger" data-confirm="取消后无法恢复，已投入费用不退还。"')}</div>` : ""}
+    ${p.active && !["naming", "clinical_queue"].includes(p.stage) ? `<progress value="${done}" max="${total || 1}" aria-label="${e(p.label)}进度"></progress><div class="progress-caption"><span>${rd ? "研发" : e(p.phase_name)} ${done} / ${total} 周${rd && !p.team_ids.length ? " · 未配团队，已暂停" : ""}</span><span>累计花费 ${money(p.spent)}</span></div>` : ""}
     ${rd ? statGrid(p.stats) : ""}
     ${p.hazards.length ? `<p class="small muted">${p.hazards.length} 个研发遗留隐患 · ${p.hazards.map((h) => e(h.text)).join("、")}</p>` : ""}
     <details data-key="project-${p.id}"><summary>查看${p.active ? "分数预估与" : ""}项目记录</summary>${forecastTable(p)}${p.results
@@ -352,7 +385,7 @@ function projectCard(p) {
             )}<br>${e(r.text)}${r.hazard_texts.length ? `<br>${r.hazard_texts.map(e).join("<br>")}` : ""}</p>`,
       )
       .join("")}</details>
-    <div class="card-bottom"><span class="small muted">${rd ? p.team_ids.map((id) => e(teamById(id)?.lead.name)).join(" / ") || "尚未配备团队" : p.active ? "临床自动进行 · 不占用研发团队" : `已投入 ${money(p.spent)}`}</span><div class="compact-actions">${p.stage === "research" ? `${modalButton("调整团队", "project-teams", p.id, disabled(waiting || state.game_over))}${actionButton("取消", "cancel_project", { project_id: p.id }, 'class="quiet" data-confirm="取消研发项目后，已花费用不会退回，也不会增加熟练度。"')}` : ""}</div></div></article>`;
+    <div class="card-bottom"><span class="small muted">${rd ? p.team_ids.map((id) => e(teamById(id)?.lead.name)).join(" / ") || "尚未配备团队" : p.active ? (p.clinical_mode === "contract" ? "委托临床 · 费用 +30% · 不占自营席位" : p.stage === "clinical_queue" ? "等待自营席位 · 研发团队已释放" : "自营临床 · 不占用研发团队") : `已投入 ${money(p.spent)}`}</span><div class="compact-actions">${p.stage === "research" ? `${modalButton("调整团队", "project-teams", p.id, disabled(waiting || state.game_over))}${actionButton("取消", "cancel_project", { project_id: p.id }, 'class="quiet" data-confirm="取消研发项目后，已花费用不会退回，也不会增加熟练度。"')}` : ""}</div></div></article>`;
 }
 
 function renderPipeline() {
@@ -369,6 +402,7 @@ function renderPipeline() {
         'class="primary"' + disabled(!idleTeams().length || state.game_over),
       ),
     ) +
+    `<div class="hint">自营临床 ${state.clinical_operations.used} / ${state.clinical_operations.capacity} 个席位 · 排队 ${state.clinical_operations.queue.length} 项。升级场地可增加席位，委托临床可立即启动。</div>` +
     (state.week > 48 && !state.drugs.length && state.cash < 0
       ? `<div class="hint warn">旧版的临床门槛问题已修复，已有属性和记录均保留。这家公司现金已透支 ${money(-state.cash)}；可备份这局后重新开始。 ${modalButton("备份旧局，开始新公司", "new-game", "", 'class="primary"')}</div>`
       : "") +
@@ -411,7 +445,7 @@ function renderTeams() {
     (state.recruitment
       ? `<div class="hint">招聘进行中 · ${e(state.names.attrs[state.recruitment.specialty])}方向 · ${state.recruitment.candidates.length ? "候选人已到，请处理上方事件" : `还需 ${Math.max(0, state.recruitment.ready_week - state.week)} 周`}</div>`
       : "") +
-    `<div class="two-column">${state.teams.map((t) => `<article class="card"><div class="card-head"><div class="person"><div class="team-avatar">${e(t.type.slice(0, 2))}</div><div><h3>${e(t.lead.name)}</h3><span class="small muted">${e(t.type)} · Lv.${t.lead.level}</span></div></div>${badge(t.task ? "忙碌" : "空闲", t.task ? "" : "green")}</div>${statGrid(t.lead, attrs)}<p class="small">主修 ${e(state.names.attrs[t.specialty])} · 副修 ${e(state.names.attrs[t.lead.secondary])}<br>${t.members} 位成员 · 产出 ×${number(t.size_factor, 2)} · 带队 ${t.lead.leadership} 人<br><span class="muted">团队月薪 ${money(t.salary)} · ${e(t.task_label)}</span></p><progress value="${t.lead.exp}" max="${t.exp_next}" aria-label="${e(t.lead.name)}经验"></progress><div class="progress-caption"><span>经验 ${t.lead.exp} / ${t.exp_next}</span><span>${t.lead.level >= 10 ? "已满级" : "工作积累经验"}</span></div><div class="compact-actions">${modalButton("管理与培养", "team", t.id, disabled(state.game_over))}${!t.task && state.projects.some((p) => p.stage === "research" && p.team_ids.length < state.team_rules.max_per_project && !state.pending.some((d) => d.project_id === p.id)) ? modalButton("安排研发", "assign", t.id, 'class="primary"' + disabled(state.game_over)) : ""}</div></article>`).join("")}</div>`
+    `<div class="two-column">${state.teams.map((t) => `<article class="card"><div class="card-head"><div class="person"><div class="team-avatar">${e(t.type.slice(0, 2))}</div><div><h3>${e(t.lead.name)}</h3><span class="small muted">${e(t.type)} · Lv.${t.lead.level}</span></div></div>${badge(t.task ? "忙碌" : "空闲", t.task ? "" : "green")}</div>${statGrid(t.lead, attrs)}<p class="small"><b>${e(t.trait.name)}</b>：${e(t.trait.description)}</p><p class="small">主修 ${e(state.names.attrs[t.specialty])} · 副修 ${e(state.names.attrs[t.lead.secondary])}<br>${t.members} 位成员 · 产出 ×${number(t.size_factor, 2)} · 带队 ${t.lead.leadership} 人<br><span class="muted">团队月薪 ${money(t.salary)} · ${e(t.task_label)}</span></p><progress value="${t.lead.exp}" max="${t.exp_next}" aria-label="${e(t.lead.name)}经验"></progress><div class="progress-caption"><span>经验 ${t.lead.exp} / ${t.exp_next}</span><span>${t.lead.level >= 10 ? "已满级" : "工作积累经验"}</span></div><div class="compact-actions">${modalButton("管理与培养", "team", t.id, disabled(state.game_over))}${!t.task && state.projects.some((p) => p.stage === "research" && p.team_ids.length < state.team_rules.max_per_project && !state.pending.some((d) => d.project_id === p.id)) ? modalButton("安排研发", "assign", t.id, 'class="primary"' + disabled(state.game_over)) : ""}</div></article>`).join("")}</div>`
   );
 }
 
@@ -463,7 +497,7 @@ function renderCompany() {
   const next = state.next_facility;
   return (
     sectionHead("经营手记", "公司的钱、空间，以及每次尝试留下的经验。") +
-    `<div class="card"><div class="card-head"><div><h3>${e(state.facility.name)}</h3><span class="small muted">${state.headcount} / ${state.capacity} 人 · 月租 ${money(state.facility.rent)}</span></div>${next ? actionButton("升级场地", "build_facility", {}, `class="primary" data-confirm="升级到${e(next.name)}，建造费 ${money(next.cost)}，新月租 ${money(next.rent)}。"${disabled(state.cash < next.cost)}`) : badge("最大场地", "green")}</div>${next ? `<p class="small">下一级 ${e(next.name)} · ${next.capacity} 人 · 建造费 ${money(next.cost)} · 月租 ${money(next.rent)}</p>` : ""}<p class="small muted">当前工资与租金合计 ${money(state.monthly_overhead)}/月。</p></div>
+    `<div class="card"><div class="card-head"><div><h3>${e(state.facility.name)}</h3><span class="small muted">${state.headcount} / ${state.capacity} 人 · 临床 ${state.clinical_operations.used}/${state.clinical_operations.capacity} 席位 · 月租 ${money(state.facility.rent)}</span></div>${next ? actionButton("升级场地", "build_facility", {}, `class="primary" data-confirm="升级到${e(next.name)}，建造费 ${money(next.cost)}，新月租 ${money(next.rent)}。"${disabled(state.cash < next.cost)}`) : badge("最大场地", "green")}</div>${next ? `<p class="small">下一级 ${e(next.name)} · ${next.capacity} 人 · ${next.clinical_slots} 个临床席位 · 建造费 ${money(next.cost)} · 月租 ${money(next.rent)}</p>` : ""}<p class="small muted">当前工资与租金合计 ${money(state.monthly_overhead)}/月。</p></div>
     <h2 class="table-title">年度账本</h2><div class="table-scroll"><table><thead><tr><th>年份</th><th>药品销售额</th><th>实际进账</th><th>全部支出</th><th>净收支</th><th>获批 / 失败</th></tr></thead><tbody>${state.years
       .slice()
       .reverse()
@@ -536,7 +570,7 @@ function openModal(name, id) {
   } else if (name === "team") {
     const t = teamById(id);
     title = `${t.lead.name} · 管理与培养`;
-    body = `${statGrid(t.lead, attrs)}<div class="hint">主修 ${e(state.names.attrs[t.specialty])} 上限 100，副修 ${e(state.names.attrs[t.lead.secondary])} 上限 70，其他学科上限 45。需要不同专业合作补齐短板。</div>${outputNote(t)}<p class="small muted">${t.members} 位成员 / 带队能力 ${t.lead.leadership} 人。超过带队能力后，新增人数的效果减半。</p><form id="members-form" data-id="${t.id}"><label class="field">调整成员人数<input name="count" type="number" min="1" max="400" step="1" value="${Math.max(1, Math.min(3, state.capacity - state.headcount))}" required><small>招人 ${money(state.team_rules.member_hire_fee)}/人，新增月薪 ${money(state.team_rules.member_salary)}/人；减人遣散费 ${money(state.team_rules.member_severance)}/人。</small></label><div id="members-estimate" class="hint"></div><div class="actions"><button class="primary" type="submit" name="operation" value="add_members"${disabled(state.headcount >= state.capacity)}>招募成员</button><button type="submit" name="operation" value="remove_members"${disabled(!t.members)}>减少成员</button></div></form><h3 class="table-title">定向培养 · 每次 +${state.training_gain}</h3><div class="compact-actions">${attrs
+    body = `${statGrid(t.lead, attrs)}<p><b>${e(t.trait.name)}</b>：${e(t.trait.description)}</p><div class="hint">主修 ${e(state.names.attrs[t.specialty])} 上限 100，副修 ${e(state.names.attrs[t.lead.secondary])} 上限 70，其他学科上限 45。需要不同专业合作补齐短板。</div>${outputNote(t)}<p class="small muted">${t.members} 位成员 / 带队能力 ${t.lead.leadership} 人。超过带队能力后，新增人数的效果减半。</p><form id="members-form" data-id="${t.id}"><label class="field">调整成员人数<input name="count" type="number" min="1" max="400" step="1" value="${Math.max(1, Math.min(3, state.capacity - state.headcount))}" required><small>招人 ${money(state.team_rules.member_hire_fee)}/人，新增月薪 ${money(state.team_rules.member_salary)}/人；减人遣散费 ${money(state.team_rules.member_severance)}/人。</small></label><div id="members-estimate" class="hint"></div><div class="actions"><button class="primary" type="submit" name="operation" value="add_members"${disabled(state.headcount >= state.capacity)}>招募成员</button><button type="submit" name="operation" value="remove_members"${disabled(!t.members)}>减少成员</button></div></form><h3 class="table-title">定向培养 · 每次 +${state.training_gain}</h3><div class="compact-actions">${attrs
       .map((a) => {
         const cost = t.training[a];
         return actionButton(
@@ -568,7 +602,7 @@ function openModal(name, id) {
     body = `<form id="new-game-form"><p class="small">这一局的进度会先备份到本地存档目录，然后开始新的公司。</p><label class="field">随机种子<input type="number" name="seed" min="0" max="999999999" step="1" value="${Math.floor(Math.random() * 999999) + 1}" required><small>同一个种子与同样的操作，会得到同样的结果。</small></label>${err}${submit("备份旧局，开始新公司")}</form>`;
   } else if (name === "help") {
     title = "你的第一家制药公司";
-    body = `<ol class="help-list"><li><b>立项。</b>先试 EGFR × 小分子，把生物组和化学组配进去。</li><li><b>补齐团队。</b>通过学术会议招聘毒理负责人，配 3 位成员；初始两组各补到 4 位成员，点击「安排研发」加入项目。</li><li><b>推进时间。</b>「继续 4 周」便于看进展；「下一件事」会在攻关、候选人或临床结果出现时停下。</li><li><b>研发结束，看够不够好。</b>尽量达到全部「有余量」，并清除隐患再进临床。最多打磨 6 次，每次显示收益和开销；门槛不会随时间上涨。</li><li><b>研发要团队，临床不用。</b>临床期间可以立下一个项目，也可以接外包回款。</li><li><b>留够现金。</b>「已承诺」是项目后续预算，工资和租金要另留。连续 3 个月月底现金为负会破产。</li></ol><div class="hint">每次操作都会自动保存，刷新或重新打开页面会继续这一局。游戏时间只会在你点击推进时流动。</div><p class="small muted">导出的 JSON 存档可以作为独立备份保留。平常继续游戏，只需重新打开页面。</p><div class="modal-actions"><button class="primary" data-close>开始经营</button></div>`;
+    body = `<ol class="help-list"><li><b>立项。</b>先试 EGFR × 小分子，把生物组和化学组配进去。</li><li><b>补齐团队。</b>通过学术会议招聘毒理负责人，配 3 位成员；初始两组各补到 4 位成员，点击「安排研发」加入项目。</li><li><b>推进时间。</b>「继续 4 周」便于看进展；「下一件事」会在关键攻关、候选人或临床结果出现时停下。攻关可选性能、排险或速度。</li><li><b>研发结束，看够不够好。</b>尽量达到全部「有余量」，并清除隐患再进临床。最多打磨 6 次，每次显示收益和开销；严重隐患需要专项验证或研发末期排险。门槛不会随时间上涨。</li><li><b>研发要团队，临床不用。</b>自营临床占用场地席位；满员可排队、升级或加价委托。排队不阻止时间前进。研发团队可接新项目或外包。</li><li><b>留够现金。</b>「已承诺」是项目后续预算，工资和租金要另留。连续 3 个月月底现金为负会破产。</li></ol><div class="hint">每次操作都会自动保存，刷新或重新打开页面会继续这一局。游戏时间只会在你点击推进时流动。</div><p class="small muted">导出的 JSON 存档可以作为独立备份保留。平常继续游戏，只需重新打开页面。</p><div class="modal-actions"><button class="primary" data-close>开始经营</button></div>`;
   }
   modalBody.innerHTML = `<div class="modal-head"><h2 id="modal-title">${e(title)}</h2><button type="button" data-close aria-label="关闭弹窗">×</button></div>${body}`;
   if (!modal.open) modal.showModal();
@@ -621,6 +655,11 @@ document.addEventListener("click", async (event) => {
   if (!state) return;
   if (button.dataset.view) {
     activeView = button.dataset.view;
+    render();
+    return;
+  }
+  if (button.dataset.milestonePlan) {
+    selectedPlan = button.dataset.milestonePlan;
     render();
     return;
   }

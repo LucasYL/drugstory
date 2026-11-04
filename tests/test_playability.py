@@ -39,7 +39,10 @@ def test_first_drug_can_launch_with_normal_funding(content, seed):
         elif d.kind == "rd_end":
             ready = all(f["margin_ok"] for f in forecasts(s, p, content))
             capped = extensions_used(p, content) >= content.balance.research.max_extensions
-            A.resolve_rd_end(s, content, decision_id=d.id, choice="proceed" if ready or capped else "extend")
+            choice = "proceed" if ready or capped else "extend"
+            if p.hazards and p.validation_count < content.balance.research.max_validations:
+                choice = "validate"
+            A.resolve_rd_end(s, content, decision_id=d.id, choice=choice)
         elif d.kind == "phase_result":
             A.resolve_phase(s, content, decision_id=d.id, choice="continue" if d.data["passed"] else "ack")
         elif d.kind == "approval":
@@ -48,7 +51,7 @@ def test_first_drug_can_launch_with_normal_funding(content, seed):
             A.acknowledge(s, content, decision_id=d.id)
     assert p.stage == "approved"
     assert s.cash > 1000
-    assert s.week <= 100
+    assert s.week <= 120
 
 
 def test_year19_legacy_drug_is_not_trapped_by_moving_standards(content):

@@ -5,7 +5,17 @@ from __future__ import annotations
 from drugstory.content import Content, Contract
 from drugstory.engine.book import round_half_up
 from drugstory.engine.rules.combo import tier_name
-from drugstory.engine.state import CLINICAL, PHASE_REVIEW, RD_REVIEW, RESEARCH, GameState, NotebookEntry, Project, Team
+from drugstory.engine.state import (
+    CLINICAL,
+    PHASE_REVIEW,
+    QUEUED,
+    RD_REVIEW,
+    RESEARCH,
+    GameState,
+    NotebookEntry,
+    Project,
+    Team,
+)
 from drugstory.engine.systems.clinical import phase_plan
 from drugstory.engine.systems.contracts import duration, reward
 from drugstory.engine.systems.research import rd_weeks
@@ -44,7 +54,7 @@ def committed_costs(state: GameState, content: Content) -> int:
     total = 0.0
     for p in state.active_projects:
         m = content.modalities[p.modality]
-        if p.stage in (RESEARCH, RD_REVIEW):
+        if p.stage in (RESEARCH, RD_REVIEW, QUEUED):
             total += max(0, p.rd_weeks - p.rd_done) * m.weekly_cost
             remaining = keys
         elif p.stage == CLINICAL:

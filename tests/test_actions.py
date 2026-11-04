@@ -53,7 +53,7 @@ def test_cancel_project_frees_teams(content, fresh):
     A.cancel_project(fresh, content, project_id=pid)
     assert fresh.project(pid).stage == CANCELLED
     assert all(t.task == IDLE for t in fresh.teams)
-    with pytest.raises(ActionError, match="只能取消研发中的项目"):
+    with pytest.raises(ActionError, match="只能取消研发中"):
         A.cancel_project(fresh, content, project_id=pid)
 
 

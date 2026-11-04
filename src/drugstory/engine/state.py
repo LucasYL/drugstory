@@ -12,12 +12,13 @@ from typing import Any
 
 from drugstory.content import ATTRS
 
-SAVE_VERSION = 1
+SAVE_VERSION = 2
 
 # 项目阶段
 RESEARCH = "research"  # 研发中
 RD_REVIEW = "rd_review"  # 研发结束，等玩家决定
 CLINICAL = "clinical"  # 在某一期临床或审评中
+QUEUED = "clinical_queue"
 PHASE_REVIEW = "phase_review"  # 某一期过关，等玩家决定继续还是终止
 NAMING = "naming"  # 审评通过，等玩家起名
 APPROVED = "approved"
@@ -25,7 +26,7 @@ FAILED = "failed"
 TERMINATED = "terminated"
 CANCELLED = "cancelled"
 ENDED_STAGES = (APPROVED, FAILED, TERMINATED, CANCELLED)
-ACTIVE_STAGES = (RESEARCH, RD_REVIEW, CLINICAL, PHASE_REVIEW, NAMING)
+ACTIVE_STAGES = (RESEARCH, RD_REVIEW, QUEUED, CLINICAL, PHASE_REVIEW, NAMING)
 
 # 团队在做什么
 IDLE = ""
@@ -45,6 +46,7 @@ class Lead:
     exp: int = 0
     profession: str = ""
     secondary: str = ""
+    trait: str = ""
 
     def __post_init__(self) -> None:
         ranked = sorted(ATTRS, key=lambda a: (-self.attr(a), ATTRS.index(a)))
@@ -52,6 +54,8 @@ class Lead:
             self.profession = ranked[0]
         if not self.secondary:
             self.secondary = next(a for a in ranked if a != self.profession)
+        if not self.trait:
+            self.trait = {"bio": "rigorous", "chem": "iterative", "tox": "rigorous", "proc": "frugal"}[self.profession]
 
     def attr(self, key: str) -> int:
         return getattr(self, key)
@@ -115,6 +119,12 @@ class Project:
     ended_week: int = -1
     drug_id: int = 0
     spent: int = 0
+    base_rd_weeks: int = 0
+    extension_count: int = -1  # -1 表示从旧档研发时长推断
+    validation_count: int = 0
+    validation_weeks_left: int = 0
+    clinical_mode: str = "internal"
+    queued_week: int = -1
 
     @property
     def active(self) -> bool:

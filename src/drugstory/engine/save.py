@@ -69,9 +69,10 @@ def from_json(text: str) -> GameState:
     except json.JSONDecodeError as e:
         raise SaveError(f"存档坏了：{e}") from None
     version = data.get("version") if isinstance(data, dict) else None
-    if version != SAVE_VERSION:
-        raise SaveError(f"存档版本是 {version}，这个版本的游戏只能读 {SAVE_VERSION}")
+    if version not in (1, SAVE_VERSION):
+        raise SaveError(f"存档版本是 {version}，这个版本的游戏支持 1 和 {SAVE_VERSION}")
     try:
+        data["version"] = SAVE_VERSION
         return _build(GameState, data)
     except (KeyError, TypeError, ValueError) as e:
         raise SaveError(f"存档坏了：{e}") from None

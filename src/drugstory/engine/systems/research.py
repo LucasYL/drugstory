@@ -19,6 +19,8 @@ def rd_weeks(target: Target, modality: Modality) -> int:
 
 
 def extensions_used(project: Project, content: Content) -> int:
+    if project.extension_count >= 0:
+        return project.extension_count
     base = rd_weeks(content.targets[project.target], content.modalities[project.modality])
     return max(0, (project.rd_weeks - base) // content.balance.research.extension_weeks)
 
@@ -50,7 +52,7 @@ def project_teams(state: GameState, project: Project) -> list[Team]:
 
 
 def milestone_week(project: Project, index: int, content: Content) -> int:
-    return math.ceil(content.balance.research.milestones[index] * project.rd_weeks)
+    return math.ceil(content.balance.research.milestones[index] * (project.base_rd_weeks or project.rd_weeks))
 
 
 def best_team(state: GameState, project: Project, stat: str, content: Content) -> Team | None:
@@ -61,10 +63,49 @@ def best_team(state: GameState, project: Project, stat: str, content: Content) -
     return max(teams, key=lambda t: (weekly_output(t, stat, content), -t.id))
 
 
-def milestone_bonus(state: GameState, project: Project, team: Team, stat: str, content: Content) -> float:
+def milestone_bonus(state: GameState, project: Project, team: Team, stat: str, content: Content,
+                    factor: float = 1.0) -> float:
     r = content.balance.research
-    effort = weekly_output(team, stat, content) * point_multiplier(state, project, content) * r.milestone_multiplier
+    effort = (weekly_output(team, stat, content) * point_multiplier(state, project, content)
+              * r.milestone_multiplier * factor)
     return quality_gain(project.stats[stat], effort, content.targets[project.target], content)
+
+
+def milestone_plan(state: GameState, project: Project, team: Team, plan: str, content: Content) -> dict:
+    r = content.balance.research
+    stat = STATS[project.milestones_done]
+    trait = team.lead.trait
+    result = {"key": plan, "cost": 0, "weeks": 0, "bonus": 0.0, "hazard_ids": [], "problem": ""}
+    if plan in ("boost", "routine"):
+        factor = 1.0 if plan == "routine" else r.boost_factor
+        if plan == "boost":
+            result.update(cost=r.boost_cost, weeks=r.boost_weeks)
+            if trait == "iterative":
+                factor *= .85
+                result["weeks"] -= 1
+            elif trait == "optimizer":
+                factor *= 1.25
+                result["weeks"] += 1
+                result["cost"] *= 1.25
+            elif trait == "frugal":
+                factor *= .9
+        result["bonus"] = milestone_bonus(state, project, team, stat, content, factor)
+    elif plan == "validate":
+        eligible = [h for h in project.hazards if team.lead.attr(ATTR_OF_STAT[h.stat]) >= r.validation_attr]
+        eligible.sort(key=lambda h: (-h.severity, h.id))
+        result.update(cost=r.validate_cost, weeks=r.validate_weeks + (trait == "rigorous"),
+                      hazard_ids=[h.id for h in eligible[:2 if trait == "rigorous" else 1]])
+        if not eligible:
+            result["problem"] = "暂无该团队能处理的隐患（对应专业需 ≥30）"
+    elif plan == "fast":
+        minimum = max(project.rd_done + 1, milestone_week(project, len(r.milestones) - 1, content) + 1)
+        result["weeks"] = -min(r.fast_weeks + (trait == "iterative"), max(0, project.rd_weeks - minimum))
+    else:
+        result["problem"] = "不认识的攻关方案"
+    if trait == "frugal":
+        result["cost"] *= .8
+    result["cost"] = round_half_up(result["cost"])
+    return result
 
 
 def step(state: GameState, content: Content) -> None:
@@ -76,6 +117,14 @@ def step(state: GameState, content: Content) -> None:
         teams = project_teams(state, project)
         if not teams:
             continue  # 没有团队：研发暂停，也不花钱
+        if project.validation_weeks_left:
+            project.spent += spend(state, content.modalities[project.modality].weekly_cost, "research")
+            project.rd_done += 1
+            project.validation_weeks_left -= 1
+            if not project.validation_weeks_left:
+                project.stage = RD_REVIEW
+                decisions.add(state, decisions.RD_END, project.id)
+            continue
         target = content.targets[project.target]
         modality = content.modalities[project.modality]
         mult = point_multiplier(state, project, content)
@@ -94,7 +143,10 @@ def step(state: GameState, content: Content) -> None:
         if project.milestones_done < len(r.milestones):
             if project.rd_done >= milestone_week(project, project.milestones_done, content):
                 stat = STATS[project.milestones_done]
-                decisions.add(state, decisions.MILESTONE, project.id, index=project.milestones_done, stat=stat)
+                if project.milestones_done in r.decision_milestones:
+                    decisions.add(state, decisions.MILESTONE, project.id, index=project.milestones_done, stat=stat)
+                else:
+                    apply_milestone(state, project, best_team(state, project, stat, content), content, "routine")
         elif project.rd_done >= project.rd_weeks:
             project.stage = RD_REVIEW
             decisions.add(state, decisions.RD_END, project.id)
@@ -124,7 +176,7 @@ def _clear_hazards(
 ) -> None:
     divisor = content.balance.research.hazard_clear_divisor
     for stat in HAZARD_STATS:
-        open_hazards = [h for h in project.hazards if h.stat == stat]
+        open_hazards = [h for h in project.hazards if h.stat == stat and h.severity < 2]
         if not open_hazards:
             continue
         attr = ATTR_OF_STAT[stat]
@@ -135,18 +187,28 @@ def _clear_hazards(
             say(state, f"{best.lead.name}的团队清掉了{spaced(project_label(project, content))}的隐患「{hazard.text}」")
 
 
-def apply_milestone(state: GameState, project: Project, team: Team, content: Content) -> float:
+def apply_milestone(state: GameState, project: Project, team: Team, content: Content, plan: str = "boost") -> float:
+    if not project.base_rd_weeks:
+        project.base_rd_weeks = project.rd_weeks
     stat = STATS[project.milestones_done]
-    bonus = milestone_bonus(state, project, team, stat, content)
+    effect = milestone_plan(state, project, team, plan, content)
+    bonus = effect["bonus"]
+    if project.extension_count < 0:
+        project.extension_count = extensions_used(project, content)
+    project.rd_weeks += effect["weeks"]
+    project.hazards = [h for h in project.hazards if h.id not in effect["hazard_ids"]]
     project.stats[stat] += bonus
     project.milestones_done += 1
     names = content.texts.names
-    say(state, f"{team.lead.name}带队完成{names.milestones[stat]}：{names.stats[stat]} +{bonus:.0f}")
+    title = {"boost": "深挖性能", "validate": "专项验证", "fast": "尽快定型", "routine": "例行攻关"}[plan]
+    say(state, f"{team.lead.name}完成{names.milestones[stat]}·{title}：{names.stats[stat]} +{bonus:.0f}，"
+        f"工期 {effect['weeks']:+} 周，排除 {len(effect['hazard_ids'])} 项隐患")
     return bonus
 
 
 def extend(state: GameState, project: Project, content: Content) -> None:
     weeks = content.balance.research.extension_weeks
+    project.extension_count = extensions_used(project, content) + 1
     project.rd_weeks += weeks
     project.stage = RESEARCH
     say(state, f"{project_label(project, content)} 多磨 {weeks} 周")

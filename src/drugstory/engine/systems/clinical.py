@@ -8,7 +8,7 @@ from drugstory.engine.book import round_half_up, say, spend
 from drugstory.engine.rules.naming import suggest_name
 from drugstory.engine.rules.scoring import composite, expert_score, passed, standard
 from drugstory.engine.rules.texts import hazard_text, phase_text, project_label, spaced
-from drugstory.engine.state import CLINICAL, FAILED, NAMING, PHASE_REVIEW, GameState, PhaseResult, Project
+from drugstory.engine.state import CLINICAL, FAILED, NAMING, PHASE_REVIEW, QUEUED, GameState, PhaseResult, Project
 from drugstory.engine.systems.progression import add_proficiency
 
 
@@ -23,13 +23,29 @@ def unresolved_hazards(project: Project):
     return [h for h in project.hazards if h.phase not in completed]
 
 
+def operations(state: GameState, content: Content) -> dict:
+    capacity = content.facility(state.facility).clinical_slots
+    used = sum(p.clinical_mode == "internal" and p.stage in (CLINICAL, PHASE_REVIEW) for p in state.projects)
+    queue = sorted((p for p in state.projects if p.stage == QUEUED), key=lambda p: (p.queued_week, p.id))
+    return {"capacity": capacity, "used": used, "available": max(0, capacity - used),
+            "queue": [p.id for p in queue],
+            "contract_multiplier": content.balance.clinical_operations.contract_multiplier}
+
+
+def promote_queue(state: GameState, content: Content) -> None:
+    op = operations(state, content)
+    for pid in op["queue"][:op["available"]]:
+        start_phase(state, state.project(pid), content.phase_keys[0], content)
+
+
 def phase_plan(project: Project, phase_key: str, content: Content) -> tuple[int, float]:
     """这一期要多少周、一共花多少钱。"""
     phase = content.phase(phase_key)
     target = content.targets[project.target]
     modality = content.modalities[project.modality]
     weeks = max(2, round_half_up(phase.weeks * target.trial_time))
-    return weeks, phase.cost * target.trial_cost * modality.trial_cost
+    mult = content.balance.clinical_operations.contract_multiplier if project.clinical_mode == "contract" else 1
+    return weeks, phase.cost * target.trial_cost * modality.trial_cost * mult
 
 
 def assign_hazards(state: GameState, project: Project, content: Content) -> None:
@@ -53,13 +69,13 @@ def start_phase(state: GameState, project: Project, phase_key: str, content: Con
 
 
 def step(state: GameState, content: Content) -> None:
-    for project in state.projects:
-        if project.stage != CLINICAL:
-            continue
+    promote_queue(state, content)
+    for project in [p for p in state.projects if p.stage == CLINICAL]:
         project.spent += spend(state, project.phase_weekly_cost, "clinical")
         project.phase_weeks_left -= 1
         if project.phase_weeks_left <= 0:
             _finish_phase(state, project, content)
+    promote_queue(state, content)
 
 
 def _finish_phase(state: GameState, project: Project, content: Content) -> None:

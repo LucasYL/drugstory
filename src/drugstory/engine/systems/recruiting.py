@@ -33,7 +33,8 @@ def generate(
     main = min(cap, random_.randint(*ch.specialty) + bonus)
     attrs = {a: min(main - 1, random_.randint(*ch.other)) for a in ATTRS}
     attrs[specialty] = main
-    return Lead(name=_unique_name(random_, taken, content), leadership=random_.randint(*ch.leadership), **attrs)
+    return Lead(name=_unique_name(random_, taken, content), leadership=random_.randint(*ch.leadership),
+                trait=rng.stream(state, "traits").choice(list(content.balance.traits.keys())), **attrs)
 
 
 def _unique_name(random_: random.Random, taken: set[str], content: Content) -> str:

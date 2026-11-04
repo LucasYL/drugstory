@@ -34,6 +34,9 @@ def test_actions_survive_restart_and_continue_deterministically(session):
     command(session, "advance", weeks=4)
     command(restored, "advance", weeks=4)
     assert to_json(restored.state) == to_json(session.state)
+    command(session, "advance", weeks=4)
+    command(restored, "advance", weeks=4)
+    assert to_json(restored.state) == to_json(session.state)
     assert session.state.pending[0].kind == "milestone"
 
 

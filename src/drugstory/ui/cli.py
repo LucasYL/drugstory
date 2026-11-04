@@ -38,6 +38,7 @@ from drugstory.engine.state import (
     ON_CONTRACT,
     ON_PROJECT,
     PHASE_REVIEW,
+    QUEUED,
     RD_REVIEW,
     RESEARCH,
     Decision,
@@ -48,7 +49,7 @@ from drugstory.engine.state import (
 from drugstory.engine.systems.clinical import phase_plan, prior_approvals
 from drugstory.engine.systems.market import curve, sharing
 from drugstory.engine.systems.progression import final_score
-from drugstory.engine.systems.research import extensions_used, milestone_bonus, project_teams
+from drugstory.engine.systems.research import extensions_used, milestone_plan, project_teams
 from drugstory.engine.systems.teams import capacity, exp_to_next, lead_salary, team_salary, training_cost
 
 LINE = "─" * 64
@@ -238,6 +239,8 @@ class CLI:
         if p.stage == CLINICAL:
             done = p.phase_weeks - p.phase_weeks_left
             return f"{name}  {c.phase(p.phase).name} {done}/{p.phase_weeks} 周"
+        if p.stage == QUEUED:
+            return f"{name}  等待临床席位，不占研发团队、不收临床费"
         if p.stage == PHASE_REVIEW:
             return f"{name}  {c.phase(p.phase).name}已过关，等你决定"
         return f"{name}  等待起名"
@@ -280,17 +283,19 @@ class CLI:
         stat = d.data["stat"]
         self.say(f"⚑ {project_label(p, c)} 到了「{self.names.milestones[stat]}」节点（{self.names.stats[stat]}）")
         teams = project_teams(s, p)
-        bonuses = [milestone_bonus(s, p, t, stat, c) for t in teams]
-        best = max(range(len(teams)), key=lambda i: (bonuses[i], -teams[i].id))
-        for i, (t, bonus) in enumerate(zip(teams, bonuses, strict=True), 1):
-            tag = "（推荐）" if i - 1 == best else ""
-            self.say(
-                f"  [{i}] {self.names.teams[t.lead.specialty]} {t.lead.name}  "
-                f"{self.names.stats[stat]} +{bonus:.0f}{tag}"
-            )
-        index = self.choose("派哪个团队攻关？", len(teams), default=best, allow_back=False)
+        self.say("  [1] 深挖性能：追加费用和工期，提升属性")
+        self.say("  [2] 专项验证：消除已知隐患，放弃属性加成")
+        self.say("  [3] 尽快定型：缩短工期，放弃属性加成")
+        plan_index = self.choose("选择攻关方案", 3, default=0, allow_back=False)
+        plan = ("boost", "validate", "fast")[plan_index or 0]
+        options = [milestone_plan(s, p, t, plan, c) for t in teams]
+        for i, (t, effect) in enumerate(zip(teams, options, strict=True), 1):
+            self.say(f"  [{i}] {t.lead.name} · {c.balance.traits[t.lead.trait].name}："
+                     f"加点 {effect['bonus']:.1f}，{effect['weeks']:+} 周，费用 {money(effect['cost'])}，"
+                     f"排险 {len(effect['hazard_ids'])} 项 {effect['problem']}")
+        index = self.choose("派哪个团队攻关？", len(teams), default=0, allow_back=False)
         assert index is not None
-        self.act("choose_milestone_team", decision_id=d.id, team_id=teams[index].id)
+        self.act("choose_milestone_team", decision_id=d.id, team_id=teams[index].id, plan=plan)
 
     def expectation_lines(self, p: Project, phases: list[str]) -> list[str]:
         """按现在的属性，各期预计能拿几分（不算随机和隐患）。"""
@@ -330,8 +335,10 @@ class CLI:
         self.say(f"  [1] 进入临床：一共约 {weeks} 周、{money(cost)}，团队空出来")
         self.say(f"  [2] 多磨 {extra} 周：研发费 {money(extend_cost)}，另付工资租金；已用 {used}/{limit} 次")
         self.say("  [3] 终止：钱不再花，熟练度照涨")
-        index = self.choose("怎么办？", 3, allow_back=False)
-        choice = ("proceed", "extend", "terminate")[index or 0]
+        self.say("  [4] 专项排险：2 周，按隐患数量付费，不加点、不产生新隐患")
+        self.say(f"  [5] 委托临床：不占自营席位，全程约 {money(cost * 1.3)}")
+        index = self.choose("怎么办？", 5, allow_back=False)
+        choice = ("proceed", "extend", "terminate", "validate", "contract")[index or 0]
         self.act("resolve_rd_end", decision_id=d.id, choice=choice)
 
     def show_result(self, p: Project, phase_key: str) -> None:

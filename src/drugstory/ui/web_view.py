@@ -22,13 +22,13 @@ from drugstory.engine.rules.combo import compat, multiplier, tier_name
 from drugstory.engine.rules.scoring import expected_scores, passed
 from drugstory.engine.rules.texts import project_label
 from drugstory.engine.save import to_data
-from drugstory.engine.state import CLINICAL, PHASE_REVIEW, RD_REVIEW, RESEARCH, GameState, Project
-from drugstory.engine.systems.clinical import phase_plan, prior_approvals, unresolved_hazards
+from drugstory.engine.state import CLINICAL, PHASE_REVIEW, QUEUED, RD_REVIEW, RESEARCH, GameState, Project
+from drugstory.engine.systems.clinical import operations, phase_plan, prior_approvals, unresolved_hazards
 from drugstory.engine.systems.market import curve, sharing
 from drugstory.engine.systems.progression import final_score
 from drugstory.engine.systems.research import (
     extensions_used,
-    milestone_bonus,
+    milestone_plan,
     point_multiplier,
     project_teams,
     quality_gain,
@@ -60,7 +60,7 @@ def forecasts(state: GameState, p: Project, content: Content) -> list[dict]:
     """用现有属性、各期预计结束时的标准预估，避免跨年时过于乐观。"""
     keys = content.phase_keys
     week = state.week
-    if p.stage in (RESEARCH, RD_REVIEW):
+    if p.stage in (RESEARCH, RD_REVIEW, QUEUED):
         week += max(0, p.rd_weeks - p.rd_done)
     elif p.stage == CLINICAL:
         keys = keys[keys.index(p.phase):]
@@ -84,7 +84,7 @@ def forecasts(state: GameState, p: Project, content: Content) -> list[dict]:
                for k, v in scores.items()}
         out.append({
             "key": key, "name": phase.name, "weeks": duration, "cost": cost,
-            "finish": label(max(0, week - 1), content), "scores": scores,
+            "finish": "排队时间未计入" if p.stage == QUEUED else label(max(0, week - 1), content), "scores": scores,
             "passed": passed(key, scores, content), "requirements": plain(phase.pass_),
             "total_required": phase.pass_total,
             "margin_ok": passed(key, low, content) and not unresolved_hazards(p),
@@ -104,6 +104,7 @@ def snapshot(state: GameState, content: Content) -> dict:
     current = c.facility(s.facility)
     overhead = payroll(s, c) + current.rent
     committed = committed_costs(s, c)
+    ops = operations(s, c)
     shares = sharing(s)
     drugs = []
     for drug in s.drugs:
@@ -134,6 +135,13 @@ def snapshot(state: GameState, content: Content) -> dict:
             "forecasts": future, "weekly_cost": c.modalities[p.modality].weekly_cost,
             "operating_reserve": operating_reserve,
             "cash_after_reserve": s.cash - committed - operating_reserve,
+            "queue_position": ops["queue"].index(p.id) + 1 if p.id in ops["queue"] else 0,
+            "contract_cost": sum(phase_plan(replace(p, clinical_mode="contract"), k, c)[1] for k in c.phase_keys),
+            "validation": {"cost": len(p.hazards) * c.balance.research.final_validation_cost,
+                           "weeks": c.balance.research.validate_weeks,
+                           "available": bool(p.hazards and p.team_ids)
+                           and p.validation_count < c.balance.research.max_validations,
+                           "remaining": max(0, c.balance.research.max_validations - p.validation_count)},
             "route": route_info(p.target, p.modality, c),
             "quality_knee": c.balance.scoring.base_standard * c.targets[p.target].difficulty
             * c.balance.research.quality_knee,
@@ -153,6 +161,7 @@ def snapshot(state: GameState, content: Content) -> dict:
             task = f"{c.contracts[contract.kind].name} · 还剩 {contract.weeks_left} 周"
         teams.append({
             **to_data(t), "specialty": t.lead.specialty, "type": names.teams[t.lead.specialty],
+            "trait": plain(c.balance.traits[t.lead.trait]),
             "task_label": task, "salary": team_salary(t, c), "exp_next": exp_to_next(t.lead, c),
             "size_factor": size_factor(t, c),
             "weekly_output": {stat: weekly_output(t, stat, c) for stat in STATS},
@@ -163,15 +172,28 @@ def snapshot(state: GameState, content: Content) -> dict:
     pending = []
     for d in s.pending:
         item = to_data(d)
+        if d.kind == "phase_result" and not d.data["passed"]:
+            result = s.project(d.project_id).results[-1]
+            phase = c.phase(result.phase)
+            item["failure_reasons"] = [
+                f"{names.stats[stat]} {result.scores[stat]} 分，门槛 ≥{line} 分"
+                for stat, line in phase.pass_.items() if result.scores[stat] < line
+            ]
+            total = sum(result.scores.values())
+            if total < phase.pass_total:
+                item["failure_reasons"].append(f"合计 {total} 分，门槛 ≥{phase.pass_total} 分")
         if d.kind == "milestone":
             p = s.project(d.project_id)
             item["options"] = [
                 {"team_id": t.id, "name": t.lead.name, "type": names.teams[t.lead.specialty],
-                 "bonus": milestone_bonus(s, p, t, d.data["stat"], c)} for t in project_teams(s, p)
+                 "trait": plain(c.balance.traits[t.lead.trait]),
+                 "plans": {key: milestone_plan(s, p, t, key, c) for key in ("boost", "validate", "fast")}}
+                for t in project_teams(s, p)
             ]
         if d.kind == "candidates" and s.recruitment:
             item["candidates"] = [
                 {**to_data(lead), "type": names.teams[lead.specialty], "salary": lead_salary(lead, c),
+                 "trait_info": plain(c.balance.traits[lead.trait]),
                  "fee": lead_salary(lead, c) * c.balance.recruiting.signing_months}
                 for lead in s.recruitment.candidates
             ]
@@ -244,4 +266,5 @@ def snapshot(state: GameState, content: Content) -> dict:
         "names": plain(names), "team_rules": plain(c.balance.team),
         "extension_weeks": c.balance.research.extension_weeks,
         "training_gain": c.balance.growth.training_gain,
+        "clinical_operations": ops, "edition": "下一版 v0.2",
     }
