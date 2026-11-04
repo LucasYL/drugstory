@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f5ef" />
+    <title>新药物语 · 研发手记</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="新药物语首页"
+        ><span class="brand-mark">药</span
+        ><span>新药物语<small>一家小公司的新药之路</small></span></a
+      >
+      <div class="save-tools">
+        <span id="save-status">连接中…</span
+        ><button data-action="save" class="quiet">保存</button
+        ><a class="button quiet" href="/api/save" download>导出存档</a
+        ><button data-modal="help" class="icon-button" aria-label="玩法帮助">
+          ?
+        </button>
+      </div>
+    </header>
+    <div id="app"><p class="loading">正在打开研发手记…</p></div>
+    <div id="notice" role="alert" hidden></div>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div id="modal-body"></div>
+    </dialog>
+    <footer>
+      新药物语 · 文字试玩版
+      <span>每次操作自动保存 · 关闭页面后，下次从这里继续</span>
+    </footer>
+  </body>
+</html>

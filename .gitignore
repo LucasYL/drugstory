@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# 虚拟环境（uv sync 会自动创建）
+.venv/
+
+# 工具缓存
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# 系统 / 编辑器
+.DS_Store
+.idea/
+
+# 本地游戏进度
+saves/
+/autosave.json
+/save.json
+.artifacts/

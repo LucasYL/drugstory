@@ -1,0 +1,251 @@
+# 所有可调数值。钱的单位是万元，时间的单位是周。
+# 公式的含义见 design/game-design.md，对应的小节写在每一段前面。
+
+[time]
+weeks_per_month = 4
+weeks_per_year = 48
+career_years = 20
+
+# 第 12 节 新手期
+[start]
+cash = 4000
+facility = "incubator"
+targets = ["egfr", "pd1", "tnf", "jak"]
+modalities = ["small_molecule", "mab"]
+
+[[start.teams]]
+name = "周敏"
+bio = 55
+chem = 20
+tox = 25
+proc = 15
+leadership = 4
+members = 2
+
+[[start.teams]]
+name = "李建国"
+bio = 20
+chem = 60
+tox = 20
+proc = 30
+leadership = 4
+members = 2
+
+# 5.1、5.2 节 负责人与团队
+[team]
+output_divisor = 40
+member_weight = 0.7           # 规模系数 = 1 + 0.7 × 有效人数 ^ 0.5
+member_exponent = 0.5
+overflow_weight = 0.5
+max_per_project = 4
+member_salary = 1.5
+member_hire_fee = 2
+member_severance = 1.5
+lead_salary_base = 2
+lead_salary_per_point = 0.1
+max_attr = 100
+max_leadership = 20
+
+# 5.5 节 培养
+[growth]
+exp_per_level = 12
+max_level = 10
+level_up_specialty = 3
+level_up_other = 1
+leadership_every_levels = 2
+training_base_cost = 20
+training_cost_per_point = 0.6
+training_base_data = 10
+training_data_divisor = 5
+training_gain = 5
+secondary_cap = 70           # 固定副专业，避免所有人都能练成四项 100
+other_cap = 45
+
+# 第 7 节 研发
+[research]
+noise = 0.2
+milestones = [0.2, 0.4, 0.6, 0.8]
+milestone_multiplier = 8
+extension_weeks = 4
+max_extensions = 6           # 最多追加 24 周；及时判断继续还是止损
+quality_knee = 1.0           # 达到同靶点基础审评标准后，新增点数的收益递减
+quality_ceiling = 1.35       # 研发属性渐近上限；不降低老存档已经取得的属性
+data_per_team_week = 1
+hazard_rate = { low = 0.05, medium = 0.08, high = 0.12 }
+hazard_stat_weights = { safety = 50, druggability = 25, manufacturability = 25 }
+hazard_severity2_chance = 0.3
+hazard_clear_divisor = 200
+proficiency_bonus = 0.06
+max_proficiency = 5
+
+# 6.2 节 组合系数，依次是 很差、差、一般、好、绝配
+[combo]
+tier_multipliers = [0.4, 0.7, 1.0, 1.2, 1.5]
+
+# 8.2、8.5 节 打分
+[scoring]
+base_standard = 380
+yearly_growth = 0.0          # 审批标准固定，避免研发追不上指数上涨的门槛
+standard_of_care_step = 0.0  # 同类产品通过市场份额竞争，不无限抬高审批标准
+score_scale = 7
+noise = 1                    # 每位专家的分数随机 -1、0、+1
+min_score = 1
+max_score = 10
+hall_of_fame = 90
+
+# 8.1 节 临床各期和审评。standard 是阶段系数；pass 是单项过关线；pass_total 是总分过关线
+[[phases]]
+key = "I"
+name = "I 期"
+weeks = 8
+cost = 100
+data = 5
+weight = 1
+experts = ["safety", "druggability"]
+standard = { safety = 0.8, druggability = 0.8 }
+pass = { safety = 4 }
+
+[[phases]]
+key = "II"
+name = "II 期"
+weeks = 16
+cost = 250
+data = 10
+weight = 2
+experts = ["efficacy", "safety"]
+standard = { efficacy = 0.9, safety = 0.9 }
+pass = { efficacy = 5 }
+
+[[phases]]
+key = "III"
+name = "III 期"
+weeks = 24
+cost = 450
+data = 15
+weight = 3
+experts = ["efficacy", "safety"]
+standard = { efficacy = 1.15, safety = 1.0 }
+pass = { efficacy = 6, safety = 4 }
+vs_standard_of_care = true
+
+[[phases]]
+key = "NDA"
+name = "上市审评"
+weeks = 8
+cost = 40
+data = 5
+weight = 4
+experts = ["efficacy", "druggability", "safety", "manufacturability"]
+standard = { efficacy = 1.0, druggability = 1.0, safety = 1.0, manufacturability = 1.0 }
+pass = {}
+pass_total = 24
+
+# 8.3 节 隐患分配到各期的权重
+[hazard_phases]
+safety = { I = 20, II = 35, III = 35, NDA = 10 }
+druggability = { I = 70, NDA = 30 }
+manufacturability = { NDA = 100 }
+
+# 第 9 节 上市与销售
+[market]
+base_by_tier = [20, 40, 80, 120, 200]
+ramp_weeks = 24
+plateau_weeks = 96
+decline_rate = 0.02
+retire_fraction = 0.10
+reputation_divisor = 200
+oral_chronic_bonus = 1.2
+margin_base = 0.40
+margin_per_point = 0.045
+
+[reputation]
+max = 100
+approval_offset = 50
+approval_divisor = 5
+approval_min = 1
+failure_penalty = 1
+
+# 5.3 节 场地，只能按顺序逐级升级
+[[facilities]]
+key = "incubator"
+name = "孵化器实验室"
+capacity = 20
+cost = 0
+rent = 5
+
+[[facilities]]
+key = "center"
+name = "研发中心"
+capacity = 60
+cost = 2000
+rent = 20
+
+[[facilities]]
+key = "campus"
+name = "研发园区"
+capacity = 150
+cost = 8000
+rent = 60
+
+[[facilities]]
+key = "hq"
+name = "总部大楼"
+capacity = 400
+cost = 25000
+rent = 150
+
+# 5.4 节 招聘负责人
+[recruiting]
+weeks = 2
+candidates = 3
+signing_months = 3
+reputation_divisor = 5
+
+[[recruiting.channels]]
+key = "web"
+name = "招聘网站"
+cost = 20
+specialty = [25, 50]
+other = [10, 35]
+leadership = [3, 6]
+
+[[recruiting.channels]]
+key = "conference"
+name = "学术会议"
+cost = 60
+specialty = [40, 70]
+other = [15, 40]
+leadership = [4, 8]
+
+[[recruiting.channels]]
+key = "headhunter"
+name = "猎头"
+cost = 200
+specialty = [60, 90]
+other = [20, 45]
+leadership = [6, 12]
+
+# 第 10 节 外包与破产
+[contracts]
+offers_per_month = 3
+duration_factor = 2
+min_weeks = 2
+bonus_per_10 = 0.10
+
+[finance]
+bankrupt_months = 3
+
+# 第 11 节 成就的门槛（营收按万元算）
+[achievements]
+revenue_100m = 10000
+revenue_1b = 100000
+staff = 100
+pipeline = 5
+alzheimer_target = "abeta"
+
+# 第 11 节 20 年结算：总分 = 累计利润（亿元）× 10 + 获批数 × 20 + 名人堂数 × 50 + 成就数 × 30
+[final_score]
+per_100m_profit = 10
+per_approval = 20
+per_hall_of_fame = 50
+per_achievement = 30
