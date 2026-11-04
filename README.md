@@ -66,6 +66,7 @@ uv run python design/tools/combo.py --write  # 改了靶点或分子类型以后
 
 ## 文档
 
+- [角色养成与研发经营重设计草案](design/growth-redesign.md)：下一版的仿制与创新路线、角色突破、证据驱动研发和经济验收；尚未接入当前版本
 - [游戏设计](design/game-design.md)：核心循环、各个系统、数值、MVP 范围
 - [内容表](design/content.md)：靶点、分子类型、组合规则、文案
 - [技术方案](design/tech.md)：架构、约定、存档、模拟结果、里程碑
