@@ -1,14 +1,14 @@
 [project]
 name = "drugstory"
-version = "0.3.0"
+version = "0.4.0"
 description = "新药物语（暂定名）：开罗式的制药经营游戏"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-drugstory = "drugstory.ui.cli:main"
-drugstory-web = "drugstory.ui.web_server:main"
+drugstory = "drugstory.career.cli:main"
+drugstory-web = "drugstory.career.server:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
