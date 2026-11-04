@@ -150,6 +150,7 @@ def start_project(state: GameState, content: Content, target: str, modality: str
 def set_project_teams(state: GameState, content: Content, project_id: int, team_ids: list[int]) -> None:
     project = _project(state, project_id)
     _require(project.stage == RESEARCH, "只有研发中的项目才能调整团队")
+    _require(not decisions.for_project(state, project.id), "先处理完这个项目待决定的事")
     limit = content.balance.team.max_per_project
     _require(len(team_ids) <= limit, f"一个项目最多配 {limit} 个团队")
     teams = _check_team_ids(state, team_ids, allowed_project=project.id)
@@ -313,6 +314,7 @@ def fire_lead(state: GameState, content: Content, team_id: int) -> None:
     team = _team(state, team_id)
     if team.task == ON_PROJECT:
         project = state.project(team.task_id)
+        _require(not decisions.for_project(state, project.id), "先处理完这个项目待决定的事")
         project.team_ids = [i for i in project.team_ids if i != team.id]
     elif team.task == ON_CONTRACT:
         state.contracts = [c for c in state.contracts if c.team_id != team.id]

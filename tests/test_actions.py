@@ -97,6 +97,17 @@ def test_fire_lead_removes_the_team_from_its_work(content, fresh):
     assert fresh.project(pid).team_ids == [fresh.teams[0].id]
 
 
+def test_teams_cannot_leave_a_project_that_is_waiting_for_a_decision(content, fresh):
+    pid = A.start_project(fresh, content, target="egfr", modality="small_molecule", team_ids=ids(fresh))
+    while not fresh.pending:
+        advance(fresh, content, 1)
+    assert fresh.pending[0].kind == D.MILESTONE
+    with pytest.raises(ActionError, match="先处理完"):
+        A.set_project_teams(fresh, content, project_id=pid, team_ids=[])
+    with pytest.raises(ActionError, match="先处理完"):
+        A.fire_lead(fresh, content, team_id=fresh.teams[0].id)
+
+
 def test_training(content, fresh):
     team = fresh.teams[0]
     fresh.data = 100
