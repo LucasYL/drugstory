@@ -31,7 +31,8 @@ def check_invariants(state, content):
     for decision in state.pending:
         if decision.project_id:
             state.project(decision.project_id)
-    assert len(state.years) == state.week // content.balance.time.weeks_per_year + 1
+    if not state.game_over:  # 破产发生在年底时，不会再开新的一年
+        assert len(state.years) == state.week // content.balance.time.weeks_per_year + 1
     assert 0 <= state.reputation <= content.balance.reputation.max
 
 

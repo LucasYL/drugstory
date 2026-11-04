@@ -173,6 +173,9 @@ class Section:
     def __iter__(self):
         return iter(self._data)
 
+    def __len__(self) -> int:
+        return len(self._data)
+
     def get(self, key: str, default: Any = None) -> Any:
         return self._data.get(key, default)
 
