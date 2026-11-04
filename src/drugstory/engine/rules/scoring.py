@@ -5,7 +5,7 @@ from __future__ import annotations
 from drugstory.content import Content, Target
 from drugstory.engine.book import round_half_up
 from drugstory.engine.calendar import year_of
-from drugstory.engine.state import PhaseResult
+from drugstory.engine.state import PhaseResult, Project
 
 
 def year_factor(week: int, content: Content) -> float:
@@ -55,3 +55,24 @@ def composite(results: list[PhaseResult], content: Content) -> float:
         total += w * sum(r.scores.values()) / len(r.scores)
         weights += w
     return round(total / weights * 10, 1) if weights else 0.0
+
+
+def strategy_for(project: Project, phase_key: str, content: Content):
+    key = project.clinical_strategy if project.strategy_chosen and phase_key != "I" else "standard"
+    return content.balance.clinical_strategies[key]
+
+
+def score_noise(project: Project, phase_key: str, content: Content) -> int:
+    return min(content.balance.scoring.noise, strategy_for(project, phase_key, content).noise)
+
+
+def project_scores(project: Project, phase_key: str, week: int, content: Content,
+                   noises: dict[str, int] | None = None) -> dict[str, int]:
+    strategy = strategy_for(project, phase_key, content)
+    target = content.targets[project.target]
+    return {
+        stat: expert_score(project.stats[stat], standard(target, phase_key, stat, week, content),
+                           (noises or {}).get(stat, 0) + (strategy.efficacy_bonus if stat == "efficacy" else 0),
+                           content)
+        for stat in content.phase(phase_key).experts
+    }

@@ -34,6 +34,7 @@ const stageNames = {
   failed: "未通过",
   terminated: "已终止",
   cancelled: "已取消",
+  licensed: "已授权",
 };
 const nav = [
   ["pipeline", "研发管线"],
@@ -41,6 +42,7 @@ const nav = [
   ["contracts", "外包"],
   ["technology", "技术"],
   ["drugs", "药品"],
+  ["business", "市场与授权"],
   ["company", "经营手记"],
 ];
 const disabled = (condition) => (condition ? " disabled" : "");
@@ -123,6 +125,7 @@ async function send(name, args = {}) {
     if (name === "start_project" || name === "new_game")
       activeView = "pipeline";
     if (name === "hire_candidate" && args.index >= 0) activeView = "teams";
+    if (name === "license_project") activeView = "business";
     render();
     if (name === "save") notify("进度已保存");
     if (name === "new_game") notify("新公司成立。上一局已备份到本地存档目录。");
@@ -170,6 +173,7 @@ function render() {
     technology: renderTechnology,
     drugs: renderDrugs,
     company: renderCompany,
+    business: renderBusiness,
   };
   app.innerHTML = `<div class="shell">
     <div class="timebar"><div><span class="eyebrow">RESEARCH JOURNAL / 研发手记</span><div class="date">${e(state.date)}</div><div class="status-line"><span class="status-dot"></span>${state.game_over ? "公司已破产 · 可以查看这一局的记录" : state.pending.length ? `${state.pending.length} 件事等待你的决定` : "时间暂停中，准备好后再继续"}</div></div><div class="time-actions">
@@ -181,9 +185,10 @@ function render() {
       ${metric("现金", `${number(state.cash)}<small> 万</small>`, state.cash_weeks === null ? "当前经营收支为正" : `按当前收支约 ${number(state.cash_weeks)} 周`, state.cash < 0 ? "negative" : "")}
       ${metric("项目已承诺", `${number(state.committed)}<small> 万</small>`, `扣除后余 ${number(state.uncommitted)} 万 · 不含工资租金`, state.uncommitted < 0 ? "negative" : "")}
       ${metric("研究数据", number(state.data), "解锁技术 / 培养负责人")}
-      ${metric("公司口碑", `${number(state.reputation)}<small> / 100</small>`, `已获批 ${state.drugs.length} 个药物`)}
+      ${metric("公司口碑", `${number(state.reputation)}<small> / 100</small>`, `自主获批 ${state.drugs.length} 款 · 已授权 ${state.deals.length} 项`)}
       ${metric("团队与场地", `${state.headcount}<small> / ${state.capacity} 人</small>`, e(state.facility.name))}
     </section>
+    <div class="objective-strip"><div><b>${e(state.objective.name)} · ${state.objective.completed ? "目标已达成" : "公司目标"}</b><span>${e(state.objective.description)}</span></div>${state.week === 0 && !state.projects.length ? modalButton("选择开局路线", "new-game") : `<button data-view="business">查看进度</button>`}</div>
     <div class="layout"><main class="main">
       ${state.game_over ? `<section class="decision"><span class="eyebrow">本次创业结束</span><h2>现金未能撑到下一次转机</h2><p class="small">获批 ${state.score.approvals} 个药 · 综合得分 ${state.score.score} · 累计利润 ${money(state.score.profit)}</p>${modalButton("开始一家新公司", "new-game", "", 'class="primary"')}</section>` : renderDecision()}
       <nav class="tabs" aria-label="经营菜单">${nav.map(([key, title]) => `<button data-view="${key}" class="${activeView === key ? "active" : ""}" aria-current="${activeView === key ? "page" : "false"}">${title}${key === "pipeline" && activeProjects().length ? `<span class="count">${activeProjects().length}</span>` : key === "teams" ? `<span class="count">${state.teams.length}</span>` : ""}</button>`).join("")}</nav>
@@ -216,8 +221,8 @@ function renderAside() {
   if (state.uncommitted < 0)
     suggestion =
       "现有项目的后续花费已经超过现金。考虑外包回款，或在阶段决策时终止希望不大的项目。";
-  return `<h2 class="aside-title">给创始人的便签</h2><div class="note"><strong>${state.drugs.length ? "下一次突破，从这里开始。" : "先让第一款药走出实验室。"}</strong><p>${suggestion}</p></div>
-    <div class="note"><strong>现金流速览</strong><p>工资与租金 <b>${money(state.monthly_overhead)}/月</b><br>研发与临床 ${money(state.weekly_project_cost)}/周<br>在售药物利润 <span class="positive">${money(state.weekly_sales_profit)}/周</span></p><p class="small muted">现金可支撑周数按当前净开销粗估，不含未来临床升级、外包回款或销量变化。</p></div>
+  return `<h2 class="aside-title">给创始人的便签</h2><div class="note"><strong>${state.scenario === "licensing" ? "让研究成果支持下一次研发。" : state.scenario === "platform" ? "用项目和外包积累平台能力。" : state.drugs.length ? "下一次突破，从这里开始。" : "先让第一款药走出实验室。"}</strong><p>${suggestion}</p></div>
+    <div class="note"><strong>现金流速览</strong><p>工资与租金 <b>${money(state.monthly_overhead)}/月</b><br>研发与临床 ${money(state.weekly_project_cost)}/周<br>在售药物利润 <span class="positive">${money(state.weekly_sales_profit)}/周</span><br>授权销售分成 <span class="positive">${money(state.weekly_royalties)}/周</span></p><p class="small muted">现金可支撑周数按当前净开销粗估，不含未来临床升级、外包回款或销量变化。</p></div>
     <h2 class="aside-title">公司日志 <span class="muted small">最近 ${Math.min(state.messages.length, 18)} 条</span></h2><ol class="activity">${state.messages
       .slice(-18)
       .reverse()
@@ -323,14 +328,18 @@ function renderDecision() {
     title = "研发结束，准备进入临床吗？";
     const total = p.forecasts.reduce((a, f) => a + f.cost, 0),
       weeks = p.forecasts.reduce((a, f) => a + f.weeks, 0);
-    body = `${routeNote(p.route)}${statGrid(p.stats)}${p.hazards.length ? `<div class="hint warn">剩余隐患：${p.hazards.map((h) => `${e(h.text)}（${e(state.names.stats[h.stat])} −${h.severity}${h.severity >= 2 ? "，需专项排险" : ""}）`).join("、")}</div>` : '<div class="hint">目前没有未解决的隐患。</div>'}${forecastTable(p)}${polishNote(p)}${fundingNote(p)}<p class="small">后续临床与审评约 <b>${weeks} 周 / ${money(total)}</b>。自营临床空余 ${state.clinical_operations.available} 个席位；委托临床费用高 30%，无需等待且不提高通过分数。排队或进入临床后，研发团队全部空出来。</p><div class="actions">${actionButton(state.clinical_operations.available ? "进入自营临床 →" : "加入临床队列 →", "resolve_rd_end", { ...args, choice: "proceed" }, 'class="primary"')}${actionButton(`委托临床 · 全程约 ${money(p.contract_cost)}`, "resolve_rd_end", { ...args, choice: "contract" })}${p.validation.available ? actionButton(`专项排险 ${p.validation.weeks} 周 · ${money(p.validation.cost)}`, "resolve_rd_end", { ...args, choice: "validate" }, disabled(state.cash < p.validation.cost)) : ""}${actionButton(`再打磨 ${state.extension_weeks} 周（剩 ${p.polish.remaining} 次）`, "resolve_rd_end", { ...args, choice: "extend" }, disabled(!p.team_ids.length || !p.polish.remaining))}${actionButton("终止项目", "resolve_rd_end", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后不再花钱，已花费用不会退回，熟练度照常增加。"')}</div>`;
+    body = `<p class="small"><b>${e(p.profile_info.name)}</b>：${e(p.profile_info.description)}</p>${routeNote(p.route)}${statGrid(p.stats)}${p.hazards.length ? `<div class="hint warn">剩余隐患：${p.hazards.map((h) => `${e(h.text)}（${e(state.names.stats[h.stat])} −${h.severity}${h.severity >= 2 ? "，需专项排险" : ""}）`).join("、")}</div>` : '<div class="hint">目前没有未解决的隐患。</div>'}${forecastTable(p)}${polishNote(p)}${fundingNote(p)}<p class="small">后续临床与审评按标准试验约 <b>${weeks} 周 / ${money(total)}</b>。自营临床空余 ${state.clinical_operations.available} 个席位；委托临床费用高 30%，无需等待且不提高通过分数。排队或进入临床后，研发团队全部空出来。</p><div class="actions">${actionButton(state.clinical_operations.available ? "进入自营临床 →" : "加入临床队列 →", "resolve_rd_end", { ...args, choice: "proceed" }, 'class="primary"')}${actionButton(`委托临床 · 全程约 ${money(p.contract_cost)}`, "resolve_rd_end", { ...args, choice: "contract" })}${p.validation.available ? actionButton(`专项排险 ${p.validation.weeks} 周 · ${money(p.validation.cost)}`, "resolve_rd_end", { ...args, choice: "validate" }, disabled(state.cash < p.validation.cost)) : ""}${actionButton(`再打磨 ${state.extension_weeks} 周（剩 ${p.polish.remaining} 次）`, "resolve_rd_end", { ...args, choice: "extend" }, disabled(!p.team_ids.length || !p.polish.remaining))}${actionButton("终止项目", "resolve_rd_end", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后不再花钱，已花费用不会退回，熟练度照常增加。"')}</div>`;
+    if (p.license_offers.length)
+      body += `<div class="actions">${modalButton("比较授权报价", "license", p.id)}</div>`;
   } else if (d.kind === "phase_result") {
     const result = p.results.findLast((r) => r.phase === d.data.phase);
     title = `${p.phase_name}结果 · ${d.data.passed ? "通过" : "未通过"}`;
     body = resultBlock(result);
-    if (d.data.passed) {
+    if (d.strategies?.length) {
+      body += `<h3 class="table-title">确定后续临床策略</h3><p class="small muted">只在 I 期后选择一次，影响 II 期到审评。下方已按当前项目计算，隐患仍可能扣分。</p><div class="choice-grid">${d.strategies.map((x) => `<article class="card"><h3>${e(x.name)}</h3><p class="small">${e(x.description)}</p><p>剩余 ${x.remaining_weeks} 周 · ${money(x.remaining_cost)}<br>III 期疗效预估 ${x.forecasts.find((f) => f.key === "III").scores.efficacy} 分<br>上市销售潜力 ×${number(x.market_factor, 2)}</p><p class="small ${x.forecasts.every((f) => f.margin_ok) ? "positive" : "muted"}">${x.forecasts.every((f) => f.margin_ok) ? "各阶段预估有余量" : x.forecasts.every((f) => f.passed) ? "预估达标，仍需关注风险" : "部分阶段尚未达标"}</p>${actionButton(`按${e(x.name)}进入 II 期`, "resolve_phase", { ...args, choice: "continue", strategy: x.key }, x.key === "standard" ? 'class="primary"' : "")}</article>`).join("")}</div><div class="actions">${actionButton("到此为止", "resolve_phase", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后无法恢复这个项目。"')}</div>`;
+    } else if (d.data.passed) {
       const next = p.forecasts[0];
-      body += `<p class="small">下一步：<b>${e(next.name)}</b>，${next.weeks} 周 / ${money(next.cost)}。</p>${forecastTable(p)}<div class="actions">${actionButton(`继续${e(next.name)} →`, "resolve_phase", { ...args, choice: "continue" }, 'class="primary"')}${actionButton("到此为止", "resolve_phase", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后无法恢复这个项目，熟练度照常增加。"')}</div>`;
+      body += `<p class="small">下一步：<b>${e(next.name)}</b>，${next.weeks} 周 / ${money(next.cost)}。临床策略：${e(p.strategy_info.name)}。</p>${forecastTable(p)}<div class="actions">${actionButton(`继续${e(next.name)} →`, "resolve_phase", { ...args, choice: "continue" }, 'class="primary"')}${p.license_offers.length ? modalButton("比较授权报价", "license", p.id) : ""}${actionButton("到此为止", "resolve_phase", { ...args, choice: "terminate" }, 'class="danger" data-confirm="终止后无法恢复这个项目，熟练度照常增加。"')}</div>`;
     } else
       body += `<div class="hint warn">未过关原因：${d.failure_reasons.map(e).join("；")}。</div><div class="hint">这次尝试积累的研究数据和熟练度会留下来。可以查看项目记录，调整下一次的团队配置。</div><div class="actions">${actionButton("记下经验，继续", "resolve_phase", { ...args, choice: "ack" }, 'class="primary"')}</div>`;
   } else if (d.kind === "approval") {
@@ -347,11 +356,11 @@ function renderDecision() {
   } else if (d.kind === "year_end") {
     title = `第 ${d.data.year} 年 · 年度回顾`;
     subtitle = "把这一年的进展，记在手记里。";
-    body = `<div class="two-column"><div class="card"><span class="small muted">药品销售收入</span><h3>${money(d.data.revenue)}</h3><p class="small">实际进账 ${money(d.data.income)}<br>全部支出 ${money(d.data.expense)}</p></div><div class="card"><span class="small muted">研发成果</span><h3>${d.data.approvals} 个药物获批</h3><p class="small">${d.data.failures} 个项目未通过<br>公司口碑 ${d.data.reputation}</p></div></div><div class="actions">${actionButton("开启新的一年 →", "acknowledge", args, 'class="primary"')}</div>`;
+    body = `<div class="two-column"><div class="card"><span class="small muted">药品销售收入</span><h3>${money(d.data.revenue)}</h3><p class="small">实际进账 ${money(d.data.income)}<br>全部支出 ${money(d.data.expense)}</p></div><div class="card"><span class="small muted">自主研发成果</span><h3>${d.data.approvals} 个药物获批</h3><p class="small">${d.data.failures} 个项目未通过<br>公司口碑 ${d.data.reputation}</p></div></div><div class="actions">${actionButton("开启新的一年 →", "acknowledge", args, 'class="primary"')}</div>`;
   } else if (d.kind === "game_end") {
     title = "二十年，从一间实验室到这里";
     subtitle = "这一局完成了。你也可以继续经营。";
-    body = `<p>综合得分 <b>${d.data.score}</b> · ${d.data.approvals} 个药物获批 · ${d.data.hall_of_fame} 个名人堂药物</p><p>累计利润 ${money(d.data.profit)}</p><div class="actions">${actionButton("继续经营", "acknowledge", args, 'class="primary"')}${modalButton("开始新公司", "new-game")}</div>`;
+    body = `<p>综合得分 <b>${d.data.score}</b> · ${d.data.approvals} 个药物获批 · ${d.data.hall_of_fame} 个名人堂药物</p><p>已签 ${d.data.licenses} 笔授权 · 公司目标加分 ${d.data.objective_bonus}</p><p>累计利润 ${money(d.data.profit)}</p><div class="actions">${actionButton("继续经营", "acknowledge", args, 'class="primary"')}${modalButton("开始新公司", "new-game")}</div>`;
   }
   return `<section class="decision" id="decision" aria-label="待处理事件"><span class="eyebrow">等待决定${state.pending.length > 1 ? ` / 还有 ${state.pending.length - 1} 件` : ""}</span><h2>${title}</h2><p class="small muted">${e(subtitle)}</p>${body}</section>`;
 }
@@ -368,10 +377,10 @@ function projectCard(p) {
   const total = rd ? p.rd_weeks : p.phase_weeks;
   const waiting = state.pending.some((d) => d.project_id === p.id);
   return `<article class="card"><div class="card-head"><div><span class="eyebrow">项目 ${String(p.id).padStart(3, "0")}</span><h3>${e(p.label)}</h3><span class="small muted">${e(state.targets.find((t) => t.key === p.target)?.disease)} · ${e(p.known_tier)}</span></div>${badge(stageNames[p.stage], p.stage === "failed" ? "red" : waiting ? "amber" : "green")}</div>
-    <div class="project-stages">${stages.map((s, i) => `${i ? '<span aria-hidden="true">›</span>' : ""}<span class="${i === stage ? "current" : i < stage ? "done" : ""}">${s}</span>`).join("")}</div>
+    ${p.stage === "licensed" ? '<div class="hint">项目已交给合作方，后续进展与回款可在「市场与授权」查看。</div>' : `<div class="project-stages">${stages.map((s, i) => `${i ? '<span aria-hidden="true">›</span>' : ""}<span class="${i === stage ? "current" : i < stage ? "done" : ""}">${s}</span>`).join("")}</div>`}
     ${p.stage === "clinical_queue" ? `<div class="hint">临床排队第 ${p.queue_position} 位 · 不收临床费，不占用研发团队。席位空出后自动开始；等待期间属性不下降。</div><div class="actions">${actionButton(`转委托临床 · 全程约 ${money(p.contract_cost)}`, "outsource_clinical", { project_id: p.id })}${actionButton("取消排队项目", "cancel_project", { project_id: p.id }, 'class="danger" data-confirm="取消后无法恢复，已投入费用不退还。"')}</div>` : ""}
     ${p.active && !["naming", "clinical_queue"].includes(p.stage) ? `<progress value="${done}" max="${total || 1}" aria-label="${e(p.label)}进度"></progress><div class="progress-caption"><span>${rd ? "研发" : e(p.phase_name)} ${done} / ${total} 周${rd && !p.team_ids.length ? " · 未配团队，已暂停" : ""}</span><span>累计花费 ${money(p.spent)}</span></div>` : ""}
-    ${rd ? statGrid(p.stats) : ""}
+    ${rd ? statGrid(p.stats) : ""}<p class="small muted">${e(p.profile_info.name)}${p.strategy_chosen ? " · " + e(p.strategy_info.name) : ""}</p>
     ${p.hazards.length ? `<p class="small muted">${p.hazards.length} 个研发遗留隐患 · ${p.hazards.map((h) => e(h.text)).join("、")}</p>` : ""}
     <details data-key="project-${p.id}"><summary>查看${p.active ? "分数预估与" : ""}项目记录</summary>${forecastTable(p)}${p.results
       .map(
@@ -498,7 +507,7 @@ function renderCompany() {
   return (
     sectionHead("经营手记", "公司的钱、空间，以及每次尝试留下的经验。") +
     `<div class="card"><div class="card-head"><div><h3>${e(state.facility.name)}</h3><span class="small muted">${state.headcount} / ${state.capacity} 人 · 临床 ${state.clinical_operations.used}/${state.clinical_operations.capacity} 席位 · 月租 ${money(state.facility.rent)}</span></div>${next ? actionButton("升级场地", "build_facility", {}, `class="primary" data-confirm="升级到${e(next.name)}，建造费 ${money(next.cost)}，新月租 ${money(next.rent)}。"${disabled(state.cash < next.cost)}`) : badge("最大场地", "green")}</div>${next ? `<p class="small">下一级 ${e(next.name)} · ${next.capacity} 人 · ${next.clinical_slots} 个临床席位 · 建造费 ${money(next.cost)} · 月租 ${money(next.rent)}</p>` : ""}<p class="small muted">当前工资与租金合计 ${money(state.monthly_overhead)}/月。</p></div>
-    <h2 class="table-title">年度账本</h2><div class="table-scroll"><table><thead><tr><th>年份</th><th>药品销售额</th><th>实际进账</th><th>全部支出</th><th>净收支</th><th>获批 / 失败</th></tr></thead><tbody>${state.years
+    <h2 class="table-title">年度账本</h2><div class="table-scroll"><table><thead><tr><th>年份</th><th>药品销售额</th><th>实际进账</th><th>全部支出</th><th>净收支</th><th>自主获批 / 失败</th></tr></thead><tbody>${state.years
       .slice()
       .reverse()
       .map(
@@ -507,7 +516,7 @@ function renderCompany() {
       )
       .join(
         "",
-      )}</tbody></table></div><p class="small muted">实际进账为药品销售利润与外包回款。项目预算不包含工资和租金。</p>
+      )}</tbody></table></div><p class="small muted">实际进账包含药品利润、外包回款、授权首付款、获批里程碑及销售分成。项目预算不包含工资和租金。</p>
     <h2 class="table-title">组合笔记本</h2>${state.notebook.length ? `<div class="stack">${state.notebook.map((n) => `<div class="card"><div class="card-head"><h3>${e(n.label)}</h3>${badge(n.tier_name, n.tier >= 1 ? "green" : n.tier < 0 ? "amber" : "")}</div><p>${e(n.reason)}</p><p class="small muted">完成 ${n.times} 次${n.best_composite ? ` · 最佳综合分 ${number(n.best_composite, 1)}` : ""}</p></div>`).join("")}</div>` : '<div class="hint">研发完成后，这个组合的评价和原因会记在这里。</div>'}
     <div class="danger-zone"><p class="small muted">当前随机种子 ${state.seed}。每次操作自动保存，刷新页面会接着这一局。开始新公司时会备份旧进度。</p><div class="actions"><a class="button" href="/api/save" download>导出这局存档</a>${modalButton("开始新公司", "new-game")}</div></div>`
   );
@@ -551,7 +560,13 @@ function openModal(name, id) {
       )
       .join(
         "",
-      )}</select></label></div><div id="project-estimate" class="estimate"></div><label class="field">配备团队 <small>至少 1 个，最多 ${state.team_rules.max_per_project} 个；临床开始后团队会释放。</small></label>${teamChecks(
+      )}</select></label></div><label class="field">候选药取向<select name="profile">${Object.entries(
+      state.profiles,
+    )
+      .map(([key, p]) => `<option value="${e(key)}">${e(p.name)}</option>`)
+      .join(
+        "",
+      )}</select></label><div id="project-estimate" class="estimate"></div><label class="field">配备团队 <small>至少 1 个，最多 ${state.team_rules.max_per_project} 个；临床开始后团队会释放。</small></label>${teamChecks(
       idleTeams(),
       idleTeams()
         .slice(0, state.team_rules.max_per_project)
@@ -597,12 +612,26 @@ function openModal(name, id) {
         !state.pending.some((d) => d.project_id === p.id),
     );
     body = `<form id="assign-form" data-id="${t.id}"><label class="field">加入项目<select name="project_id">${ps.map((p) => `<option value="${p.id}">${e(p.label)} · ${p.team_ids.length} 个团队</option>`).join("")}</select></label>${t.members === 0 ? '<div class="hint warn">这个团队还没有成员。安排后可以在「管理与培养」里加人，提高每周产出。</div>' : ""}${err}${submit("加入研发")}</form>`;
+  } else if (name === "license") {
+    const p = projectById(id),
+      d = state.pending[0];
+    title = `授权方案 · ${p.label}`;
+    body = `<p class="small">签约后项目交由合作方开发，不再占用你的研发团队或临床席位，你不再承担后续开发费。首付款立即到账；获批才有里程碑，上市销售才有分成。合作方仍可能失败，已收首付款不退回。</p><div class="two-column">${p.license_offers.map((q) => `<article class="card"><h3>${e(q.name)}</h3><p class="small">合作方：${e(q.partner)}<br>${e(q.description)}</p><p>首付款 <b>${money(q.upfront)}</b><br>获批里程碑 ${money(q.milestone)}<br>销售分成 ${number(q.royalty_rate * 100)}%</p><p class="small muted">顺利完成后续开发约需 ${q.remaining_weeks} 周。签约后不可撤回。报价已考虑当前同靶点市场份额约 ${number(q.market_share * 100)}%。</p>${q.problem ? `<p class="small fail">${e(q.problem)}</p>` : ""}${actionButton(`签约 · ${e(q.name)}`, "license_project", { decision_id: d.id, kind: q.kind }, disabled(Boolean(q.problem)))}</article>`).join("")}</div>${forecastTable(p)}${err}<div class="modal-actions"><button data-close>继续自己研发</button></div>`;
   } else if (name === "new-game") {
     title = "开始一家新公司";
-    body = `<form id="new-game-form"><p class="small">这一局的进度会先备份到本地存档目录，然后开始新的公司。</p><label class="field">随机种子<input type="number" name="seed" min="0" max="999999999" step="1" value="${Math.floor(Math.random() * 999999) + 1}" required><small>同一个种子与同样的操作，会得到同样的结果。</small></label>${err}${submit("备份旧局，开始新公司")}</form>`;
+    body = `<form id="new-game-form"><div class="scenario-options">${Object.entries(
+      state.scenarios,
+    )
+      .map(
+        ([key, x]) =>
+          `<label class="check-row"><input type="radio" name="scenario" value="${e(key)}"${key === state.scenario ? " checked" : ""}><span><b>${e(x.name)}</b> · ${money(x.cash)} / ${x.data} 数据<small>${e(x.description)}<br>目标：${e(x.objective)}</small></span></label>`,
+      )
+      .join(
+        "",
+      )}</div><p class="small">这一局的进度会先备份到本地存档目录，然后开始新的公司。</p><label class="field">随机种子<input type="number" name="seed" min="0" max="999999999" step="1" value="${Math.floor(Math.random() * 999999) + 1}" required><small>同一开局路线、种子与操作，会得到同样的结果。</small></label>${err}${submit("备份旧局，开始新公司")}</form>`;
   } else if (name === "help") {
     title = "你的第一家制药公司";
-    body = `<ol class="help-list"><li><b>立项。</b>先试 EGFR × 小分子，把生物组和化学组配进去。</li><li><b>补齐团队。</b>通过学术会议招聘毒理负责人，配 3 位成员；初始两组各补到 4 位成员，点击「安排研发」加入项目。</li><li><b>推进时间。</b>「继续 4 周」便于看进展；「下一件事」会在关键攻关、候选人或临床结果出现时停下。攻关可选性能、排险或速度。</li><li><b>研发结束，看够不够好。</b>尽量达到全部「有余量」，并清除隐患再进临床。最多打磨 6 次，每次显示收益和开销；严重隐患需要专项验证或研发末期排险。门槛不会随时间上涨。</li><li><b>研发要团队，临床不用。</b>自营临床占用场地席位；满员可排队、升级或加价委托。排队不阻止时间前进。研发团队可接新项目或外包。</li><li><b>留够现金。</b>「已承诺」是项目后续预算，工资和租金要另留。连续 3 个月月底现金为负会破产。</li></ol><div class="hint">每次操作都会自动保存，刷新或重新打开页面会继续这一局。游戏时间只会在你点击推进时流动。</div><p class="small muted">导出的 JSON 存档可以作为独立备份保留。平常继续游戏，只需重新打开页面。</p><div class="modal-actions"><button class="primary" data-close>开始经营</button></div>`;
+    body = `<ol class="help-list"><li><b>立项。</b>先试 EGFR × 小分子，把生物组和化学组配进去。</li><li><b>补齐团队。</b>通过学术会议招聘毒理负责人，配 3 位成员；初始两组各补到 4 位成员，点击「安排研发」加入项目。</li><li><b>推进时间。</b>「继续 4 周」便于看进展；「下一件事」会在关键攻关、候选人或临床结果出现时停下。攻关可选性能、排险或速度。</li><li><b>研发结束，看够不够好。</b>尽量达到全部「有余量」，并清除隐患再进临床。最多打磨 6 次，每次显示收益和开销；严重隐患需要专项验证或研发末期排险。门槛不会随时间上涨。</li><li><b>临床策略。</b>I 期后选标准试验、精准入组或扩大验证，之后固定。缩小人群能改善疗效判读，但会牺牲市场；扩大验证用费用和时间换较稳定的证据。</li><li><b>授权与竞争。</b>研发结束或 II 期成功后可比较授权报价，合作方承担后续费用，成功后再拿里程碑和分成。「市场与授权」可查看合作方进度、竞争管线和公司目标。</li><li><b>研发要团队，临床不用。</b>自营临床占用场地席位；满员可排队、升级或加价委托。排队不阻止时间前进。研发团队可接新项目或外包。</li><li><b>留够现金。</b>「已承诺」是项目后续预算，工资和租金要另留。连续 3 个月月底现金为负会破产。</li></ol><div class="hint">每次操作都会自动保存，刷新或重新打开页面会继续这一局。游戏时间只会在你点击推进时流动。</div><p class="small muted">导出的 JSON 存档可以作为独立备份保留。平常继续游戏，只需重新打开页面。</p><div class="modal-actions"><button class="primary" data-close>开始经营</button></div>`;
   }
   modalBody.innerHTML = `<div class="modal-head"><h2 id="modal-title">${e(title)}</h2><button type="button" data-close aria-label="关闭弹窗">×</button></div>${body}`;
   if (!modal.open) modal.showModal();
@@ -620,7 +649,7 @@ function updateProjectEstimate() {
     state.estimates[`${values.get("target")}|${values.get("modality")}`];
   const remaining = estimate.cash_after_reserve;
   document.querySelector("#project-estimate").innerHTML =
-    `${routeNote(estimate.route)}<p>${e(target.tags)}</p><div class="estimate-row"><span>研发阶段</span><strong>${estimate.rd_weeks} 周 · ${money(estimate.rd_cost)}</strong></div><div class="estimate-row"><span>临床与审评</span><strong>${estimate.clinical_weeks} 周 · ${money(estimate.clinical_cost)}</strong></div><div class="estimate-row"><span>同期全公司工资租金约</span><strong>${money(estimate.operating_reserve)}</strong></div><div class="estimate-row"><span>预留现有项目、本项目和工资租金后</span><strong class="${remaining < 0 ? "negative" : ""}">${money(remaining)}</strong></div>${remaining < 0 ? '<div class="hint warn">现金不足以覆盖全部预留。建议先接外包、等待药品回款或缩减计划，再开这条管线。</div>' : ""}${estimate.same_target_drugs.length ? `<div class="hint warn">同靶点已有 ${estimate.same_target_drugs.length} 款在售药：${estimate.same_target_drugs.map(e).join("、")}。若它们届时仍在售，新药会与它们平分市场，也可考虑不同靶点。</div>` : ""}<p class="muted small">预留未计未来销售或外包收入、额外打磨和扩员。组合记录：${e(estimate.known_tier)}</p>`;
+    `${routeNote(estimate.route)}<p>${e(target.tags)}</p><div class="hint">${e(state.profiles[values.get("profile")].description)}</div><div class="estimate-row"><span>研发阶段</span><strong>${estimate.rd_weeks} 周 · ${money(estimate.rd_cost)}</strong></div><div class="estimate-row"><span>临床与审评（标准试验）</span><strong>${estimate.clinical_weeks} 周 · ${money(estimate.clinical_cost)}</strong></div><div class="estimate-row"><span>同期全公司工资租金约</span><strong>${money(estimate.operating_reserve)}</strong></div><div class="estimate-row"><span>预留现有项目、本项目和工资租金后</span><strong class="${remaining < 0 ? "negative" : ""}">${money(remaining)}</strong></div>${remaining < 0 ? '<div class="hint warn">现金不足以覆盖全部预留。建议先接外包、等待药品回款或缩减计划，再开这条管线。</div>' : ""}${estimate.same_target_drugs.length ? `<div class="hint warn">同靶点已有 ${estimate.same_target_drugs.length} 款在售药：${estimate.same_target_drugs.map(e).join("、")}。若它们届时仍在售，新药会与它们平分市场，也可考虑不同靶点。</div>` : ""}${estimate.rivals.length ? `<div class="hint warn">竞争动态：${estimate.rivals.map((r) => `${e(r.name)} · ${r.active ? "已上市" : "预计 " + e(r.launch) + " 上市"}`).join("；")}。审批门槛不变；会分流上市后的同靶点市场。</div>` : ""}<p class="small muted">按当前市场格局，一款新药约分得 ${number(estimate.market_share * 100)}% 的同靶点市场；品质、候选药取向和临床人群还会影响销售潜力。</p><p class="muted small">预留未计未来销售或外包收入、额外打磨和扩员。组合记录：${e(estimate.known_tier)}</p>`;
   form.querySelector('button[type="submit"]').disabled =
     !estimate.route.allowed;
 }
@@ -701,6 +730,7 @@ document.addEventListener("submit", async (event) => {
       await send("start_project", {
         target: values.get("target"),
         modality: values.get("modality"),
+        profile: values.get("profile"),
         team_ids,
       });
     else await send("set_project_teams", { project_id: id, team_ids });
@@ -726,7 +756,10 @@ document.addEventListener("submit", async (event) => {
       name: values.get("name"),
     });
   else if (form.id === "new-game-form")
-    await send("new_game", { seed: Number(values.get("seed")) });
+    await send("new_game", {
+      seed: Number(values.get("seed")),
+      scenario: values.get("scenario"),
+    });
 });
 modal.addEventListener("click", (event) => {
   if (event.target === modal) {
@@ -744,3 +777,23 @@ window.addEventListener("focus", () => {
   if (state && !busy && !modal.open) refresh();
 });
 refresh();
+
+function renderBusiness() {
+  const objective = state.objective;
+  const status = {
+    developing: "合作方开发中",
+    marketed: "销售分成中",
+    failed: "合作方研发失败",
+    retired: "产品已退市",
+  };
+  return (
+    sectionHead(
+      "市场与授权",
+      "看清竞争的时间表，选择自己上市，或把项目交给合作方。",
+    ) +
+    `<article class="card"><div class="card-head"><h3>${e(objective.name)} · 公司目标</h3>${badge(objective.completed ? "已达成 · +100 总分" : "进行中", objective.completed ? "green" : "")}</div><p>${e(objective.description)}</p><div class="objective-metrics">${objective.metrics.map((m) => `<div><b>${e(m.name)}</b><p>${number(m.value)} / ${number(m.goal)}</p><progress value="${Math.min(m.value, m.goal)}" max="${m.goal}" aria-label="${e(m.name)}"></progress></div>`).join("")}</div><p class="small muted">${objective.cash_ok ? "现金为正" : "还需恢复正现金"}。目标达成后可以继续经营；每笔授权另计 15 总分。</p></article>
+    <h2 class="table-title">授权业务</h2><div class="two-column"><article class="card"><span class="small muted">已收首付款 / 获批里程碑</span><h3>${money(state.income.license_upfront || 0)} / ${money(state.income.license_milestones || 0)}</h3></article><article class="card"><span class="small muted">累计销售分成 / 当前每周分成</span><h3>${money(state.income.royalties || 0)} / ${money(state.weekly_royalties)}</h3></article></div>
+    ${state.deals.length ? `<div class="project-list">${state.deals.map((d) => `<article class="card"><div class="card-head"><div><h3>${e(d.label)}</h3><span class="small muted">${e(d.partner)} · ${d.kind === "cash" ? "现金优先" : "长期分成"}</span></div>${badge(status[d.status], d.status === "marketed" ? "green" : "")}</div><p>${d.status === "developing" ? `${e(d.phase_name)} · 剩余 ${d.weeks_left} 周，由合作方承担费用` : d.status === "failed" ? "后续款项停止，首付款已保留。可在项目历史查看逐期结果。" : `累计销售分成 ${money(d.royalty_total)} · 当前每周 ${money(d.weekly_royalty)}`}</p><p class="small muted">首付款 ${money(d.upfront)} · 获批里程碑 ${money(d.milestone)}（${d.milestone_paid ? "已到账" : d.status === "failed" ? "不再支付" : "尚未到账"}） · 销售额分成 ${number(d.royalty_rate * 100)}%</p></article>`).join("")}</div>` : `<div class="hint">研发结束或 II 期成功时，可以「比较授权报价」。每笔报价都列出首付款、成功里程碑和销售分成。</div>`}
+    <h2 class="table-title">公开竞争管线</h2><p class="small muted">竞争对手按公布的时间进入市场，只分流同靶点销售。审批标准不变；候选药取向和临床人群影响你的销售潜力。</p><div class="choice-grid">${state.rivals.map((r) => `<article class="card"><div class="card-head"><h3>${e(r.name)}</h3>${badge(r.launched ? "在售" : "开发中", r.launched ? "green" : "")}</div><p><b>${e(r.target_name)}</b><br>${r.launched ? "已进入同靶点市场" : `${e(r.launch_date)} 上市 · 约 ${r.remaining} 周后`}</p><p class="small muted">${r.launched ? `按当前格局，一款新药约分得 ${number(r.market_share * 100)}% 的同靶点市场。` : "可提前评估错峰上市、换靶点或授权回收资金。"}</p></article>`).join("")}</div>`
+  );
+}

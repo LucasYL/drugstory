@@ -166,14 +166,14 @@ def test_final_validation_has_time_cost_without_point_farming(quiet, fresh):
     assert p.validation_count == 1
 
 
-def test_v1_save_migrates_forward_and_version_two_is_marked(fresh):
+def test_v1_save_migrates_forward_and_current_version_is_marked(fresh):
     import json
     data = json.loads(to_json(fresh))
     data["version"] = 1
     for team in data["teams"]:
         team["lead"].pop("trait")
     loaded = from_json(json.dumps(data))
-    assert loaded.version == 2 and all(t.lead.trait for t in loaded.teams)
+    assert loaded.version == 3 and all(t.lead.trait for t in loaded.teams)
     assert loaded.cash == fresh.cash and loaded.week == fresh.week
 
 

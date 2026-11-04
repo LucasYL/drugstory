@@ -8,6 +8,7 @@ from drugstory.content import Content
 from drugstory.engine import decisions
 from drugstory.engine.book import say
 from drugstory.engine.state import GameState, Project, YearStats
+from drugstory.engine.systems.world import check_objective
 
 
 def add_proficiency(state: GameState, project: Project, content: Content) -> None:
@@ -31,13 +32,14 @@ def final_score(state: GameState, content: Content) -> dict[str, int]:
         + approvals * f.per_approval
         + hall * f.per_hall_of_fame
         + achievements * f.per_achievement
+        + len(state.deals) * 15 + (100 if state.objective_completed else 0)
     )
     return {
         "profit": profit,
         "approvals": approvals,
         "hall_of_fame": hall,
         "achievements": achievements,
-        "score": round(score),
+        "score": round(score), "licenses": len(state.deals), "objective_bonus": 100 if state.objective_completed else 0,
     }
 
 
@@ -78,6 +80,7 @@ def _checks(state: GameState, content: Content) -> dict[str, Callable[[], bool]]
 
 
 def check_achievements(state: GameState, content: Content) -> None:
+    check_objective(state, content)
     for key, check in _checks(state, content).items():
         if key not in state.achievements and check():
             state.achievements.append(key)

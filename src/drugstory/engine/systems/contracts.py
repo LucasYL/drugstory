@@ -35,6 +35,7 @@ def step(state: GameState, content: Content) -> None:
             continue
         earn(state, contract.reward, "contracts")
         state.data += contract.data
+        state.contracts_completed += 1
         team.task, team.task_id = IDLE, 0
         state.contracts.remove(contract)
         name = content.contracts[contract.kind].name

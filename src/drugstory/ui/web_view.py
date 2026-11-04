@@ -19,19 +19,20 @@ from drugstory.engine.queries import (
     target_unlock_problems,
 )
 from drugstory.engine.rules.combo import compat, multiplier, tier_name
-from drugstory.engine.rules.scoring import expected_scores, passed
+from drugstory.engine.rules.scoring import passed, project_scores, score_noise
 from drugstory.engine.rules.texts import project_label
 from drugstory.engine.save import to_data
 from drugstory.engine.state import CLINICAL, PHASE_REVIEW, QUEUED, RD_REVIEW, RESEARCH, GameState, Project
-from drugstory.engine.systems.clinical import operations, phase_plan, prior_approvals, unresolved_hazards
+from drugstory.engine.systems.clinical import operations, phase_plan, unresolved_hazards
+from drugstory.engine.systems.licensing import offer as license_offer
 from drugstory.engine.systems.market import curve, sharing
 from drugstory.engine.systems.progression import final_score
 from drugstory.engine.systems.research import (
     extensions_used,
     milestone_plan,
     point_multiplier,
+    project_gain,
     project_teams,
-    quality_gain,
 )
 from drugstory.engine.systems.teams import (
     capacity,
@@ -44,6 +45,7 @@ from drugstory.engine.systems.teams import (
     training_cost,
     weekly_output,
 )
+from drugstory.engine.systems.world import objective, pressure
 
 
 def plain(value: Any) -> Any:
@@ -76,11 +78,8 @@ def forecasts(state: GameState, p: Project, content: Content) -> list[dict]:
             cost = duration * p.phase_weekly_cost
         week += duration
         phase = content.phase(key)
-        scores = expected_scores(
-            p.stats, content.targets[p.target], key, max(0, week - 1), content,
-            prior_approvals(state, p.target),
-        )
-        low = {k: max(content.balance.scoring.min_score, v - content.balance.scoring.noise)
+        scores = project_scores(p, key, max(0, week - 1), content)
+        low = {k: max(content.balance.scoring.min_score, v - score_noise(p, key, content))
                for k, v in scores.items()}
         out.append({
             "key": key, "name": phase.name, "weeks": duration, "cost": cost,
@@ -105,7 +104,7 @@ def snapshot(state: GameState, content: Content) -> dict:
     overhead = payroll(s, c) + current.rent
     committed = committed_costs(s, c)
     ops = operations(s, c)
-    shares = sharing(s)
+    shares = sharing(s, c)
     drugs = []
     for drug in s.drugs:
         gross = drug.peak * curve(drug.weeks_on_market, c) / shares[drug.target] if drug.active else 0
@@ -120,9 +119,9 @@ def snapshot(state: GameState, content: Content) -> dict:
         for hazard in data["hazards"]:
             hazard.pop("phase", None)  # 留住临床揭晓的未知信息
         used = extensions_used(p, c)
-        gains = {stat: quality_gain(
-            p.stats.get(stat, 0.0), sum(weekly_output(t, stat, c) for t in project_teams(s, p))
-            * point_multiplier(s, p, c) * c.balance.research.extension_weeks, c.targets[p.target], c,
+        gains = {stat: project_gain(
+            p, stat, sum(weekly_output(t, stat, c) for t in project_teams(s, p))
+            * point_multiplier(s, p, c) * c.balance.research.extension_weeks, c,
         ) for stat in STATS}
         polished = replace(p, stats={k: v + gains[k] for k, v in p.stats.items()},
                            rd_weeks=p.rd_weeks + c.balance.research.extension_weeks)
@@ -131,6 +130,10 @@ def snapshot(state: GameState, content: Content) -> dict:
         projects.append({
             **data, "label": project_label(p, c), "active": p.active,
             "phase_name": c.phase(p.phase).name if p.phase else "研发",
+            "profile_info": plain(c.balance.profiles[p.profile]),
+            "strategy_info": plain(c.balance.clinical_strategies[p.clinical_strategy]),
+            "license_offers": [license_offer(s, p, c, k) for k in c.balance.license_types]
+            if p.stage == RD_REVIEW or (p.stage == PHASE_REVIEW and p.phase == "II") else [],
             "known_tier": known_tier_text(s, p.target, p.modality, c),
             "forecasts": future, "weekly_cost": c.modalities[p.modality].weekly_cost,
             "operating_reserve": operating_reserve,
@@ -182,6 +185,16 @@ def snapshot(state: GameState, content: Content) -> dict:
             total = sum(result.scores.values())
             if total < phase.pass_total:
                 item["failure_reasons"].append(f"合计 {total} 分，门槛 ≥{phase.pass_total} 分")
+        if d.kind == "phase_result" and d.data["passed"] and s.project(d.project_id).phase == "I":
+            p = s.project(d.project_id)
+            if not p.strategy_chosen:
+                item["strategies"] = []
+                for key, strategy in c.balance.clinical_strategies.items():
+                    variant = replace(p, clinical_strategy=key, strategy_chosen=True)
+                    rows = forecasts(s, variant, c)
+                    item["strategies"].append({"key": key, **plain(strategy), "forecasts": rows,
+                                               "remaining_cost": sum(f["cost"] for f in rows),
+                                               "remaining_weeks": sum(f["weeks"] for f in rows)})
         if d.kind == "milestone":
             p = s.project(d.project_id)
             item["options"] = [
@@ -227,6 +240,9 @@ def snapshot(state: GameState, content: Content) -> dict:
                 "operating_reserve": operating,
                 "cash_after_reserve": s.cash - committed - rd_cost - clinical_cost - operating,
                 "same_target_drugs": [d.name for d in s.drugs if d.active and d.target == t],
+                "rivals": [{"name": r.name, "launch": label(r.launch_week, c), "active": r.launched}
+                           for r in s.rivals if r.target == t],
+                "market_share": 1 / (1 + shares.get(t, pressure(s, t, c))),
             }
     offers = []
     for offer in s.offers:
@@ -241,9 +257,17 @@ def snapshot(state: GameState, content: Content) -> dict:
         c.modalities[p.modality].weekly_cost if p.stage == RESEARCH and p.team_ids
         else p.phase_weekly_cost if p.stage == CLINICAL else 0 for p in s.active_projects
     )
+    deals = []
+    for deal in s.deals:
+        drug = deal.drug
+        royalty = (drug.peak * curve(drug.weeks_on_market, c) / shares[drug.target] * deal.royalty_rate
+                   if drug and drug.active else 0)
+        deals.append({**to_data(deal), "label": project_label(s.project(deal.project_id), c),
+                      "phase_name": c.phase(deal.phase).name, "weekly_royalty": royalty})
+    weekly_royalties = sum(d["weekly_royalty"] for d in deals)
     weekly_net_cost = project_burn + overhead / c.balance.time.weeks_per_month - sum(
         d["weekly_profit"] for d in drugs
-    )
+    ) - weekly_royalties
     return {
         "week": s.week, "date": label(s.week, c), "seed": s.seed, "cash": s.cash, "data": s.data,
         "reputation": s.reputation, "headcount": s.headcount, "capacity": capacity(s, c),
@@ -266,5 +290,11 @@ def snapshot(state: GameState, content: Content) -> dict:
         "names": plain(names), "team_rules": plain(c.balance.team),
         "extension_weeks": c.balance.research.extension_weeks,
         "training_gain": c.balance.growth.training_gain,
-        "clinical_operations": ops, "edition": "下一版 v0.2",
+        "clinical_operations": ops, "edition": "下一版 v0.3",
+        "profiles": plain(c.balance.profiles), "scenarios": plain(c.balance.scenarios),
+        "scenario": s.scenario, "objective": objective(s, c), "deals": deals,
+        "weekly_royalties": weekly_royalties, "income": dict(s.income),
+        "rivals": [{**to_data(r), "target_name": c.targets[r.target].name,
+                    "launch_date": label(r.launch_week, c), "remaining": max(0, r.launch_week - s.week),
+                    "market_share": 1 / (1 + shares.get(r.target, pressure(s, r.target, c)))} for r in s.rivals],
     }

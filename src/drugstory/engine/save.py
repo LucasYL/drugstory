@@ -69,8 +69,8 @@ def from_json(text: str) -> GameState:
     except json.JSONDecodeError as e:
         raise SaveError(f"存档坏了：{e}") from None
     version = data.get("version") if isinstance(data, dict) else None
-    if version not in (1, SAVE_VERSION):
-        raise SaveError(f"存档版本是 {version}，这个版本的游戏支持 1 和 {SAVE_VERSION}")
+    if version not in (1, 2, SAVE_VERSION):
+        raise SaveError(f"存档版本是 {version}，这个版本的游戏支持 1、2 和 {SAVE_VERSION}")
     try:
         data["version"] = SAVE_VERSION
         return _build(GameState, data)
@@ -90,9 +90,9 @@ def load(path: str | Path) -> GameState:
     return from_json(text)
 
 
-def replay(seed: int, log: list[LoggedAction], content: Content) -> GameState:
+def replay(seed: int, log: list[LoggedAction], content: Content, scenario: str = "independent") -> GameState:
     """从同一个种子开局，在原来的周重放每一个操作。"""
-    state = new_game(seed, content)
+    state = new_game(seed, content, scenario)
     for entry in log:
         advance(state, content, entry.week - state.week)
         if state.week != entry.week:

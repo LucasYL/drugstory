@@ -6,7 +6,7 @@ from drugstory.content import Content
 from drugstory.engine import decisions, rng
 from drugstory.engine.book import round_half_up, say, spend
 from drugstory.engine.rules.naming import suggest_name
-from drugstory.engine.rules.scoring import composite, expert_score, passed, standard
+from drugstory.engine.rules.scoring import composite, passed, project_scores, score_noise, strategy_for
 from drugstory.engine.rules.texts import hazard_text, phase_text, project_label, spaced
 from drugstory.engine.state import CLINICAL, FAILED, NAMING, PHASE_REVIEW, QUEUED, GameState, PhaseResult, Project
 from drugstory.engine.systems.progression import add_proficiency
@@ -43,9 +43,10 @@ def phase_plan(project: Project, phase_key: str, content: Content) -> tuple[int,
     phase = content.phase(phase_key)
     target = content.targets[project.target]
     modality = content.modalities[project.modality]
-    weeks = max(2, round_half_up(phase.weeks * target.trial_time))
+    strategy = strategy_for(project, phase_key, content)
+    weeks = max(2, round_half_up(phase.weeks * target.trial_time * strategy.weeks))
     mult = content.balance.clinical_operations.contract_multiplier if project.clinical_mode == "contract" else 1
-    return weeks, phase.cost * target.trial_cost * modality.trial_cost * mult
+    return weeks, phase.cost * target.trial_cost * modality.trial_cost * mult * strategy.cost
 
 
 def assign_hazards(state: GameState, project: Project, content: Content) -> None:
@@ -78,29 +79,32 @@ def step(state: GameState, content: Content) -> None:
     promote_queue(state, content)
 
 
-def _finish_phase(state: GameState, project: Project, content: Content) -> None:
-    phase = content.phase(project.phase)
-    target = content.targets[project.target]
-    modality = content.modalities[project.modality]
-    random_ = rng.stream(state, "clinical")
-    noise = content.balance.scoring.noise
-
-    prior = prior_approvals(state, project.target)
-    scores: dict[str, int] = {}
-    for stat in phase.experts:
-        std = standard(target, phase.key, stat, state.week, content, prior)
-        scores[stat] = expert_score(project.stats[stat], std, random_.randint(-noise, noise), content)
+def evaluate_phase(state: GameState, project: Project, phase_key: str, content: Content,
+                   stream: str = "clinical") -> PhaseResult:
+    phase = content.phase(phase_key)
+    random_ = rng.stream(state, stream)
+    noise = score_noise(project, phase_key, content)
+    scores = project_scores(project, phase_key, state.week, content,
+                            {stat: random_.randint(-noise, noise) for stat in phase.experts})
     hazard_lines = []
     for hazard in project.hazards:
-        if hazard.phase == phase.key:
+        if hazard.phase == phase_key:
             scores[hazard.stat] = max(content.balance.scoring.min_score, scores[hazard.stat] - hazard.severity)
             hazard_lines.append(hazard_text(content, phase.name, hazard.text, hazard.stat, hazard.severity))
+    ok = passed(phase_key, scores, content)
+    text = phase_text(content, content.targets[project.target], content.modalities[project.modality],
+                      phase_key, scores, ok)
+    return PhaseResult(phase=phase_key, scores=scores, passed=ok, text=text, hazard_texts=hazard_lines)
 
-    ok = passed(phase.key, scores, content)
-    text = phase_text(content, target, modality, phase.key, scores, ok)
+
+def _finish_phase(state: GameState, project: Project, content: Content) -> None:
+    phase = content.phase(project.phase)
+    target, modality = content.targets[project.target], content.modalities[project.modality]
+    result = evaluate_phase(state, project, phase.key, content)
     state.data += phase.data
-    project.results.append(PhaseResult(phase=phase.key, scores=scores, passed=ok, text=text, hazard_texts=hazard_lines))
-    say(state, f"{project_label(project, content)} {phase.name}{'过关' if ok else '失败'}：{text}")
+    project.results.append(result)
+    ok = result.passed
+    say(state, f"{project_label(project, content)} {phase.name}{'过关' if ok else '失败'}：{result.text}")
 
     keys = content.phase_keys
     if not ok:

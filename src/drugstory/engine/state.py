@@ -12,7 +12,7 @@ from typing import Any
 
 from drugstory.content import ATTRS
 
-SAVE_VERSION = 2
+SAVE_VERSION = 3
 
 # 项目阶段
 RESEARCH = "research"  # 研发中
@@ -25,7 +25,8 @@ APPROVED = "approved"
 FAILED = "failed"
 TERMINATED = "terminated"
 CANCELLED = "cancelled"
-ENDED_STAGES = (APPROVED, FAILED, TERMINATED, CANCELLED)
+LICENSED = "licensed"
+ENDED_STAGES = (APPROVED, FAILED, TERMINATED, CANCELLED, LICENSED)
 ACTIVE_STAGES = (RESEARCH, RD_REVIEW, QUEUED, CLINICAL, PHASE_REVIEW, NAMING)
 
 # 团队在做什么
@@ -125,6 +126,10 @@ class Project:
     validation_weeks_left: int = 0
     clinical_mode: str = "internal"
     queued_week: int = -1
+    profile: str = "balanced"
+    clinical_strategy: str = "standard"
+    strategy_chosen: bool = False
+    deal_id: int = 0
 
     @property
     def active(self) -> bool:
@@ -146,6 +151,36 @@ class Drug:
     active: bool = True
     revenue_total: int = 0
     hall_of_fame: bool = False
+
+
+@dataclass
+class LicenseDeal:
+    id: int
+    project_id: int
+    partner: str
+    kind: str
+    signed_week: int
+    upfront: int
+    milestone: int
+    royalty_rate: float
+    phase: str
+    weeks_left: int
+    status: str = "developing"
+    milestone_paid: bool = False
+    royalty_total: int = 0
+    drug: Drug | None = None
+
+
+@dataclass
+class Rival:
+    key: str
+    name: str
+    target: str
+    launch_week: int
+    retire_week: int
+    strength: float
+    launched: bool = False
+    cycle: int = 0
 
 
 @dataclass
@@ -246,6 +281,12 @@ class GameState:
     next_id: int = 1
     rng_states: dict[str, list[Any]] = field(default_factory=dict)
     action_log: list[LoggedAction] = field(default_factory=list)
+    scenario: str = "independent"
+    objective_completed: bool = False
+    contracts_completed: int = 0
+    deals: list[LicenseDeal] = field(default_factory=list)
+    rivals: list[Rival] = field(default_factory=list)
+    world_initialized: bool = False
     version: int = SAVE_VERSION
     runtime: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 

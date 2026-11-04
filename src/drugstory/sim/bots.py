@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from drugstory.content import ATTRS, Content
 from drugstory.engine import actions as A
 from drugstory.engine import decisions as D
@@ -23,15 +25,18 @@ from drugstory.engine.queries import (
     target_unlock_problems,
 )
 from drugstory.engine.rules.combo import compat, multiplier
-from drugstory.engine.rules.scoring import expected_scores, passed
+from drugstory.engine.rules.scoring import passed, project_scores, score_noise
 from drugstory.engine.state import RESEARCH, GameState, Project, Team
-from drugstory.engine.systems.clinical import prior_approvals
-from drugstory.engine.systems.research import milestone_plan
+from drugstory.engine.systems.licensing import offer as license_offer
+from drugstory.engine.systems.research import extensions_used, milestone_plan
 from drugstory.engine.systems.teams import capacity, lead_salary, payroll, training_cost
 
 
 class Bot:
     name = "bot"
+    scenario = "independent"
+    profile = "balanced"
+    strategy = "standard"
     uses_true_tiers = False
     min_tier = -2
     takes_contracts = False
@@ -123,7 +128,8 @@ class Bot:
             if combo is None or not self.can_fund(state, *combo, content):
                 return
             teams = self.pick_teams(state, content)
-            A.start_project(state, content, target=combo[0], modality=combo[1], team_ids=[t.id for t in teams])
+            A.start_project(state, content, target=combo[0], modality=combo[1], team_ids=[t.id for t in teams],
+                            profile=self.profile)
             researching = [p for p in state.projects if p.stage == RESEARCH]
 
     def pick_teams(self, state: GameState, content: Content) -> list[Team]:
@@ -241,7 +247,8 @@ class Bot:
             A.resolve_rd_end(state, content, decision_id=decision.id, choice=choice)
         elif kind == D.PHASE_RESULT:
             choice = self.phase_choice(state, content, decision) if decision.data["passed"] else "ack"
-            A.resolve_phase(state, content, decision_id=decision.id, choice=choice)
+            A.resolve_phase(state, content, decision_id=decision.id, choice=choice,
+                            strategy=self.strategy if state.project(decision.project_id).phase == "I" else "standard")
         elif kind == D.APPROVAL:
             A.name_drug(state, content, decision_id=decision.id, name=decision.data["suggested"])
         elif kind == D.CANDIDATES:
@@ -250,9 +257,7 @@ class Bot:
             A.acknowledge(state, content, decision_id=decision.id)
 
     def expected_ok(self, state: GameState, project: Project, phase_key: str, content: Content) -> bool:
-        target = content.targets[project.target]
-        prior = prior_approvals(state, project.target)
-        scores = expected_scores(project.stats, target, phase_key, state.week, content, prior)
+        scores = project_scores(project, phase_key, state.week, content)
         return passed(phase_key, scores, content)
 
     def rd_choice(self, state: GameState, content: Content, decision) -> str:
@@ -261,9 +266,7 @@ class Bot:
         project = state.project(decision.project_id)
         if all(self.expected_ok(state, project, k, content) for k in content.phase_keys):
             return "proceed"
-        extensions = (project.rd_weeks - rd_estimate(project.target, project.modality, content)[0]) // (
-            content.balance.research.extension_weeks
-        )
+        extensions = extensions_used(project, content)
         if project.team_ids and extensions < min(3, content.balance.research.max_extensions):
             return "extend"
         return "terminate"
@@ -345,3 +348,55 @@ class Aggressive(Bot):
 
 
 STRATEGIES: dict[str, type[Bot]] = {"newbie": Newbie, "steady": Steady, "aggressive": Aggressive}
+
+
+class RoadmapCompany(Steady):
+    """经营路线测试玩家：只依据可见预估补足余量，使用正式操作接口。"""
+    def rd_choice(self, state, content, decision):
+        p = state.project(decision.project_id)
+        planned = replace(p, strategy_chosen=True, clinical_strategy=self.strategy)
+        safe = True
+        for key in content.phase_keys:
+            scores = project_scores(planned, key, state.week, content)
+            low = {k: max(1, v - score_noise(planned, key, content)) for k, v in scores.items()}
+            safe = safe and passed(key, low, content)
+        if safe:
+            return "proceed"
+        if extensions_used(p, content) < content.balance.research.max_extensions:
+            return "extend"
+        return "terminate"
+
+    def combo_value(self, state, target, modality, content):
+        value = super().combo_value(state, target, modality, content)
+        previous = sum(p.target == target for p in state.projects if p.stage in ("approved", "licensed"))
+        return value / (1 + previous * .5)
+
+
+class LicensingStudio(RoadmapCompany):
+    name = "授权工作室"
+    scenario = "licensing"
+    max_projects_in_research = 1
+
+    def resolve(self, state, content, decision):
+        p = state.project(decision.project_id) if decision.project_id else None
+        if p and decision.kind == D.PHASE_RESULT and decision.data["passed"] and p.phase == "II":
+            kind = "cash" if state.cash < 3500 else "royalty"
+            if not license_offer(state, p, content, kind)["problem"]:
+                A.license_project(state, content, decision_id=decision.id, kind=kind)
+                return
+        super().resolve(state, content, decision)
+
+
+class PlatformCompany(RoadmapCompany):
+    name = "技术平台"
+    scenario = "platform"
+    max_projects_in_research = 1
+
+    def start_projects(self, state, content):
+        if state.active_projects:
+            return
+        super().start_projects(state, content)
+
+    def combo_value(self, state, target, modality, content):
+        value = super().combo_value(state, target, modality, content)
+        return value / (1 + state.modality_proficiency.get(modality, 0))

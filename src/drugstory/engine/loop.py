@@ -4,15 +4,27 @@ from __future__ import annotations
 
 from drugstory.content import Content
 from drugstory.engine.state import GameState
-from drugstory.engine.systems import clinical, contracts, finance, market, progression, recruiting, research
+from drugstory.engine.systems import (
+    clinical,
+    contracts,
+    finance,
+    licensing,
+    market,
+    progression,
+    recruiting,
+    research,
+    world,
+)
 
 
 def step_week(state: GameState, content: Content) -> None:
     if state.game_over:
         return
+    world.step(state, content)
     research.step(state, content)
     contracts.step(state, content)
     clinical.step(state, content)
+    licensing.step(state, content)
     market.step(state, content)
     recruiting.step(state, content)
     state.week += 1

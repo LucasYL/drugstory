@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from drugstory.content import Content
+from drugstory.content import Content, default_content
 from drugstory.engine.book import earn, round_half_up, say
 from drugstory.engine.state import APPROVED, Drug, GameState, Project
 from drugstory.engine.systems.progression import add_proficiency
+from drugstory.engine.systems.world import pressure
 
 
 def peak_sales(state: GameState, project: Project, content: Content) -> float:
@@ -15,13 +16,18 @@ def peak_sales(state: GameState, project: Project, content: Content) -> float:
     modality = content.modalities[project.modality]
     route = m.oral_chronic_bonus if target.chronic and modality.route == "oral" else 1.0
     reputation = 1 + state.reputation / m.reputation_divisor
-    return m.base_by_tier[target.market - 1] * (project.composite / 100) ** 2 * reputation * route
+    profile = content.balance.profiles[project.profile]
+    strategy = content.balance.clinical_strategies[project.clinical_strategy]
+    reach = strategy.market_factor if project.strategy_chosen else 1
+    return (m.base_by_tier[target.market - 1] * (project.composite / 100) ** 2 * reputation * route
+            * profile.market_factor * reach)
 
 
 def margin(project: Project, content: Content) -> float:
     m = content.balance.market
     review = next(r for r in project.results if r.phase == content.phase_keys[-1])
-    return m.margin_base + m.margin_per_point * review.scores["manufacturability"]
+    return min(0.95, m.margin_base + m.margin_per_point * review.scores["manufacturability"]
+               + content.balance.profiles[project.profile].margin_bonus)
 
 
 def curve(weeks_on_market: int, content: Content) -> float:
@@ -66,18 +72,19 @@ def launch(state: GameState, project: Project, name: str, content: Content) -> D
     return drug
 
 
-def sharing(state: GameState) -> dict[str, int]:
+def sharing(state: GameState, content: Content | None = None) -> dict[str, float]:
     """每个靶点上同时在卖的药有几个。它们分同一个市场。"""
-    counts: dict[str, int] = {}
-    for d in state.drugs:
+    content = content or default_content()
+    counts: dict[str, float] = {}
+    for d in [*state.drugs, *(deal.drug for deal in state.deals if deal.drug)]:
         if d.active:
             counts[d.target] = counts.get(d.target, 0) + 1
-    return counts
+    return {target: count + pressure(state, target, content) for target, count in counts.items()}
 
 
 def step(state: GameState, content: Content) -> None:
     m = content.balance.market
-    shares = sharing(state)
+    shares = sharing(state, content)
     for drug in state.drugs:
         if not drug.active:
             continue
@@ -92,4 +99,19 @@ def step(state: GameState, content: Content) -> None:
         revenue_int = round_half_up(revenue)
         drug.revenue_total += revenue_int
         state.current_year.revenue += revenue_int
+        drug.weeks_on_market += 1
+
+    for deal in state.deals:
+        drug = deal.drug
+        if not drug or not drug.active:
+            continue
+        factor = curve(drug.weeks_on_market, content)
+        if drug.weeks_on_market >= m.ramp_weeks + m.plateau_weeks and factor < m.retire_fraction:
+            drug.active = False
+            deal.status = "retired"
+            say(state, f"授权药 {drug.name} 退出市场，累计销售分成 ¥{deal.royalty_total:,} 万")
+            continue
+        revenue = drug.peak * factor / shares[drug.target]
+        deal.royalty_total += earn(state, revenue * deal.royalty_rate, "royalties")
+        drug.revenue_total += round_half_up(revenue)
         drug.weeks_on_market += 1

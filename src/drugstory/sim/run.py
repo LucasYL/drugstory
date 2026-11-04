@@ -23,7 +23,7 @@ def play(
 ) -> GameState:
     """让 bot 从开局玩到第 years 年结束（默认 20 年），或者破产为止。"""
     years = years or content.balance.time.career_years
-    state = new_game(seed, content)
+    state = new_game(seed, content, bot.scenario)
     end = years * content.balance.time.weeks_per_year
     while state.week < end and not state.game_over:
         bot.manage(state, content)

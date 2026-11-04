@@ -12,13 +12,14 @@ from typing import Any
 
 from drugstory.content import ATTRS, STATS, Content
 from drugstory.engine import decisions
-from drugstory.engine.book import can_afford, round_half_up, say, spend
+from drugstory.engine.book import can_afford, earn, round_half_up, say, spend
 from drugstory.engine.queries import modality_unlock_problems, next_facility, target_unlock_problems
 from drugstory.engine.rules.combo import compat
 from drugstory.engine.rules.texts import project_label, spaced
 from drugstory.engine.state import (
     CANCELLED,
     IDLE,
+    LICENSED,
     ON_CONTRACT,
     ON_PROJECT,
     PHASE_REVIEW,
@@ -29,12 +30,13 @@ from drugstory.engine.state import (
     ActiveContract,
     Decision,
     GameState,
+    LicenseDeal,
     LoggedAction,
     Project,
     Recruitment,
     Team,
 )
-from drugstory.engine.systems import clinical, market, research
+from drugstory.engine.systems import clinical, licensing, market, research
 from drugstory.engine.systems.contracts import duration, reward
 from drugstory.engine.systems.progression import add_proficiency, check_achievements
 from drugstory.engine.systems.teams import capacity, lead_salary, training_cap, training_cost
@@ -125,7 +127,9 @@ def _assign(teams: list[Team], project: Project) -> None:
 
 
 @action
-def start_project(state: GameState, content: Content, target: str, modality: str, team_ids: list[int]) -> int:
+def start_project(state: GameState, content: Content, target: str, modality: str, team_ids: list[int],
+                  profile: str = "balanced") -> int:
+    _require(profile in content.balance.profiles, "不认识的候选药方案")
     _require(target in state.unlocked_targets, "这个靶点还没解锁")
     _require(modality in state.unlocked_modalities, "这种分子类型还没解锁")
     _require(len(team_ids) > 0, "至少要配一个团队")
@@ -144,6 +148,7 @@ def start_project(state: GameState, content: Content, target: str, modality: str
         rd_weeks=research.rd_weeks(t, m),
         base_rd_weeks=research.rd_weeks(t, m),
         extension_count=0,
+        profile=profile,
         stats={s: 0.0 for s in STATS},
         started_week=state.week,
     )
@@ -261,7 +266,8 @@ def outsource_clinical(state: GameState, content: Content, project_id: int) -> N
 
 
 @action
-def resolve_phase(state: GameState, content: Content, decision_id: int, choice: str) -> None:
+def resolve_phase(state: GameState, content: Content, decision_id: int, choice: str,
+                  strategy: str = "standard") -> None:
     """过关时 choice 是 continue 或 terminate；没过关时只能是 ack。"""
     decision = _decision(state, decision_id, decisions.PHASE_RESULT)
     project = _project(state, decision.project_id)
@@ -269,6 +275,12 @@ def resolve_phase(state: GameState, content: Content, decision_id: int, choice: 
         _require(choice == "ack", "这一期没过关，只能确认")
     elif choice == "continue":
         _require(project.stage == PHASE_REVIEW, "这个项目不在等待决定的阶段")
+        _require(strategy in content.balance.clinical_strategies, "不认识的临床策略")
+        if project.phase == "I" and not project.strategy_chosen:
+            project.clinical_strategy, project.strategy_chosen = strategy, True
+            say(state, f"选择临床策略：{content.balance.clinical_strategies[strategy].name}，后续不再切换")
+        else:
+            _require(strategy in ("standard", project.clinical_strategy), "临床策略已经确定，不能中途切换")
         clinical.start_phase(state, project, decision.data["next"], content)
     elif choice == "terminate":
         _require(project.stage == PHASE_REVIEW, "这个项目不在等待决定的阶段")
@@ -280,6 +292,36 @@ def resolve_phase(state: GameState, content: Content, decision_id: int, choice: 
         raise ActionError(f"不认识的选择：{choice}")
     decisions.remove(state, decision)
     clinical.promote_queue(state, content)
+
+
+@action
+def license_project(state: GameState, content: Content, decision_id: int, kind: str) -> int:
+    decision = _decision(state, decision_id, decisions.RD_END, decisions.PHASE_RESULT)
+    p = _project(state, decision.project_id)
+    _require(kind in content.balance.license_types, "不认识的授权条款")
+    quoted = licensing.offer(state, p, content, kind)
+    _require(not quoted["problem"], quoted["problem"])
+    if p.stage == RD_REVIEW:
+        research.record_in_notebook(state, p, content)
+        research.release_teams(state, p)
+        clinical.assign_hazards(state, p, content)
+        p.clinical_strategy, p.strategy_chosen = "standard", True
+        phase = content.phase_keys[0]
+    else:
+        phase = content.phase_keys[2]
+    deal = LicenseDeal(id=state.new_id(), project_id=p.id, partner=quoted["partner"], kind=kind,
+                       signed_week=state.week, upfront=quoted["upfront"], milestone=quoted["milestone"],
+                       royalty_rate=quoted["royalty_rate"], phase=phase,
+                       weeks_left=clinical.phase_plan(p, phase, content)[0])
+    state.deals.append(deal)
+    p.deal_id, p.stage, p.ended_week = deal.id, LICENSED, state.week
+    earn(state, deal.upfront, "license_upfront")
+    add_proficiency(state, p, content)
+    decisions.remove(state, decision)
+    clinical.promote_queue(state, content)
+    say(state, f"{project_label(p, content)} 授权给{deal.partner}：首付款 ¥{deal.upfront:,} 万，"
+        f"获批里程碑 ¥{deal.milestone:,} 万，销售分成 {deal.royalty_rate:.0%}；后续开发费用与风险由合作方承担")
+    return deal.id
 
 
 @action

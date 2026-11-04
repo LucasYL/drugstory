@@ -25,15 +25,22 @@ def extensions_used(project: Project, content: Content) -> int:
     return max(0, (project.rd_weeks - base) // content.balance.research.extension_weeks)
 
 
-def quality_gain(current: float, effort: float, target: Target, content: Content) -> float:
+def quality_gain(current: float, effort: float, target: Target, content: Content, ceiling_factor: float = 1) -> float:
     """基础研发按原速度积累，优秀后逐渐放缓；投入顺序不影响结果，旧属性不下调。"""
     base = content.balance.scoring.base_standard * target.difficulty
     knee = base * content.balance.research.quality_knee
-    ceiling = base * content.balance.research.quality_ceiling
+    ceiling = base * content.balance.research.quality_ceiling * ceiling_factor
     linear = min(max(0.0, effort), max(0.0, knee - current))
     remaining = max(0.0, effort - linear)
     room = max(0.0, ceiling - current - linear)
     return linear + room * -math.expm1(-remaining / (ceiling - knee))
+
+
+
+def project_gain(project: Project, stat: str, effort: float, content: Content) -> float:
+    profile = content.balance.profiles[project.profile]
+    return quality_gain(project.stats.get(stat, 0), effort * profile.gains[stat], content.targets[project.target],
+                        content, profile.ceilings[stat])
 
 
 def proficiency_multiplier(state: GameState, project: Project, content: Content) -> float:
@@ -68,7 +75,7 @@ def milestone_bonus(state: GameState, project: Project, team: Team, stat: str, c
     r = content.balance.research
     effort = (weekly_output(team, stat, content) * point_multiplier(state, project, content)
               * r.milestone_multiplier * factor)
-    return quality_gain(project.stats[stat], effort, content.targets[project.target], content)
+    return project_gain(project, stat, effort, content)
 
 
 def milestone_plan(state: GameState, project: Project, team: Team, plan: str, content: Content) -> dict:
@@ -132,7 +139,7 @@ def step(state: GameState, content: Content) -> None:
             for stat in STATS:
                 noise = random_.uniform(1 - r.noise, 1 + r.noise)
                 effort = weekly_output(team, stat, content) * mult * noise
-                project.stats[stat] += quality_gain(project.stats[stat], effort, target, content)
+                project.stats[stat] += project_gain(project, stat, effort, content)
             state.data += r.data_per_team_week
             gain_exp(state, team, content)
         project.spent += spend(state, modality.weekly_cost, "research")
@@ -157,7 +164,8 @@ def _spawn_hazard(
     state: GameState, project: Project, target: Target, modality: Modality, random_: random.Random, content: Content
 ) -> None:
     r = content.balance.research
-    if random_.random() >= r.hazard_rate[modality.risk] * target.difficulty:
+    chance = r.hazard_rate[modality.risk] * target.difficulty * content.balance.profiles[project.profile].hazard_factor
+    if random_.random() >= chance:
         return
     stats = list(r.hazard_stat_weights.keys())
     stat = random_.choices(stats, weights=[r.hazard_stat_weights[s] for s in stats])[0]

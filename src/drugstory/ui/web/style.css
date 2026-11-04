@@ -1109,3 +1109,39 @@ select.inline {
     scroll-behavior: auto !important;
   }
 }
+
+.objective-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  background: var(--soft, #eaf0e6);
+  border-radius: 10px;
+}
+.objective-strip span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.objective-strip button {
+  flex-shrink: 0;
+}
+.objective-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+}
+.scenario-options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+@media (max-width: 650px) {
+  .objective-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

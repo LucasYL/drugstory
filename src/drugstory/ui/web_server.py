@@ -19,6 +19,7 @@ from drugstory.engine import actions
 from drugstory.engine.game import new_game
 from drugstory.engine.loop import advance
 from drugstory.engine.save import SaveError, from_json, load, to_json
+from drugstory.engine.systems.world import ensure
 from drugstory.ui.web_view import snapshot
 
 ASSETS = Path(__file__).with_name("web")
@@ -52,14 +53,16 @@ def valid_type(value, hint) -> bool:
 
 
 class GameSession:
-    def __init__(self, save_path: Path, seed: int = 42, load_path: Path | None = None):
+    def __init__(self, save_path: Path, seed: int = 42, load_path: Path | None = None,
+                 scenario: str = "independent"):
         self.content = default_content()
         self.path = save_path
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
         source = load_path or (save_path if save_path.exists() else None)
-        self.state = load(source) if source else new_game(seed, self.content)
+        self.state = load(source) if source else new_game(seed, self.content, scenario)
+        ensure(self.state, self.content)
         snapshot(self.state, self.content)  # 在改动任何存档前检查能否正常显示
         self.saved_at = None
 
@@ -93,7 +96,7 @@ class GameSession:
                 seed = args.get("seed", 42)
                 if type(seed) is not int or not 0 <= seed <= 999999999:
                     raise ValueError("随机种子需要是 0–999999999 的整数")
-                candidate = new_game(seed, self.content)
+                candidate = new_game(seed, self.content, args.get("scenario", "independent"))
             elif isinstance(name, str) and name in actions.ACTIONS:
                 fn = actions.ACTIONS[name]
                 signature = inspect.signature(fn)
@@ -197,11 +200,12 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="新药物语 · 本地鼠标操作界面")
     parser.add_argument("--port", type=int, default=8878)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
+    parser.add_argument("--scenario", choices=list(default_content().balance.scenarios), default="independent")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     args = parser.parse_args(argv)
     try:
-        session = GameSession(args.save_path, args.seed, args.load)
+        session = GameSession(args.save_path, args.seed, args.load, args.scenario)
         server = create_server(session, args.port)
     except (OSError, SaveError) as e:
         parser.exit(1, f"启动失败：{e}\n")

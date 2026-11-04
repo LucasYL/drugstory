@@ -30,7 +30,7 @@ from drugstory.engine.queries import (
     target_unlock_problems,
 )
 from drugstory.engine.rules.combo import tier_name
-from drugstory.engine.rules.scoring import expected_scores
+from drugstory.engine.rules.scoring import project_scores
 from drugstory.engine.rules.texts import project_label, spaced
 from drugstory.engine.save import SaveError, load, save
 from drugstory.engine.state import (
@@ -47,10 +47,12 @@ from drugstory.engine.state import (
     Team,
 )
 from drugstory.engine.systems.clinical import phase_plan, prior_approvals
+from drugstory.engine.systems.licensing import offer as license_offer
 from drugstory.engine.systems.market import curve, sharing
 from drugstory.engine.systems.progression import final_score
 from drugstory.engine.systems.research import extensions_used, milestone_plan, project_teams
 from drugstory.engine.systems.teams import capacity, exp_to_next, lead_salary, team_salary, training_cost
+from drugstory.engine.systems.world import ensure, objective
 
 LINE = "─" * 64
 AUTOSAVE = Path("autosave.json")
@@ -162,6 +164,7 @@ class CLI:
             "b": self.menu_facility,
             "k": self.menu_notebook,
             "d": self.menu_drugs,
+            "m": self.menu_business,
             "s": self.menu_save,
             "?": self.help,
             "q": self.quit,
@@ -226,7 +229,7 @@ class CLI:
         self.say(LINE)
         self.say(
             "[回车] 继续  [f] 快进  [n] 立项  [p] 项目  [t] 团队  [h] 招聘  [c] 外包  [u] 解锁  "
-            "[b] 场地  [k] 笔记本  [d] 药物  [s] 存档  [?] 帮助  [q] 退出"
+            "[b] 场地  [k] 笔记本  [d] 药物  [m] 市场授权  [s] 存档  [?] 帮助  [q] 退出"
         )
 
     def project_line(self, p: Project) -> str:
@@ -300,12 +303,10 @@ class CLI:
     def expectation_lines(self, p: Project, phases: list[str]) -> list[str]:
         """按现在的属性，各期预计能拿几分（不算随机和隐患）。"""
         s, c = self.state, self.content
-        target = c.targets[p.target]
-        prior = prior_approvals(s, p.target)
         lines = []
         for key in phases:
             phase = c.phase(key)
-            scores = expected_scores(p.stats, target, key, s.week, c, prior)
+            scores = project_scores(p, key, s.week, c)
             parts = "  ".join(f"{self.names.stats[k]} {v}" for k, v in scores.items())
             lines.append(f"  预计{spaced(phase.name)}：{parts}{self.pass_hint(key, scores)}")
         return lines
@@ -337,7 +338,11 @@ class CLI:
         self.say("  [3] 终止：钱不再花，熟练度照涨")
         self.say("  [4] 专项排险：2 周，按隐患数量付费，不加点、不产生新隐患")
         self.say(f"  [5] 委托临床：不占自营席位，全程约 {money(cost * 1.3)}")
-        index = self.choose("怎么办？", 5, allow_back=False)
+        self.say("  [6] 比较授权报价")
+        index = self.choose("怎么办？", 6, allow_back=False)
+        if index == 5:
+            self.offer_license(d)
+            return
         choice = ("proceed", "extend", "terminate", "validate", "contract")[index or 0]
         self.act("resolve_rd_end", decision_id=d.id, choice=choice)
 
@@ -369,9 +374,20 @@ class CLI:
         self.say(f"  ✓ 过关！下一步是{c.phase(nxt).name}：{weeks} 周、{money(cost)}")
         for line in self.expectation_lines(p, [nxt]):
             self.say(line)
-        self.say("  [1] 继续  [2] 终止")
-        index = self.choose("怎么办？", 2, default=0, allow_back=False)
-        self.act("resolve_phase", decision_id=d.id, choice="continue" if index == 0 else "terminate")
+        self.say("  [1] 继续  [2] 终止" + ("  [3] 比较授权报价" if p.phase == "II" else ""))
+        index = self.choose("怎么办？", 3 if p.phase == "II" else 2, default=0, allow_back=False)
+        if index == 2:
+            self.offer_license(d)
+            return
+        strategy = "standard"
+        if index == 0 and p.phase == "I" and not p.strategy_chosen:
+            keys = list(c.balance.clinical_strategies)
+            for i, key in enumerate(keys, 1):
+                x = c.balance.clinical_strategies[key]
+                self.say(f"  [{i}] {x.name}：{x.description}")
+            selected = self.choose("后续临床策略？", len(keys), default=0, allow_back=False)
+            strategy = keys[selected or 0]
+        self.act("resolve_phase", decision_id=d.id, choice="continue" if index == 0 else "terminate", strategy=strategy)
 
     def on_approval(self, d: Decision) -> None:
         s, c = self.state, self.content
@@ -494,10 +510,15 @@ class CLI:
         mi = self.choose("哪种分子类型？", len(modalities))
         if mi is None:
             return
+        profiles = list(c.balance.profiles)
+        for i, key in enumerate(profiles, 1):
+            self.say(f"  [{i}] {c.balance.profiles[key].name}：{c.balance.profiles[key].description}")
+        pi = self.choose("候选药取向？", len(profiles), default=0, allow_back=False)
         team_ids = self.pick_teams(s.idle_teams, c.balance.team.max_per_project)
         if team_ids is None:
             return
-        self.act("start_project", target=target.key, modality=modalities[mi].key, team_ids=team_ids)
+        self.act("start_project", target=target.key, modality=modalities[mi].key, team_ids=team_ids,
+                 profile=profiles[pi or 0])
 
     def target_tags(self, key: str) -> str:
         t = self.content.targets[key]
@@ -721,6 +742,32 @@ class CLI:
         got = [names[k].name for k in s.achievements]
         self.say(f"成就（{len(got)}/{len(names)}）：{'、'.join(got) if got else '还没有'}")
 
+    def offer_license(self, d: Decision) -> None:
+        p = self.state.project(d.project_id)
+        keys = list(self.content.balance.license_types)
+        for i, key in enumerate(keys, 1):
+            q = license_offer(self.state, p, self.content, key)
+            self.say(f"  [{i}] {q['name']}：首付 {money(q['upfront'])}，成功里程碑 {money(q['milestone'])}，"
+                     f"销售分成 {q['royalty_rate']:.0%}。{q['problem']}")
+        self.say("授权后合作方承担后续费用和风险，签约不可撤回；失败则无里程碑或分成。")
+        index = self.choose("签哪种条款？", len(keys))
+        if index is not None:
+            self.act("license_project", decision_id=d.id, kind=keys[index])
+
+    def menu_business(self) -> None:
+        s, c = self.state, self.content
+        ensure(s, c)
+        goal = objective(s, c)
+        self.say(f"公司目标：{goal['name']} · {goal['description']}")
+        for m in goal["metrics"]:
+            self.say(f"  {m['name']}：{m['value']}/{m['goal']}")
+        for r in s.rivals:
+            self.say(f"竞争：{r.name} · {c.targets[r.target].name} · "
+                     + ("在售" if r.launched else f"预计 {label(r.launch_week, c)} 上市"))
+        for d in s.deals:
+            self.say(f"授权：{project_label(s.project(d.project_id), c)} · {d.partner} · {d.status} · "
+                     f"累计分成 {money(d.royalty_total)}")
+
     def menu_save(self) -> None:
         text = self.ask("存到哪个文件？（回车 = save.json）> ") or "save.json"
         try:
@@ -734,6 +781,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="新药物语：开罗式的制药经营游戏")
     parser.add_argument("--seed", type=int, help="随机种子（默认随机）")
     parser.add_argument("--load", type=Path, help="读取存档")
+    parser.add_argument("--scenario", choices=list(default_content().balance.scenarios), default="independent")
     parser.add_argument("--fast", action="store_true", help="揭晓结果时不停顿")
     args = parser.parse_args(argv)
     content = default_content()
@@ -744,5 +792,5 @@ def main(argv: list[str] | None = None) -> None:
             print(f"❌ {e}")
             sys.exit(1)
     else:
-        state = new_game(args.seed if args.seed is not None else random.randrange(1, 1_000_000), content)
+        state = new_game(args.seed if args.seed is not None else random.randrange(1, 1_000_000), content, args.scenario)
     CLI(state, content, delay=0 if args.fast else 0.4).run()

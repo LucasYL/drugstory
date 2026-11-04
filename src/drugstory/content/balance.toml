@@ -279,3 +279,127 @@ per_100m_profit = 10
 per_approval = 20
 per_hall_of_fame = 50
 per_achievement = 30
+
+# 候选药的研发取向；数值是游戏权衡，不是现实药理预测。
+[profiles.balanced]
+name = "均衡候选药"
+description = "各项研发按标准速度积累，适合第一款药。"
+gains = {efficacy=1.0, druggability=1.0, safety=1.0, manufacturability=1.0}
+ceilings = {efficacy=1.0, druggability=1.0, safety=1.0, manufacturability=1.0}
+hazard_factor = 1.0
+market_factor = 1.0
+margin_bonus = 0.0
+
+[profiles.potent]
+name = "高活性候选药"
+description = "疗效积累 +18%、上限 +8%；安全性积累 −15%、上限 −5%，隐患出现率 +15%，工艺积累 −8%。需要毒理团队补短板。"
+gains = {efficacy=1.18, druggability=1.0, safety=0.85, manufacturability=0.92}
+ceilings = {efficacy=1.08, druggability=1.0, safety=0.95, manufacturability=1.0}
+hazard_factor = 1.15
+market_factor = 1.0
+margin_bonus = 0.0
+
+[profiles.selective]
+name = "高选择性候选药"
+description = "安全性积累 +20%、上限 +7%，隐患出现率 −25%；疗效积累 −10%、上限 −4%。"
+gains = {efficacy=0.9, druggability=1.0, safety=1.2, manufacturability=1.0}
+ceilings = {efficacy=0.96, druggability=1.0, safety=1.07, manufacturability=1.0}
+hazard_factor = 0.75
+market_factor = 1.0
+margin_bonus = 0.0
+
+[profiles.convenient]
+name = "便捷给药候选药"
+description = "成药性积累 +10%，上市销售潜力 +18%；工艺积累 −15%、上限 −4%，疗效积累 −5%。"
+gains = {efficacy=0.95, druggability=1.1, safety=1.0, manufacturability=0.85}
+ceilings = {efficacy=1.0, druggability=1.0, safety=1.0, manufacturability=0.96}
+hazard_factor = 1.0
+market_factor = 1.18
+margin_bonus = 0.0
+
+[profiles.stable]
+name = "稳定工艺候选药"
+description = "工艺积累 +25%、上限 +8%，上市利润率 +5 个百分点；疗效积累 −8%、上限 −3%，销售潜力 −5%，安全性积累 +5%。"
+gains = {efficacy=0.92, druggability=1.0, safety=1.05, manufacturability=1.25}
+ceilings = {efficacy=0.97, druggability=1.0, safety=1.0, manufacturability=1.08}
+hazard_factor = 1.0
+market_factor = 0.95
+margin_bonus = 0.05
+
+[clinical_strategies.standard]
+name = "标准试验"
+description = "标准工期与费用，专家分随机波动 ±1，保留完整市场。"
+weeks = 1.0
+cost = 1.0
+noise = 1
+efficacy_bonus = 0
+market_factor = 1.0
+
+[clinical_strategies.focused]
+name = "精准入组"
+description = "从 II 期起疗效判读 +1 分；后续工期和费用 +10%，适用人群收窄，上市销售潜力 −25%。仍有 ±1 波动。"
+weeks = 1.1
+cost = 1.1
+noise = 1
+efficacy_bonus = 1
+market_factor = 0.75
+
+[clinical_strategies.rigorous]
+name = "扩大验证"
+description = "从 II 期起消除专家评分的随机波动；后续工期 +25%、费用 +30%。不会补足属性短板，也不会清除研发隐患。"
+weeks = 1.25
+cost = 1.3
+noise = 0
+efficacy_bonus = 0
+market_factor = 1.0
+
+[licensing]
+partners = ["远山制药", "海川医药", "青岚生物"]
+min_efficacy = 5
+min_review_total = 20
+rd_value = 470
+phase2_value = 1100
+milestone = 500
+
+[license_types.cash]
+name = "现金优先"
+description = "较高首付款、较低销售分成，适合回收资金继续研发。"
+upfront_factor = 1.0
+royalty_rate = 0.12
+
+[license_types.royalty]
+name = "长期分成"
+description = "首付款减少 35%，销售分成提高到 24%；合作方研发失败时没有上市里程碑或分成。"
+upfront_factor = 0.65
+royalty_rate = 0.24
+
+[competition]
+first_launch = 192
+product_life = 288
+next_pipeline = 96
+max_pressure = 1.5
+companies = ["长宁制药", "星桥生物", "远辰医药"]
+
+[scenarios.independent]
+name = "自主药企"
+description = "资金较宽裕，从第一张批文开始建立自己的产品组合。"
+cash = 4000
+data = 0
+extra_modalities = []
+objective = "自主上市 3 款药，覆盖至少 2 个靶点，现金为正。"
+
+[scenarios.licensing]
+name = "研发授权工作室"
+description = "较少启动资金、较多研究数据，靠首付款和后续分成循环研发。"
+cash = 3000
+data = 80
+extra_modalities = []
+objective = "签下 3 笔授权，累计首付款达到 1800 万，现金为正。"
+
+[scenarios.platform]
+name = "技术平台公司"
+description = "预先掌握多肽技术，利用外包和多种分子平台建立研发能力。"
+cash = 3400
+data = 120
+extra_modalities = ["peptide"]
+objective = "完成 6 笔外包，掌握 4 种分子类型，并取得 1 次自主上市或授权，现金为正。"

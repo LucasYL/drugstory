@@ -95,6 +95,6 @@ def test_replay_reproduces_the_game(content):
 def test_bad_saves_are_rejected(content):
     good = to_json(new_game(1, content))
     with pytest.raises(SaveError, match="版本"):
-        from_json(good.replace('"version":2', '"version":99'))
+        from_json(good.replace('"version":3', '"version":99'))
     with pytest.raises(SaveError, match="存档坏了"):
         from_json("{not json")

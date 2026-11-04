@@ -443,6 +443,23 @@ def _validate(content: Content) -> None:
             if stat not in content.phase(phase_key).experts:
                 raise ContentError(f"{stat} 的隐患不能分到没有 {stat} 专家的阶段 {phase_key}")
 
+    for key, profile in b.profiles.items():
+        for stat in STATS:
+            cap = profile.ceilings.get(stat, 0) * b.research.quality_ceiling
+            if profile.gains.get(stat, 0) <= 0 or cap <= b.research.quality_knee:
+                raise ContentError(f"候选药 {key} 的 {stat} 积累倍率或上限不合法")
+        if profile.market_factor <= 0 or profile.hazard_factor < 0:
+            raise ContentError(f"候选药 {key} 的销售或隐患倍率不合法")
+    for key, strategy in b.clinical_strategies.items():
+        if strategy.weeks <= 0 or strategy.cost <= 0 or strategy.noise < 0 or not 0 < strategy.market_factor <= 1:
+            raise ContentError(f"临床策略 {key} 的时间、费用、波动或市场参数不合法")
+    for key, opening in b.scenarios.items():
+        if opening.cash <= 0 or opening.data < 0 or any(m not in modalities for m in opening.extra_modalities):
+            raise ContentError(f"开局 {key} 的资源或分子类型不合法")
+    for key, terms in b.license_types.items():
+        if not 0 < terms.upfront_factor <= 1 or not 0 < terms.royalty_rate < 1:
+            raise ContentError(f"授权条款 {key} 不合法")
+
     for category in {tg.category for tg in targets.values()}:
         if category not in t.results:
             raise ContentError(f"texts.toml 缺少 {category} 的结果文案")

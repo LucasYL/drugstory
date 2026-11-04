@@ -60,7 +60,7 @@ def play(content, player, seed=3, tmp_path=None):
 
 def test_a_first_drug_from_start_to_launch(content, tmp_path):
     # 立项 EGFR × 小分子 → 在招聘网站招毒理 → 签第一位，并加进项目 → 之后一路快进
-    player = Player(script=["n", "1", "1", "", "h", "1", "3"], main_moves=30)
+    player = Player(script=["n", "1", "1", "", "", "h", "1", "3"], main_moves=30)
     state = play(content, player, tmp_path=tmp_path)
     text = player.text
     assert "立项：EGFR × 小分子" in text
@@ -86,7 +86,7 @@ def test_menus_can_be_opened_and_left(content):
 
 
 def test_bad_input_is_asked_again(content):
-    player = Player(script=["n", "9", "abc", "1", "1", "7 7", "1"], main_moves=0)
+    player = Player(script=["n", "9", "abc", "1", "1", "", "7 7", "1"], main_moves=0)
     state = play(content, player)
     assert player.text.count("❌") >= 3
     assert state.projects and state.projects[0].team_ids == [state.teams[0].id]
