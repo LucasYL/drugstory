@@ -1,4 +1,4 @@
-"""Compact terminal frontend for the same v7 action engine."""
+"""Compact terminal frontend for the same v8 action engine."""
 
 import argparse
 import json
@@ -12,12 +12,12 @@ from .view import snapshot
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="新药物语 · 开发与证据版 v0.7")
+    parser = argparse.ArgumentParser(description="新药物语 · 研究所版 v0.8")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
     parser.add_argument("--load", type=Path)
-    parser.add_argument("--save", type=Path, default=Path("saves/development-cli.json"))
+    parser.add_argument("--save", type=Path, default=Path("saves/institute-cli.json"))
     args = parser.parse_args(argv)
     s = load(args.load) if args.load else new_game(args.seed, args.scenario, args.difficulty)
     print("输入 view 查看，next 推进，help 列出操作，或 操作名 {JSON参数}；quit 退出。")

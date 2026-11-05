@@ -4,6 +4,7 @@ from . import challenge
 from .content import CATALOG, PROFESSIONS
 from .model import ability, busy, earn, find, log, rand
 from .science import observe, selected
+from .units import pts, pts_map
 
 AWARDS = {
     "quality": {
@@ -155,8 +156,8 @@ def proof_options(s):
             if people:
                 ids.append(max(people, key=ability)["id"])
         checks = [
-            ("III 期获益观察至少 78", phase_value(p, "III", "effect") >= 78),
-            ("III 期安全观察至少 66", phase_value(p, "III", "safety") >= 66),
+            (f"III 期获益观察至少 {pts(76)}", phase_value(p, "III", "effect") >= 76),
+            (f"III 期安全观察至少 {pts(64)}", phase_value(p, "III", "safety") >= 64),
             ("产品仍在市场", d["active"]),
             ("两位对应专业大师，能力至少 60", len(ids) == 2),
             ("没有正在进行的验证", not running),
@@ -184,7 +185,7 @@ def finish_proof(s, job):
     p = find(s["projects"], d["project"])
     c = selected(p)
     values = {}
-    limits = {"effect": 77 if job["step"] == 0 else 78, "safety": 64 if job["step"] == 0 else 67}
+    limits = {"effect": 75 if job["step"] == 0 else 76, "safety": 62 if job["step"] == 0 else 65}
     for stat in limits:
         # Independent public validation has its own saved evidence; cannot repeatedly buy rerolls.
         offset = c["subgroup"] if p.get("population") == "focused" and stat == "effect" else 0
@@ -259,21 +260,67 @@ def legacy_progress(s):
     ]
 
 
-def update(s):
-    milestones = {
-        "first_product": ("第一粒药", bool(s["products"])),
-        "first_elite": ("小队初成", any(h["rank"] >= 2 for h in s["heroes"])),
-        "first_master": ("专家坐镇", any(h["rank"] >= 3 for h in s["heroes"])),
-        "first_innovation": ("新药诞生", any(d["kind"] == "innovative" for d in s["products"])),
-        "partner_success": ("跨过边界", any(d["status"] == "approved" for d in s["deals"])),
-        "first_mentor": ("薪火相传", any(h["mentored"] for h in s["heroes"])),
-        "first_award": ("第一次上台", bool(s["awards"])),
-        "replicated": ("经得起复核", any(r["passed"] for r in s["proofs"])),
+ACHIEVEMENTS = {
+    "first_product": "第一粒药",
+    "first_elite": "小队初成",
+    "first_patent": "第一项专利",
+    "facility_1": "搬进联合研发所",
+    "team_6": "六人小队",
+    "first_master": "专家坐镇",
+    "first_license": "第一笔授权",
+    "first_innovation": "新药诞生",
+    "first_award": "第一次上台",
+    "first_mentor": "薪火相传",
+    "facility_2": "搬进专业研究院",
+    "notebook_10": "十条组合手记",
+    "products_5": "五款产品同时在售",
+    "sales_1e4": "累计销售额一亿",
+    "lab_top": "顶级实验室",
+    "team_10": "十人研究社",
+    "partner_success": "跨过边界",
+    "innovation_3": "三款创新药",
+    "first_legend": "传奇坐镇",
+    "facility_3": "搬进星火科学城",
+    "replicated": "经得起复核",
+}
+
+
+def achievement_ready(s):
+    employed = [h for h in s["heroes"] if h["employed"]]
+    own = [d for d in s["products"] if not d["partner"]]
+    return {
+        "first_product": bool(s["products"]),
+        "first_elite": any(h["rank"] >= 2 for h in s["heroes"]),
+        "first_patent": any((p.get("patent") or {}).get("granted") for p in s["projects"]),
+        "facility_1": s["facility"] >= 1,
+        "team_6": len(employed) >= 6,
+        "first_master": any(h["rank"] >= 3 for h in s["heroes"]),
+        "first_license": bool(s["deals"]),
+        "first_innovation": any(d["kind"] == "innovative" for d in s["products"]),
+        "first_award": bool(s["awards"]),
+        "first_mentor": any(h["mentored"] for h in s["heroes"]),
+        "facility_2": s["facility"] >= 2,
+        "notebook_10": len(s["notebook"]) >= 10,
+        "products_5": sum(d["active"] for d in own) >= 5,
+        "sales_1e4": s["income"].get("sales", 0) >= 10000,
+        "lab_top": any(level >= 3 for level in s["equipment"].values()),
+        "team_10": len(employed) >= 10,
+        "partner_success": any(d["status"] == "approved" for d in s["deals"]),
+        "innovation_3": sum(d["kind"] == "innovative" for d in own) >= 3,
+        "first_legend": any(h["rank"] >= 4 for h in s["heroes"]),
+        "facility_3": s["facility"] >= 3,
+        "replicated": any(r["passed"] for r in s["proofs"]),
     }
-    for key, (name, ready) in milestones.items():
-        if ready and not any(a["key"] == key for a in s["achievements"]):
+
+
+def update(s):
+    from .events import emit
+
+    ready = achievement_ready(s)
+    for key, name in ACHIEVEMENTS.items():
+        if ready[key] and not any(a["key"] == key for a in s["achievements"]):
             s["achievements"].append({"key": key, "name": name, "week": s["week"]})
-            log(s, "成长纪念：" + name + "。已收入荣誉室。")
+            emit(s, "milestone_reached", data={"key": key, "title": name})
 
 
 def annual(s):
@@ -320,7 +367,14 @@ def annual(s):
             s["awards"].append(
                 {"year": year, "category": c["key"], "name": c["name"], "score": c["score"], "prize": prize}
             )
-            log(s, f"年度颁奖：研究社获得{c['name']}！奖金 ¥{prize} 万，作品和培养记录已刻入奖杯室。")
+            from .events import emit
+
+            emit(
+                s,
+                "award_won",
+                actors=[h["id"] for h in s["heroes"] if h["employed"]],
+                data={"name": c["name"], "year": year, "prize": prize},
+            )
     for goal in legacy_progress(s):
         if not goal["won"] and all(c["ok"] for c in goal["checks"]):
             s["legacies"].append(
@@ -333,7 +387,14 @@ def annual(s):
                 }
             )
             s["reputation"] += 20
-            log(s, "终局荣誉达成：" + goal["name"] + "！研究社的成果与培养传承被正式认可。")
+            from .events import emit
+
+            emit(
+                s,
+                "legacy_reached",
+                actors=[h["id"] for h in s["heroes"] if h["employed"]],
+                data={"name": goal["name"], "year": year},
+            )
     s["festivals"].append({"year": year, "entry": entry, "results": results})
     log(s, f"第 {year} 年研究大会结束。前往荣誉室查看入围、获奖与差距。")
     s["season"] = {"year": year + 1, "entry": None, "baseline": counters(s)}
@@ -353,6 +414,6 @@ def view(s):
         "festivals": s["festivals"][-5:],
         "achievements": s["achievements"],
         "legacies": legacy_progress(s),
-        "proofs": s["proofs"],
+        "proofs": [{**r, "values": pts_map(r["values"]), "limits": pts_map(r["limits"])} for r in s["proofs"]],
         "studies": proof_options(s),
     }

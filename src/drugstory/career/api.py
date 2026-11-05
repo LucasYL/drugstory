@@ -1,8 +1,9 @@
-"""Version 1 public transport: static content once, dynamic decisions on each action."""
+"""Version 2 public transport: static content (rooms, cast, catalog) once, dynamic state on each action."""
 
-from .content import CATALOG, EXPERIMENTS, KINDS, PROFESSIONS, SCENARIOS, STATS
+from .content import CATALOG, EXPERIMENTS, KINDS, PROFESSIONS, ROOMS, ROSTER, SCENARIOS, STAGES, STATS
 from .development import FOCUSES
-from .product_design import profile
+from .units import SCALE
+from .view import shown_profile
 
 STATIC_FIELDS = ("scenarios", "professions", "stats", "experiments", "work_focuses")
 CATALOG_FIELDS = ("key", "competition", "announced_rivals", "requirements", "unlocked", "occupied", "discovery")
@@ -14,8 +15,16 @@ def content():
 
     opening = new_game()
     return {
-        "api_version": 1,
-        "content_version": "0.7.0",
+        "api_version": 2,
+        "content_version": "0.8.0",
+        "display_scale": SCALE,
+        "rooms": [
+            {**room, "stages": [k for k, st in STAGES.items() if st["room"] == room["id"]]} for room in ROOMS.values()
+        ],
+        "roster": [
+            {k: c[k] for k in ("key", "name", "nickname", "profession", "tier", "story", "bio", "look")}
+            for c in ROSTER.values()
+        ],
         "scenarios": SCENARIOS,
         "professions": PROFESSIONS,
         "stats": STATS,
@@ -24,7 +33,7 @@ def content():
         "catalog": [
             {
                 **{k: v for k, v in c.items() if k not in ("combo_tier", "combo_reason")},
-                "product_profile": profile(key),
+                "product_profile": shown_profile(key),
                 "kind_name": KINDS[c["kind"]],
                 "requirement_labels": [text for text, _ in catalog_requirements(opening, key)],
             }

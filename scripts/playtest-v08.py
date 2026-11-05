@@ -141,8 +141,21 @@ def policy(s, style, remaining):
 def play(seed, style, weeks, mode="standard"):
     s = new_game(seed, STYLES[style][0], mode)
     times, years, unlocks = {}, [], {}
-    idle_person_weeks = total_person_weeks = longest_gap = 0
-    last_reward = 0
+    idle_person_weeks = total_person_weeks = longest_gap = longest_event_gap = 0
+    last_reward = last_event = 0
+    big = {
+        "product_launched",
+        "award_won",
+        "character_promoted",
+        "patent_granted",
+        "patent_expired",
+        "milestone_reached",
+        "facility_upgraded",
+        "legacy_reached",
+        "deal_signed",
+    }
+    event_counts = {}
+    seen_event = 0
     for _ in range(7000):
         for tier in (2, 3, 4):
             if str(tier) not in unlocks and any(
@@ -167,6 +180,13 @@ def play(seed, style, weeks, mode="standard"):
         ):
             longest_gap = max(longest_gap, s["week"] - last_reward)
             last_reward = s["week"]
+        happened = [ev for ev in s.get("events", []) if ev["id"] > seen_event and ev["type"] in big]
+        seen_event = s.get("event_seq", 0)
+        for ev in happened:
+            event_counts[ev["type"]] = event_counts.get(ev["type"], 0) + 1
+        if happened:
+            longest_event_gap = max(longest_event_gap, s["week"] - last_event)
+            last_event = s["week"]
         if s["week"] // 48 > old["week"] // 48:
             years.append(
                 {
@@ -179,12 +199,16 @@ def play(seed, style, weeks, mode="standard"):
     else:
         raise RuntimeError("policy stalled")
     longest_gap = max(longest_gap, s["week"] - last_reward)
+    longest_event_gap = max(longest_event_gap, s["week"] - last_event)
     return s, {
         "first_products": times,
         "unlocks": unlocks,
         "years": years,
         "idle_fraction": round(idle_person_weeks / max(1, total_person_weeks), 3),
         "longest_reward_gap": longest_gap,
+        "longest_event_gap": longest_event_gap,
+        "big_events": event_counts,
+        "patents": len([p for p in s["projects"] if (p.get("patent") or {}).get("granted")]),
         "characters": len(s["heroes"]),
         "awards": s.get("awards", []),
         "legacies": s.get("legacies", []),
@@ -209,7 +233,7 @@ def main():
     parser.add_argument("--seeds", type=int, default=6)
     parser.add_argument("--weeks", type=int, default=960)
     parser.add_argument("--jobs", type=int, default=4)
-    parser.add_argument("--output", type=Path, default=Path(".artifacts/v07-study"))
+    parser.add_argument("--output", type=Path, default=Path(".artifacts/v08-study"))
     parser.add_argument("--styles", nargs="*", default=list(STYLES))
     parser.add_argument("--modes", nargs="*", default=["standard", "competition"])
     args = parser.parse_args()

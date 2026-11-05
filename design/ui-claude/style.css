@@ -290,6 +290,9 @@ button:disabled {
   cursor: pointer;
   animation: call 1.6s ease-in-out infinite;
 }
+.bubble em {
+  font-style: normal;
+}
 .bubble span {
   width: 18px;
   height: 18px;
@@ -313,8 +316,8 @@ button:disabled {
 }
 .scene-legend {
   position: absolute;
-  left: 12px;
-  top: 10px;
+  right: 12px;
+  bottom: 10px;
   margin: 0;
   display: flex;
   align-items: center;
@@ -354,6 +357,209 @@ button:disabled {
   background: var(--ink);
   color: var(--surface);
   font-size: 13px;
+}
+
+/* ---------- 目标条、横幅 ---------- */
+.guide {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  width: min(520px, calc(100% - 24px));
+  z-index: 2;
+}
+.guide-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 12px 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+}
+.guide-count {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 600;
+}
+.guide-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.35;
+}
+.guide-text b {
+  font-size: 13px;
+}
+.guide-text small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.guide-list {
+  margin: 6px 0 0;
+  padding: 8px 12px 8px 30px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  font-size: 13px;
+}
+.guide-list li[data-done="true"] {
+  color: var(--good);
+  text-decoration: line-through;
+}
+.toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 22%);
+  pointer-events: none;
+}
+.small-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.nick {
+  margin: 2px 0 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- 引导 ---------- */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.tour-hole {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgb(10 20 22 / 58%);
+  outline: 2px solid var(--accent);
+  pointer-events: none;
+  transition: all 0.25s;
+}
+.tour-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 30%);
+}
+.tour-card h3 {
+  margin: 4px 0 6px;
+  font-family: var(--font-display);
+  font-size: 19px;
+}
+.tour-card p {
+  margin: 0;
+}
+
+/* ---------- 伙伴图鉴 ---------- */
+.gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: auto;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+}
+.gallery-card {
+  box-sizing: border-box;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 16%);
+}
+.gallery-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gallery-head h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+.gallery section h3 {
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.mate {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  text-align: left;
+  cursor: pointer;
+}
+.mate[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+.portrait.xl {
+  width: 76px;
+  height: 76px;
+  border-radius: 14px;
+}
+.mate-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.mate-text b {
+  font-size: 15px;
+}
+.mate-text small {
+  color: var(--accent);
+  font-weight: 700;
+}
+.mate-more {
+  display: none;
+  gap: 4px;
+  color: var(--muted);
+}
+.mate[aria-expanded="true"] .mate-more {
+  display: grid;
 }
 
 /* ---------- 决定卡片 ---------- */
@@ -965,6 +1171,19 @@ button.link {
 @media (max-width: 600px) {
   .room-tag:not(.lot) {
     display: none;
+  }
+  .guide-text small {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .gallery-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (prefers-reduced-motion: reduce) {

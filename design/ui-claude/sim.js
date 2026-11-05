@@ -1,7 +1,8 @@
 /* 新药物语 · 一屏研究所：示例驱动。
- * 这是一个缩小版的规则模拟，数值和流程照着 v0.7 写（开发三批、验证四批、期中继续或止损）。
+ * 这是一个缩小版的规则模拟，数值和流程照着 v0.8 写（开发三批、验证四批、期中继续或止损、专利、×10 显示）。
  * 它对外只做三件事：tick() 推进一周、act() 执行一个决定、view() 给出画面和面板要的数据。
- * 事件格式和 v0.7 的 /api/state 一样：{version, id, week, type, actors, project, room, data}。
+ * 事件格式和 v0.8 的 /api/state 一样：{version, id, week, type, actors, project, room, data}。
+ * 规则内部用 0–100 的刻度；给玩家看的数字一律乘以 10（pts）。
  * 接真实引擎时，用一个调用 /api/action 的驱动替换这个文件，scene.js 和 ui.js 不用改。 */
 (() => {
   "use strict";
@@ -67,29 +68,25 @@
       limits: { effect: 75, safety: 66 }, noise: 6, clinical: true, interim: true,
     },
   };
-  const SIGNATURE = {
-    pill: { name: "首批守护", text: "处方与工艺阶段，工艺稳定额外 +3", stage: "formulation", stat: "quality", bonus: 3 },
-    beaker: { name: "路线小试", text: "分子优化阶段，暴露与等效额外 +3", stage: "optimize", stat: "exposure", bonus: 3 },
-    sprout: { name: "反例模型", text: "分子优化阶段，获益潜力额外 +3", stage: "optimize", stat: "effect", bonus: 3 },
-    bubble: { name: "杂质清单", text: "质量与稳定性阶段，安全额外 +3", stage: "quality", stat: "safety", bonus: 3 },
-    ruler: { name: "首期排程", text: "负责 I 期时，工期缩短 2 周", stage: "I", stat: "", bonus: 0 },
+  // 角色数据由 design/tools/cast_js.py 从游戏数据生成（cast.js）
+  const CAST = Object.fromEntries((window.DrugstoryCast || []).map((c) => [c.id, c]));
+  const BONUS = {
+    pill: { stage: "formulation", stat: "quality", bonus: 3 },
+    bubble: { stage: "quality", stat: "safety", bonus: 3 },
+    shield: { stage: "quality", stat: "safety", bonus: 4 },
   };
-  const LOOKS = {
-    pill: { skin: "#f1c9a6", hair: "bun", hairColor: "#3b2a22", shirt: "#3f7fbf", accessory: "goggles", accent: "#6aa9d8" },
-    beaker: { skin: "#e8b991", hair: "spiky", hairColor: "#1f1b19", shirt: "#e08a3c", glasses: true },
-    sprout: { skin: "#f0caa8", hair: "short", hairColor: "#4a3326", shirt: "#4f9d69", glasses: true, accessory: "sprout" },
-    bubble: { skin: "#f3d1b2", hair: "bob", hairColor: "#2a2220", shirt: "#7c6bb0", accessory: "clips", accent: "#f0a7c0" },
-    ruler: {
-      skin: "#edc29d", hair: "long", hairColor: "#2d211b", shirt: "#2a9d8f", coat: false, accessory: "catears",
-      accent: "#2d211b", holds: "tablet",
-    },
-  };
+  const pts = (v) => Math.round(v * 10);
+  // 场景房间 → v0.8 房间表（引擎事件里的 room 字段）
+  const ROOM_IDS = { lab: "room_proc", qc: "room_tox", clinic: "room_clinical", bio: "room_bio" };
   const TEMPLATES = {
     work_completed: (d) => `${d.name}完成一批${d.stage}：${d.detail}`,
     evidence_received: (d) => `${d.project}收到第 ${d.batch} 批${d.stage}数据：${d.detail}`,
     phase_started: (d) => `${d.project}开始${d.stage}，预计 ${d.weeks} 周`,
     phase_finished: (d) => `${d.project}完成${d.stage}：${d.outcome}`,
     service_completed: (d) => `${d.name}交付${d.service}，收入 ¥${d.reward} 万`,
+    study_completed: (d) => `${d.name}完成${d.study}，专业能力 +${d.gain}`,
+    patent_granted: (d) => `${d.name}的核心专利获得授权，口碑 +${d.reputation}`,
+    milestone_reached: (d) => `公司大事记：${d.title}`,
     equipment_upgraded: (d) => `${d.name}升到 ${d.level} 级`,
     room_built: (d) => `${d.name}落成`,
     room_build_started: (d) => `开始扩建${d.name}，${d.weeks} 周`,
@@ -107,21 +104,30 @@
       events: [],
       rooms: { lab: { built: true, level: 1 }, qc: { built: true, level: 1 }, clinic: { built: true, level: 1 }, bio: { built: false, level: 1, building: null } },
       heroes: [
-        hero("pill", "小药丸", "proc", 2, 58, 2),
-        hero("beaker", "烧杯仔", "chem", 2, 54, 2),
-        hero("bubble", "泡泡鼠", "tox", 1, 41, 1),
-        hero("ruler", "刻度喵", "clinical", 1, 46, 1),
-        hero("sprout", "豆芽博士", "bio", 1, 44, 1),
+        hero("pill", 2, 58, 2),
+        hero("beaker", 2, 54, 2),
+        hero("bubble", 1, 41, 1),
+        hero("ruler", 1, 46, 1),
+        hero("sprout", 1, 44, 1),
+        hero("shield", 2, 56, 2),
+        hero("scout", 2, 55, 2),
       ],
       projects: [],
       services: [{ id: "svc1", name: "杂质谱检测服务", hero: "bubble", left: 4, total: 6, reward: 45, room: "qc" }],
+      studies: [{ id: "study1", name: "转化验证培训", hero: "sprout", left: 9, total: 10, gain: 3, room: "clinic" }],
+      milestones: [],
+      scripted: [{ week: 105, type: "patent", project: "p2" }],
       products: [],
       decisions: [],
       lastFlow: 0,
     };
 
-    function hero(id, name, profession, rank, ability, members) {
-      return { id, name, profession, rank, ability, members, look: LOOKS[id], signature: SIGNATURE[id] };
+    function hero(id, rank, ability, members) {
+      const c = CAST[id];
+      return {
+        id, name: c.name, nickname: c.nickname, profession: c.profession, rank, ability, members, look: c.look,
+        story: c.story, bio: c.bio, signature: c.signature, quest: c.quest,
+      };
     }
 
     /* ----- 项目一：普通仿制药，刚完成筛选，等你选候选 ----- */
@@ -146,7 +152,7 @@
       scripted: [{ effect: 69.4, safety: 64.6 }, { effect: 77.8, safety: 60.2 }, { effect: 74.1, safety: 61.8 }],
     };
     s.projects.push(p1, p2);
-    startStage(p2, "II", ["ruler", "sprout"], "internal", true);
+    startStage(p2, "II", ["ruler", "scout"], "internal", true);
     p2.exec.elapsed = 12;
     p2.exec.batches.push({ index: 1, week: s.week - 5, values: { effect: 76.3, safety: 61.1 } });
     applyBelief(p2, { effect: 76.3, safety: 61.1 }, p2.exec.sigma);
@@ -174,6 +180,7 @@
       const out = {};
       for (const p of s.projects) if (p.exec && p.status === "running") for (const id of p.exec.team) out[id] = p.id;
       for (const v of s.services) out[v.hero] = v.id;
+      for (const v of s.studies) out[v.hero] = v.id;
       return out;
     }
     function payroll() {
@@ -211,7 +218,8 @@
         const base = (2 + 15 * mastery) * (1 + 0.16 * Math.sqrt(members)) + equipment * 2;
         const amounts = {};
         for (const [stat, w] of Object.entries(weights)) {
-          const sig = h.signature && h.signature.stage === key && h.signature.stat === stat ? h.signature.bonus : 0;
+          const b = BONUS[h.id];
+          const sig = b && b.stage === key && b.stat === stat ? b.bonus : 0;
           amounts[stat] = Math.min(24, base * w + sig);
         }
         plan.push({ actor: id, role: h.profession, members, amounts });
@@ -238,8 +246,8 @@
       p.work = p.exec.plan;
       if (!silent) {
         emit("phase_started", {
-          actors: team, project: p.id, room: st.clinical ? "room_clinical" : "room_lab",
-          data: { project: p.name, stage: st.name, weeks, mode },
+          actors: team, project: p.id, room: ROOM_IDS[st.room],
+          data: { project: p.name, stage: st.name, weeks, executor: mode },
         });
       }
     }
@@ -296,6 +304,26 @@
           emit("service_completed", { actors: [v.hero], room: "room_tox", data: { name: findHero(v.hero).name, service: v.name, reward: v.reward } });
         }
       }
+      for (const v of [...s.studies]) {
+        v.left -= 1;
+        if (v.left <= 0) {
+          const h = findHero(v.hero);
+          h.ability += v.gain;
+          s.studies = s.studies.filter((q) => q !== v);
+          emit("study_completed", { actors: [v.hero], room: "room_academy", data: { name: h.name, study: v.name, gain: v.gain } });
+        }
+      }
+      for (const ev of [...s.scripted]) {
+        if (ev.week !== s.week) continue;
+        s.scripted = s.scripted.filter((q) => q !== ev);
+        if (ev.type === "patent") {
+          const proj = findProject(ev.project);
+          if (proj.status !== "stopped") {
+            emit("patent_granted", { project: proj.id, room: "room_clinical", data: { name: proj.name, reputation: 2 } });
+            milestone("first_patent", "第一项专利");
+          }
+        }
+      }
       const bio = s.rooms.bio;
       if (bio.building) {
         bio.building.left -= 1;
@@ -323,8 +351,8 @@
                 const delta = total / 3;
                 c.truth[stat] = Math.min(98, c.truth[stat] + delta);
                 c.belief[stat].mean = Math.min(98, c.belief[stat].mean + delta);
-                amounts[stat] = Math.round(delta * 10) / 10;
-                detail.push(`${statNames(p)[stat]} +${delta.toFixed(1)}`);
+                amounts[stat] = pts(delta);
+                detail.push(`${statNames(p)[stat]} +${pts(delta)}`);
               }
               emit("work_completed", {
                 actors: [pkg.actor], project: p.id, room: `room_${pkg.role}`,
@@ -350,11 +378,12 @@
             p.readings.push({ stage: e.key, index, week: s.week, values });
             applyBelief(p, values, e.sigma);
             emit("evidence_received", {
-              actors: e.team, project: p.id, room: st.clinical ? "room_clinical" : "room_tox",
+              actors: e.team, project: p.id, room: ROOM_IDS[st.room],
               data: {
                 project: p.name, stage: st.name, batch: index, final: index === 4,
-                values: Object.fromEntries(Object.entries(values).map(([k, v]) => [k, Math.round(v * 10) / 10])),
-                detail: Object.entries(values).map(([k, v]) => `${SHORT_STAT[k]} ${v.toFixed(1)}`).join("、"),
+                values: Object.fromEntries(Object.entries(values).map(([k, v]) => [k, pts(v)])),
+                limits: Object.fromEntries(Object.entries(st.limits).map(([k, v]) => [k, pts(v)])),
+                detail: Object.entries(values).map(([k, v]) => `${SHORT_STAT[k]} ${pts(v)}（门槛 ${pts(st.limits[k])}）`).join("、"),
               },
             });
           }
@@ -369,7 +398,7 @@
       for (const d of s.products) {
         d.age += 1;
         const revenue = d.peak * Math.min(1, d.age / 16);
-        d.lastProfit = revenue * d.margin;
+        d.lastProfit = revenue * (d.margin - 0.04);
         s.cash += d.lastProfit;
         d.total += d.lastProfit;
       }
@@ -394,7 +423,7 @@
       const passed = failures.length === 0;
       p.results.push({ key: e.key, passed, values, limits: st.limits, failures, week: s.week });
       emit("phase_finished", {
-        actors: e.team, project: p.id, room: st.clinical ? "room_clinical" : "room_lab",
+        actors: e.team, project: p.id, room: ROOM_IDS[st.room],
         data: {
           project: p.name, stage: st.name, passed,
           outcome: passed ? "取得支持证据" : `未达标（${failures.map((f) => statNames(p)[f]).join("、")}）`,
@@ -430,6 +459,11 @@
     }
 
     /* ----- 玩家的决定 ----- */
+    function milestone(key, title) {
+      if (s.milestones.includes(key)) return;
+      s.milestones.push(key);
+      emit("milestone_reached", { data: { key, title } });
+    }
     function blocking() {
       return s.decisions.some((d) => !d.deferred);
     }
@@ -496,7 +530,8 @@
           margin: Math.min(0.82, 0.46 + (c.truth.quality - 60) / 300), lastProfit: 0, total: 0,
         };
         s.products.push(drug);
-        emit("product_launched", { project: p.id, data: { name: drug.name } });
+        emit("product_launched", { project: p.id, room: "room_tox", data: { name: drug.name } });
+        milestone("first_product", "第一粒药");
       } else if (name === "license") {
         close(d.id);
         s.cash += 520;
@@ -542,6 +577,7 @@
         }
       }
       for (const v of s.services) out[v.hero] = { mode: "service", room: v.room, role: findHero(v.hero).profession, project: v.id, members: 0 };
+      for (const v of s.studies) out[v.hero] = { mode: "study", room: v.room, role: findHero(v.hero).profession, project: v.id, members: 0 };
       return out;
     }
     function boards() {
@@ -556,7 +592,7 @@
         if (!list) continue;
         list.push({
           title: `${p.name.slice(0, 2)} · ${SHORT_STAGE[e.key] || st.name} · ${SHORT_STAT[stat]}`,
-          limit: st.limits[stat], readings: e.batches.map((b) => b.values[stat]), batches: 4, live: !!p.exec,
+          limit: pts(st.limits[stat]), readings: e.batches.map((b) => pts(b.values[stat])), batches: 4, live: !!p.exec,
         });
       }
       for (const k of Object.keys(out)) {
@@ -574,7 +610,7 @@
         ? Object.entries(names).filter(([k]) => c.belief[k]).map(([k, name]) => {
             const b = c.belief[k];
             const sd = Math.sqrt(b.variance);
-            return { key: k, name, mean: b.mean, low: b.mean - 1.645 * sd, high: b.mean + 1.645 * sd, limit: limits[k] ?? null };
+            return { key: k, name, mean: pts(b.mean), low: pts(b.mean - 1.645 * sd), high: pts(b.mean + 1.645 * sd), limit: limits[k] != null ? pts(limits[k]) : null };
           })
         : [];
     }
@@ -584,7 +620,7 @@
       return Object.entries(names).map(([k, name]) => {
         const b = c.belief[k];
         const sd = Math.sqrt(b.variance);
-        return { key: k, name, mean: b.mean, low: b.mean - 1.645 * sd, high: b.mean + 1.645 * sd, limit: strict[k] };
+        return { key: k, name, mean: pts(b.mean), low: pts(b.mean - 1.645 * sd), high: pts(b.mean + 1.645 * sd), limit: pts(strict[k]) };
       });
     }
     function decisionView(d) {
@@ -606,7 +642,7 @@
         const { team, mode } = recommend(p, key);
         const last = p.results[p.results.length - 1];
         const plan = workPlan(p, key, team);
-        const gains = plan.flatMap((pkg) => Object.entries(pkg.amounts).map(([k, v]) => `${statNames(p)[k]} +${v.toFixed(1)}`));
+        const gains = plan.flatMap((pkg) => Object.entries(pkg.amounts).map(([k, v]) => `${statNames(p)[k]} +${pts(v)}`));
         return {
           ...base, title: `${p.name}：${last ? STAGES[last.key].name + (last.passed ? "通过" : "完成") : "准备就绪"}`, room: st.room,
           text: `下一步是${st.name}（${st.kind === "make" ? "做" : "测"}）。`,
@@ -625,8 +661,8 @@
         const st = STAGES[e.key];
         const chance = Math.round(forecast(p) * 100);
         const stats = Object.keys(st.limits);
-        const rule = stats.map((k) => `${SHORT_STAT[k]} ≥ ${st.limits[k]}`).join("、");
-        const rows = e.batches.map((b) => `第 ${b.index} 批：${stats.map((k) => `${SHORT_STAT[k]} ${b.values[k].toFixed(1)}`).join("、")}`);
+        const rule = stats.map((k) => `${SHORT_STAT[k]} ≥ ${pts(st.limits[k])}`).join("、");
+        const rows = e.batches.map((b) => `第 ${b.index} 批：${stats.map((k) => `${SHORT_STAT[k]} ${pts(b.values[k])}`).join("、")}`);
         const remaining = Math.round(e.costPerWeek * (e.weeks - e.elapsed));
         const team = e.team.map((id) => findHero(id).name).join("和");
         return {
@@ -649,7 +685,7 @@
       if (d.kind === "failed") {
         const last = p.results[p.results.length - 1];
         const st = STAGES[last.key];
-        const parts = last.failures.map((f) => `${statNames(p)[f]} ${last.values[f]} < ${last.limits[f]}`);
+        const parts = last.failures.map((f) => `${statNames(p)[f]} ${pts(last.values[f])} < ${pts(last.limits[f])}`);
         const canRework = p.kind === "generic" && p.repairs < 1;
         return {
           ...base, title: `${p.name}：${st.name}没过`, room: st.room,
@@ -698,7 +734,9 @@
       const task = job
         ? job.mode === "service"
           ? `技术服务 · ${s.services.find((v) => v.hero === h.id)?.name}`
-          : `${p.name} · ${STAGES[p.exec.key].name}（${STAGES[p.exec.key].kind === "make" ? "做" : "测"}）`
+          : job.mode === "study"
+            ? `培训 · ${s.studies.find((v) => v.hero === h.id)?.name}`
+            : `${p.name} · ${STAGES[p.exec.key].name}（${STAGES[p.exec.key].kind === "make" ? "做" : "测"}）`
         : "空闲";
       return {
         ...h, professionName: PROFESSIONS[h.profession], short: SHORT[h.profession], rankName: RANKS[h.rank],
@@ -718,10 +756,14 @@
           key: k, name: STAGES[k]?.name || { optimize: "分子优化", preclinical: "临床前与申报准备", I: "I 期安全与剂量" }[k], kind: STAGES[k]?.kind || (k === "optimize" ? "make" : "test"),
           state: i < p.index ? "done" : i === p.index ? (p.status === "approved" ? "done" : "current") : "todo",
         })),
-        stage: st ? { key: e.key, name: st.name, kind: st.kind, weeks: e.weeks, elapsed: e.elapsed, mode: e.mode, team: e.team.map((id) => findHero(id).name), batches: st.kind === "make" ? e.done : e.batches.length, batchCount: e.batchCount } : null,
+        stage: st ? {
+          key: e.key, name: st.name, kind: st.kind, weeks: e.weeks, elapsed: e.elapsed, mode: e.mode,
+          team: e.team.map((id) => findHero(id).name), batches: st.kind === "make" ? e.done : e.batches.length,
+          batchCount: e.batchCount, limits: Object.fromEntries(Object.entries(st.limits).map(([k, v]) => [k, pts(v)])),
+        } : null,
         evidence: evidence(p),
-        readings: p.readings.slice(-8),
-        work: e?.plan || [],
+        readings: p.readings.slice(-8).map((r) => ({ ...r, values: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, pts(v)])) })),
+        work: (e?.plan || []).map((w) => ({ ...w, amounts: Object.fromEntries(Object.entries(w.amounts).map(([k, v]) => [k, pts(v)])) })),
         chosen: p.chosen == null ? null : p.candidates[p.chosen].label,
         statNames: statNames(p),
       };

@@ -3,8 +3,9 @@
 import math
 
 from . import events
-from .content import BUILD, STAGES
+from .content import BUILD, STAGES, STATS
 from .model import rand
+from .units import pts, pts_map
 
 
 def initialize(p):
@@ -41,17 +42,22 @@ def tick(s, p):
         batch = {"index": index + 1, "week": s["week"], "values": values, "sigma": sigmas}
         e["batches"].append(batch)
         p.setdefault("readings", []).append({"stage": key, "candidate": c["id"], **batch})
+        stage_limits = limits(p, key)
         events.emit(
             s,
             "evidence_received",
             project=p["id"],
             actors=p["team"],
-            room="room_clinical" if key in ("I", "II", "III", "be", "bridge", "confirm") else "room_tox",
+            room=STAGES[key]["room"],
             data={
                 "name": p["name"],
                 "stage": STAGES[key]["name"],
                 "batch": index + 1,
-                "values": {k: round(v, 1) for k, v in values.items()},
+                "values": pts_map(values),
+                "limits": pts_map(stage_limits),
+                "margins": {k: pts(v - stage_limits[k]) for k, v in values.items()},
+                "executor": p.get("mode", "internal"),
+                "detail": "、".join(f"{STATS[k]} {pts(v)}（门槛 {pts(stage_limits[k])}）" for k, v in values.items()),
                 "final": index + 1 == e["batch_count"],
             },
         )

@@ -10,6 +10,7 @@ from . import (
     development,
     engine,
     honors,
+    patents,
     product_design,
     readouts,
     stories,
@@ -19,6 +20,7 @@ from . import (
 from . import economy as e
 from . import science as sc
 from .content import (
+    BUILD,
     CATALOG,
     CLINICAL,
     EXPERIMENTS,
@@ -26,6 +28,7 @@ from .content import (
     KINDS,
     PATHS,
     PLANS,
+    PROFESSION_ROOM,
     PROFESSIONS,
     PROMOTION,
     RANKS,
@@ -37,6 +40,7 @@ from .content import (
     TERMS,
 )
 from .model import ACTIVE, DECISIONS, ability, busy, check, committed, date, payroll
+from .units import pts, pts_map
 
 STATUS = {
     "screening": "筛选中",
@@ -63,9 +67,9 @@ def evidence(c, kind="innovative"):
         {
             "key": stat,
             "name": name,
-            "mean": round(c["belief"][stat]["mean"], 1),
-            "low": round(max(0, c["belief"][stat]["mean"] - 1.645 * math.sqrt(c["belief"][stat]["variance"]))),
-            "high": round(min(100, c["belief"][stat]["mean"] + 1.645 * math.sqrt(c["belief"][stat]["variance"]))),
+            "mean": pts(c["belief"][stat]["mean"]),
+            "low": pts(max(0, c["belief"][stat]["mean"] - 1.645 * math.sqrt(c["belief"][stat]["variance"]))),
+            "high": pts(c["belief"][stat]["mean"] + 1.645 * math.sqrt(c["belief"][stat]["variance"])),
             "observations": c["belief"][stat]["observations"],
         }
         for stat, name in names.items()
@@ -96,6 +100,50 @@ def chance_range(probability):
     return f"约 {max(0, mid - 8)}–{min(99, mid + 8)}%"
 
 
+def shown_result(r):
+    return {**r, "values": pts_map(r["values"]), "limits": pts_map(r["limits"])}
+
+
+def shown_profile(catalog):
+    profile = product_design.profile(catalog)
+    return {**profile, "limit": pts(profile["limit"])} if profile else None
+
+
+def patent_view(s, p):
+    patent = p.get("patent")
+    if not patent or patent["granted"] is False:
+        return None
+    return {**patent, "expires_label": date(patent["expires"]), "expired": s["week"] >= patent["expires"]}
+
+
+def whereabouts(s):
+    """Where each employed character is and what kind of work they are doing, for scenes."""
+    found = {}
+    heroes = {h["id"]: h for h in s["heroes"] if h["employed"]}
+    for p in s["projects"]:
+        if p["status"] not in ("screening", "running", "checkpoint"):
+            continue
+        key = sc.stage_key(p)
+        for hid in p["team"]:
+            if hid not in heroes:
+                continue
+            building = p["status"] == "screening" or p.get("experiment") or key in BUILD
+            room = PROFESSION_ROOM[heroes[hid]["profession"]] if building else STAGES[key]["room"]
+            found[hid] = {"room": room, "activity": "make" if building else "test", "task": p["id"]}
+    for job in s["jobs"]:
+        for hid in job["heroes"]:
+            if hid not in heroes:
+                continue
+            if job["kind"] == "service":
+                place, activity = PROFESSION_ROOM[heroes[hid]["profession"]], "service"
+            elif job["kind"] == "independent":
+                place, activity = "room_clinical", "test"
+            else:
+                place, activity = "room_academy", "study"
+            found[hid] = {"room": place, "activity": activity, "task": job["name"]}
+    return found
+
+
 def project_view(s, p):
     key = sc.stage_key(p)
     ids, mode = recommended_team(s, p)
@@ -108,6 +156,7 @@ def project_view(s, p):
             estimates.append(
                 {
                     **execution,
+                    "work": development.expected(p, key, execution["work"]),
                     "name": PLANS[plan]["name"],
                     "text": PLANS[plan]["text"],
                     "chance": chance_range(execution["probability"]),
@@ -146,7 +195,6 @@ def project_view(s, p):
             "left",
             "spent",
             "team",
-            "results",
             "feedback",
             "repairs",
             "population",
@@ -156,10 +204,14 @@ def project_view(s, p):
         )
     } | {
         "kind_name": KINDS[p["kind"]],
-        "product_profile": product_design.profile(p["catalog"]),
+        "results": [shown_result(r) for r in p["results"]],
+        "patent": patent_view(s, p),
+        "product_profile": shown_profile(p["catalog"]),
         "design": p.get("design", "standard"),
         "work_focus": p.get("work_focus", "balanced"),
-        "work": p.get("execution", {}).get("work", []),
+        "work": development.expected(p, p["execution"]["key"], p["execution"]["work"])
+        if p.get("execution") and p["status"] in ("running", "checkpoint")
+        else [],
         "readings": [
             {
                 "stage": r["stage"],
@@ -167,7 +219,7 @@ def project_view(s, p):
                 "candidate": r["candidate"],
                 "index": r["index"],
                 "week": r["week"],
-                "values": {k: round(v, 1) for k, v in r["values"].items()},
+                "values": pts_map(r["values"]),
             }
             for r in p.get("readings", [])
         ][-16:],
@@ -201,13 +253,22 @@ def project_view(s, p):
 
 def snapshot(s):
     occupied = busy(s)
+    places = whereabouts(s)
     heroes = []
     for h in s["heroes"]:
         if not h["employed"]:
             continue
+        spec = ROSTER[h["id"]]
+        place = places.get(h["id"], {"room": None, "activity": "idle", "task": None})
         heroes.append(
             {
                 **{k: h[k] for k in ("id", "name", "profession", "rank", "xp", "members", "cases", "mentored")},
+                "tier": spec["tier"],
+                "nickname": spec["nickname"],
+                "bio": spec["bio"],
+                "look": spec["look"],
+                "room": place["room"],
+                "activity": place["activity"],
                 "ability": ability(h),
                 "profession_name": PROFESSIONS[h["profession"]],
                 "rank_name": RANKS[h["rank"]],
@@ -248,7 +309,7 @@ def snapshot(s):
             **{k: v for k, v in c.items() if k not in ("combo_tier", "combo_reason")},
             "discovery": s["notebook"].get(k),
             "kind_name": KINDS[c["kind"]],
-            "product_profile": product_design.profile(c["key"]),
+            "product_profile": shown_profile(c["key"]),
             "competition": round(competition.pressure(s, c["market"]), 2),
             "announced_rivals": [
                 r["name"] for r in s["rivals"] if r["status"] == "developing" and r["pipeline_market"] == c["market"]
@@ -265,8 +326,9 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.7",
-        "api_version": 1,
+        "version": "0.8",
+        "api_version": 2,
+        "display_scale": 10,
         "event_cursor": s["event_seq"],
         "events": s["events"][-32:],
         "transition_events": s.get("transition_events", []),
@@ -305,7 +367,11 @@ def snapshot(s):
         "roster": roster,
         "catalog": catalogs,
         "projects": [project_view(s, p) for p in s["projects"]],
-        "products": s["products"],
+        "products": [
+            {**d, "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None}
+            for d in s["products"]
+        ],
+        "patents": patents.view(s),
         "deals": [{k: v for k, v in d.items() if k != "execution"} for d in s["deals"]],
         "rivals": competition.public(s),
         "honors": honors.view(s),
@@ -336,7 +402,7 @@ def phase_preview(s, args):
         "weeks": execution["weeks"],
         "cost": execution["cost"],
         "chance": chance_range(execution["probability"]),
-        "work": execution["work"],
+        "work": development.expected(p, execution["key"], execution["work"]),
         "reserve": simulated["cash"] - committed(simulated),
         "note": "基于现有证据的本阶段估计，后续仍有不确定性；负面结果也会更新判断。",
     }

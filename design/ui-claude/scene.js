@@ -126,28 +126,30 @@
   const FURNITURE = [
     { id: "hood", room: "lab", type: "hood", x: 1, y: 0, w: 2, d: 1, h: 54,
       station: { x: 2, y: 1.45, face: "up", roles: ["chem"], helpers: [[1.25, 1.75], [2.8, 1.8]] } },
+    // 中岛：人站在台子后面、脸朝镜头，能看清是谁
+    { id: "lab-island", room: "lab", type: "island", x: 4, y: 3, w: 3, d: 1, h: 20,
+      station: { x: 5.5, y: 2.5, face: "down", roles: ["proc"], helpers: [[4.45, 2.45], [6.55, 2.45]] } },
     { id: "lab-bench", room: "lab", type: "bench", x: 4, y: 0, w: 3, d: 1, h: 20,
       station: { x: 5.5, y: 1.45, face: "up", roles: ["proc", "chem"], helpers: [[4.6, 1.75], [6.45, 1.75]] } },
-    { id: "lab-island", room: "lab", type: "island", x: 4, y: 3, w: 3, d: 1, h: 20,
-      station: { x: 5.5, y: 4.45, face: "up", roles: ["proc"], helpers: [[4.6, 4.55], [6.5, 4.5]] } },
     { id: "lab-shelf", room: "lab", type: "shelf", x: 0, y: 2, w: 1, d: 2, h: 40 },
     { id: "lab-plant", room: "lab", type: "plant", x: 7, y: 0, w: 1, d: 1, h: 26 },
     { id: "lab-granulator", room: "lab", type: "instrument", x: 7, y: 3, w: 1, d: 1, h: 28, minLevel: 2 },
     { id: "lab-coater", room: "lab", type: "chamber", x: 0, y: 4, w: 1, d: 1, h: 40, minLevel: 3 },
 
+    { id: "qc-desk", room: "qc", type: "desk", x: 14, y: 4, w: 2, d: 1, h: 14, monitor: "back",
+      station: { x: 15, y: 3.5, face: "down", roles: ["tox", "proc", "clinical"], helpers: [[14.1, 3.5]] } },
     { id: "qc-hplc", room: "qc", type: "bench", x: 9, y: 0, w: 3, d: 1, h: 20, items: "instrument",
       station: { x: 10.5, y: 1.45, face: "up", roles: ["tox", "proc"], helpers: [[9.6, 1.75], [11.45, 1.75]] } },
     { id: "qc-chamber", room: "qc", type: "chamber", x: 13, y: 0, w: 1, d: 1, h: 48,
       station: { x: 13.5, y: 1.45, face: "up", roles: ["proc", "tox"], helpers: [[14.4, 1.7]] } },
-    { id: "qc-desk", room: "qc", type: "desk", x: 14, y: 4, w: 2, d: 1, h: 14, monitor: "back",
-      station: { x: 15, y: 3.5, face: "down", roles: ["tox", "proc", "clinical"], helpers: [] } },
     { id: "qc-ms", room: "qc", type: "instrument", x: 8, y: 2, w: 1, d: 1, h: 30, minLevel: 2 },
     { id: "qc-ms2", room: "qc", type: "instrument", x: 8, y: 3, w: 1, d: 1, h: 24, minLevel: 3 },
 
-    { id: "cl-desk1", room: "clinic", type: "desk", x: 1, y: 7, w: 2, d: 1, h: 14, monitor: "front",
-      station: { x: 2, y: 8.45, face: "up", roles: ["clinical", "bio"], helpers: [[1.1, 8.7]] } },
-    { id: "cl-desk2", room: "clinic", type: "desk", x: 5, y: 7, w: 2, d: 1, h: 14, monitor: "front",
-      station: { x: 6, y: 8.45, face: "up", roles: ["clinical", "bio", "tox"], helpers: [[6.95, 8.7]] } },
+    // 临床办公桌：人坐在桌后、脸朝镜头
+    { id: "cl-desk1", room: "clinic", type: "desk", x: 1, y: 8, w: 2, d: 1, h: 14, monitor: "back",
+      station: { x: 2, y: 7.55, face: "down", roles: ["clinical", "bio"], helpers: [[1.05, 7.55]] } },
+    { id: "cl-desk2", room: "clinic", type: "desk", x: 5, y: 8, w: 2, d: 1, h: 14, monitor: "back",
+      station: { x: 6, y: 7.55, face: "down", roles: ["clinical", "bio", "tox"], helpers: [[6.95, 7.55]] } },
     { id: "cl-table", room: "clinic", type: "table", x: 3, y: 10, w: 2, d: 1, h: 13,
       station: { x: 4, y: 11.45, face: "up", roles: ["clinical", "bio", "tox"], helpers: [[3.1, 11.5]] } },
     { id: "cl-cro", room: "clinic", type: "cro", x: 6, y: 10, w: 2, d: 1, h: 14 },
@@ -166,9 +168,13 @@
   const IDLE_SPOTS = [
     { x: 1.35, y: 5.55, face: "left" },
     { x: 1.4, y: 6.55, face: "left" },
-    { x: 6.5, y: 5.9, face: "down" },
+    { x: 4.6, y: 5.6, face: "down" },
+    { x: 6.5, y: 6.3, face: "down" },
     { x: 9.6, y: 6.1, face: "down" },
+    { x: 11.4, y: 5.5, face: "down" },
     { x: 14.6, y: 6.0, face: "down" },
+    { x: 2.6, y: 10.5, face: "down" },
+    { x: 13.2, y: 2.6, face: "down" },
   ];
   const BOARDS = {
     clinic: { plane: "x", at: 0, from: 11.3, to: 8.5, zTop: 52, zBottom: 18 },
@@ -295,204 +301,720 @@
     return !f.minLevel || level >= f.minLevel;
   }
 
-  /* ---------- 人物：几块形状 + 数据里的发型、配饰、颜色 ---------- */
-  function drawPerson(ctx, S, look, o) {
+  /* ---------- 人物：体型、发型、服装、配饰、道具和小动作都来自外观数据 ---------- */
+  function dims(S, look) {
     const P = S.person;
+    const h = look.height || 0;
+    const build = look.build || "average";
+    return {
+      L: P.legs + h * 1.4 - (look.age === "senior" ? 0.7 : 0),
+      T: P.torso + h * 0.7 + (build === "broad" ? 0.6 : 0),
+      R: P.head,
+      SW: P.shoulders + (build === "broad" ? 2.8 : build === "slim" ? -1.4 : 0),
+      LW: build === "broad" ? 3.6 : build === "slim" ? 2.7 : 3.1,
+    };
+  }
+
+  // 小动作：返回前臂角度、是否举到脸边、身体起伏和头部点动
+  function pose(o, look) {
+    // 头像用静止姿势：道具拿在胸前，不举到脸边
+    if (o.still) return { arm: -0.55, toFace: false, bob: 0, nod: 0, up: false };
+    const t = o.phase;
+    if (o.walking) return { arm: Math.sin(t * 2) * 0.35, toFace: false, bob: Math.abs(Math.sin(t * 2)) * 1.1, nod: 0, up: false };
+    if (o.working) return { arm: -0.8 + Math.sin(t * 3.2) * 0.18, toFace: false, bob: Math.sin(t * 0.7) * 0.3, nod: 0, up: false };
+    const cycle = (t / 2.6) % 6;
+    const active = cycle < 1.4;
+    const idle = look.idle;
+    const base = { arm: 0.08, toFace: false, bob: Math.sin(t * 0.7) * 0.35, nod: 0, up: false };
+    if (["sip", "radio", "photo", "glasses"].includes(idle) && active) return { ...base, arm: -2.5, toFace: true };
+    if (["write", "tap", "type", "check", "weigh", "pipette"].includes(idle)) {
+      return { ...base, arm: -1.0 + Math.sin(t * 4) * (active ? 0.16 : 0.04) };
+    }
+    if (idle === "bounce") return { ...base, bob: Math.abs(Math.sin(t * 3.2)) * 1.6, arm: Math.sin(t * 3.2) * 0.5 };
+    if (idle === "stretch" && active) return { ...base, arm: -2.9, up: true };
+    if (idle === "twirl" || idle === "shake") return { ...base, arm: -1.15 + (active ? Math.sin(t * 9) * 0.12 : 0) };
+    if (idle === "watch" && active) return { ...base, arm: -1.5 };
+    if (idle === "nod") return { ...base, nod: active ? Math.abs(Math.sin(t * 3)) * 0.9 : 0 };
+    return base;
+  }
+
+  function drawPerson(ctx, S, look, o) {
     const c = S.c;
     const ol = S.outline;
+    const D = dims(S, look);
+    const { L, T, R, SW, LW } = D;
+    const ps = pose(o, look);
     const walk = o.walking ? Math.sin(o.phase * 2) : 0;
-    const bob = o.walking ? Math.abs(walk) * 1.1 : Math.sin(o.phase * 0.7) * 0.35;
-    const work = o.working ? Math.sin(o.phase * 3.2) : 0;
+    const acc = new Set(look.accessories || []);
+    const coatColor = c.coat;
+    const top = look.top_color || "#7a8a99";
+    const skin = look.skin || "#eec3a0";
+    const hairC = look.hair_color || "#2a2220";
     ctx.save();
     ctx.translate(o.x, o.y);
     ctx.globalAlpha = o.alpha ?? 1;
-    // 影子
     ctx.fillStyle = c.shadow;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 8, 3.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 8 + (look.build === "broad" ? 1.5 : 0), 3.6, 0, 0, Math.PI * 2);
     ctx.fill();
     if (o.ring) {
       ctx.strokeStyle = o.ring;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 11, 5, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 11.5, 5.2, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
-    ctx.translate(0, -(o.jump || 0) - bob);
+    ctx.translate(0, -(o.jump || 0) - ps.bob);
     if (o.flip) ctx.scale(-1, 1);
-    const L = P.legs;
-    const T = P.torso;
-    const R = P.head;
-    const SW = P.shoulders;
-    const line = (fill) => {
-      ctx.fillStyle = fill;
+    const fill = (color) => {
+      ctx.fillStyle = color;
       ctx.fill();
       if (ol) {
         ctx.strokeStyle = ol;
-        ctx.lineWidth = P.outline;
+        ctx.lineWidth = S.person.outline;
         ctx.stroke();
       }
     };
-    // 腿
-    rrect(ctx, -3.6 + walk * 1.6, -L, 3.1, L, 1.2);
-    line(look.pants || c.pants);
-    rrect(ctx, 0.5 - walk * 1.6, -L, 3.1, L, 1.2);
-    line(look.pants || c.pants);
+    const topY = -L - T;
+    const hy = topY - R + 1.2 + ps.nod;
+    const away = o.away;
+
+    // 头发在身后的部分（长发、马尾、低髻、双辫）
+    if (!away) drawHairBack(ctx, look, hy, R, hairC, fill);
+
+    // 腿和鞋
+    rrect(ctx, -LW - 0.5 + walk * 1.6, -L, LW, L, 1.2);
+    fill(look.pants || c.pants);
+    rrect(ctx, 0.5 - walk * 1.6, -L, LW, L, 1.2);
+    fill(look.pants || c.pants);
     ctx.fillStyle = c.shoe;
-    ctx.fillRect(-4.2 + walk * 1.6, -1.6, 4, 1.8);
-    ctx.fillRect(0.2 - walk * 1.6, -1.6, 4, 1.8);
-    const top = -L - T;
-    // 长发在身体后面
-    if (look.hair === "long" && !o.away) {
-      rrect(ctx, -R - 0.6, top - R * 1.2, R * 2 + 1.2, R * 2.6, R * 0.8);
-      line(look.hairColor);
-    }
+    ctx.fillRect(-LW - 1 + walk * 1.6, -1.6, LW + 1, 1.8);
+    ctx.fillRect(0.2 - walk * 1.6, -1.6, LW + 1, 1.8);
+
+    const sleeve = look.coat ? coatColor : look.top === "safety_vest" || look.top === "vest" ? lighten(top, 0.55) : top;
     // 后臂
-    rrect(ctx, SW / 2 - 2.2, top + 2, 2.8, T - 3, 1.3);
-    line(look.coat === false ? look.shirt : c.coatShade);
+    rrect(ctx, SW / 2 - 2.3, topY + 2, 2.9, T - 3, 1.3);
+    fill(look.coat ? c.coatShade : shade(sleeve, -0.12));
+    if (ps.up) {
+      rrect(ctx, SW / 2 - 2.3, topY - T + 4, 2.9, T - 3, 1.3);
+      fill(sleeve);
+    }
+
     // 身体
-    rrect(ctx, -SW / 2, top, SW, T + 1.5, 3);
-    line(look.coat === false ? look.shirt : c.coat);
-    if (look.coat !== false && !o.away) {
-      ctx.fillStyle = look.shirt;
-      ctx.beginPath();
-      ctx.moveTo(-2.6, top + 0.5);
-      ctx.lineTo(2.6, top + 0.5);
-      ctx.lineTo(0, top + 5.5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = c.coatShade;
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(0, top + 5.5);
-      ctx.lineTo(0, top + T);
-      ctx.stroke();
-    }
-    if (look.coat === false) {
-      ctx.fillStyle = shade(look.shirt, -0.15);
-      ctx.fillRect(-SW / 2 + 1, top + T - 2, SW - 2, 2);
-    }
-    // 前臂：工作时抬起来
+    drawTorso(ctx, S, look, { topY, T, SW, away, top, coatColor, fill });
+
+    // 前臂和手里的东西
     ctx.save();
-    ctx.translate(-SW / 2 + 1.2, top + 2.5);
-    ctx.rotate(o.working ? -0.75 + work * 0.18 : walk * 0.35);
-    rrect(ctx, -1.4, 0, 2.8, T - 3, 1.3);
-    line(look.coat === false ? shade(look.shirt, 0.05) : c.coat);
-    ctx.fillStyle = look.skin;
+    ctx.translate(-SW / 2 + 1.2, topY + 2.5);
+    ctx.rotate(ps.arm);
+    rrect(ctx, -1.45, 0, 2.9, T - 3, 1.3);
+    fill(sleeve);
+    ctx.fillStyle = acc.has("gloves") ? look.accent : skin;
     ctx.beginPath();
-    ctx.arc(0, T - 3, 1.5, 0, Math.PI * 2);
+    ctx.arc(0, T - 3, 1.6, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
-    if (look.holds === "tablet" && !o.away) {
-      rrect(ctx, -SW / 2 - 1, top + T * 0.45, 6, 7.5, 1);
-      line("#3a4a55");
-      ctx.fillStyle = c.glow;
-      ctx.fillRect(-SW / 2, top + T * 0.45 + 1.2, 4, 5);
+    if (acc.has("watch") || acc.has("bracelet")) {
+      ctx.fillStyle = acc.has("bracelet") ? look.accent : "#2c3036";
+      ctx.fillRect(-1.5, T - 5.2, 3, 1.2);
     }
+    if (!away) drawProp(ctx, look, T - 3, o);
+    ctx.restore();
+
     // 头
-    const hy = top - R + 1.2;
     ctx.beginPath();
     ctx.arc(0, hy, R, 0, Math.PI * 2);
-    line(look.skin);
-    drawHair(ctx, S, look, hy, R, o.away);
-    if (!o.away) {
-      ctx.fillStyle = "#2a2a2a";
-      const ey = hy + R * 0.12;
-      ctx.beginPath();
-      ctx.arc(-R * 0.38, ey, R * 0.11 + 0.25, 0, Math.PI * 2);
-      ctx.arc(R * 0.38, ey, R * 0.11 + 0.25, 0, Math.PI * 2);
-      ctx.fill();
-      if (look.glasses) {
-        ctx.strokeStyle = "#3b3b3b";
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.arc(-R * 0.4, ey, R * 0.28, 0, Math.PI * 2);
-        ctx.moveTo(R * 0.4 + R * 0.28, ey);
-        ctx.arc(R * 0.4, ey, R * 0.28, 0, Math.PI * 2);
-        ctx.moveTo(-R * 0.12, ey);
-        ctx.lineTo(R * 0.12, ey);
-        ctx.stroke();
-      }
+    fill(skin);
+    if (away) {
+      drawHairAway(ctx, look, hy, R, hairC);
+    } else {
+      drawHairFront(ctx, look, hy, R, hairC);
+      drawFace(ctx, look, hy, R, acc);
     }
-    drawAccessory(ctx, S, look, hy, R);
+    drawHeadwear(ctx, look, hy, R, acc, away);
     ctx.restore();
   }
-  function drawHair(ctx, S, look, hy, R, away) {
-    ctx.fillStyle = look.hairColor;
-    if (away) {
-      ctx.beginPath();
-      ctx.arc(0, hy, R + 0.4, 0, Math.PI * 2);
-      ctx.fill();
+
+  function lighten(color, k) {
+    return shade(color, k);
+  }
+
+  function drawTorso(ctx, S, look, g) {
+    const { topY, T, SW, away, top, coatColor, fill } = g;
+    const c = S.c;
+    const acc = new Set(look.accessories || []);
+    const bottom = topY + T + 1.5;
+    if (look.coat) {
+      // 白大褂，比上衣长一点
+      rrect(ctx, -SW / 2, topY, SW, T + 4, 3);
+      fill(coatColor);
+      if (!away) {
+        // 里面的衣服从领口露出来
+        ctx.fillStyle = top;
+        ctx.beginPath();
+        ctx.moveTo(-2.8, topY + 0.4);
+        ctx.lineTo(2.8, topY + 0.4);
+        ctx.lineTo(0, topY + 6.5);
+        ctx.closePath();
+        ctx.fill();
+        if (look.top === "hoodie") {
+          ctx.fillStyle = shade(top, -0.1);
+          rrect(ctx, -4.2, topY - 1.6, 8.4, 3, 1.5);
+          ctx.fill();
+          ctx.strokeStyle = "#f4f4f4";
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(-1, topY + 1);
+          ctx.lineTo(-1.2, topY + 5);
+          ctx.moveTo(1, topY + 1);
+          ctx.lineTo(1.2, topY + 5);
+          ctx.stroke();
+        } else if (look.top === "turtleneck") {
+          ctx.fillStyle = top;
+          rrect(ctx, -2.6, topY - 1.8, 5.2, 3, 1);
+          ctx.fill();
+        }
+        ctx.strokeStyle = c.coatShade;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, topY + 6.5);
+        ctx.lineTo(0, bottom + 2);
+        ctx.stroke();
+        // 口袋
+        ctx.strokeRect(-SW / 2 + 1.6, topY + T * 0.62, 2.6, 2);
+      }
+      if (look.top === "apron") {
+        ctx.fillStyle = top;
+        rrect(ctx, -SW / 2 + 1.2, topY + T * 0.35, SW - 2.4, T * 0.75, 1.5);
+        ctx.fill();
+        if (!away) {
+          ctx.strokeStyle = shade(top, -0.25);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-2.5, topY + T * 0.35);
+          ctx.lineTo(-1.5, topY + 1);
+          ctx.moveTo(2.5, topY + T * 0.35);
+          ctx.lineTo(1.5, topY + 1);
+          ctx.stroke();
+        }
+      }
     } else {
-      ctx.beginPath();
-      ctx.arc(0, hy, R + 0.4, Math.PI * 1.02, Math.PI * 1.98);
-      ctx.quadraticCurveTo(R * 0.6, hy - R * 0.25, 0, hy - R * 0.35);
-      ctx.quadraticCurveTo(-R * 0.7, hy - R * 0.2, -R - 0.4, hy - R * 0.05);
-      ctx.fill();
-      if (look.hair === "bob" || look.hair === "long") {
-        rrect(ctx, -R - 0.6, hy - R * 0.4, R * 0.55, R * 1.35, R * 0.25);
-        ctx.fill();
-        rrect(ctx, R * 0.45, hy - R * 0.4, R * 0.55, R * 1.35, R * 0.25);
-        ctx.fill();
+      const kind = look.top;
+      const main = kind === "safety_vest" || kind === "vest" ? lighten(top, 0.55) : top;
+      rrect(ctx, -SW / 2, topY, SW, T + 1.5, 3);
+      fill(main);
+      if (!away) {
+        if (kind === "blazer" || kind === "jacket") {
+          ctx.fillStyle = "#f1eee8";
+          ctx.beginPath();
+          ctx.moveTo(-2.4, topY + 0.3);
+          ctx.lineTo(2.4, topY + 0.3);
+          ctx.lineTo(0, topY + 7);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = shade(top, -0.3);
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(-2.6, topY + 0.3);
+          ctx.lineTo(-0.6, topY + 7.5);
+          ctx.lineTo(-0.6, bottom);
+          ctx.moveTo(2.6, topY + 0.3);
+          ctx.lineTo(0.6, topY + 7.5);
+          ctx.stroke();
+        } else if (kind === "vest") {
+          ctx.fillStyle = top;
+          rrect(ctx, -SW / 2 + 1.4, topY + 1.5, SW - 2.8, T - 0.5, 2);
+          ctx.fill();
+          ctx.fillStyle = lighten(top, 0.55);
+          ctx.beginPath();
+          ctx.moveTo(-1.8, topY + 1.4);
+          ctx.lineTo(1.8, topY + 1.4);
+          ctx.lineTo(0, topY + 6);
+          ctx.closePath();
+          ctx.fill();
+        } else if (kind === "safety_vest") {
+          ctx.fillStyle = "#f08a24";
+          rrect(ctx, -SW / 2 + 0.8, topY + 1, SW - 1.6, T, 2);
+          ctx.fill();
+          ctx.fillStyle = "#f2f2ee";
+          ctx.fillRect(-SW / 2 + 0.8, topY + T * 0.45, SW - 1.6, 1.4);
+          ctx.fillRect(-SW / 2 + 0.8, topY + T * 0.72, SW - 1.6, 1.4);
+        } else if (kind === "cardigan") {
+          ctx.fillStyle = "#f2efe9";
+          rrect(ctx, -1.6, topY + 0.5, 3.2, T, 1);
+          ctx.fill();
+          ctx.fillStyle = shade(top, -0.2);
+          for (let i = 0; i < 3; i++) ctx.fillRect(1.9, topY + 3 + i * 3.4, 0.9, 0.9);
+        } else if (kind === "turtleneck") {
+          ctx.fillStyle = shade(top, -0.15);
+          rrect(ctx, -2.8, topY - 2, 5.6, 3.2, 1.2);
+          ctx.fill();
+        } else if (kind === "polo" || kind === "shirt") {
+          ctx.fillStyle = shade(top, kind === "polo" ? 0.25 : -0.08);
+          ctx.beginPath();
+          ctx.moveTo(-3, topY - 0.4);
+          ctx.lineTo(0, topY + 2.6);
+          ctx.lineTo(3, topY - 0.4);
+          ctx.lineTo(1.2, topY + 0.8);
+          ctx.lineTo(-1.2, topY + 0.8);
+          ctx.closePath();
+          ctx.fill();
+          if (kind === "shirt") {
+            ctx.fillStyle = shade(top, -0.3);
+            for (let i = 0; i < 3; i++) ctx.fillRect(-0.4, topY + 4 + i * 3.2, 0.8, 0.8);
+          }
+        } else if (kind === "sweater") {
+          ctx.strokeStyle = shade(top, -0.2);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-SW / 2 + 1, bottom - 2);
+          ctx.lineTo(SW / 2 - 1, bottom - 2);
+          ctx.stroke();
+        }
       }
     }
-    if (look.hair === "bun") {
+    if (away) return;
+    // 胸前的配饰
+    if (acc.has("tie")) {
+      ctx.fillStyle = look.accent;
       ctx.beginPath();
-      ctx.arc(R * 0.15, hy - R * 1.05, R * 0.5, 0, Math.PI * 2);
+      ctx.moveTo(-0.9, topY + 1.2);
+      ctx.lineTo(0.9, topY + 1.2);
+      ctx.lineTo(1.2, topY + 8.5);
+      ctx.lineTo(0, topY + 10);
+      ctx.lineTo(-1.2, topY + 8.5);
+      ctx.closePath();
       ctx.fill();
     }
-    if (look.hair === "spiky") {
+    if (acc.has("bow_tie")) {
+      ctx.fillStyle = look.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, topY + 1.4);
+      ctx.lineTo(-3, topY - 0.1);
+      ctx.lineTo(-3, topY + 2.9);
+      ctx.closePath();
+      ctx.moveTo(0, topY + 1.4);
+      ctx.lineTo(3, topY - 0.1);
+      ctx.lineTo(3, topY + 2.9);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (acc.has("lanyard")) {
+      ctx.strokeStyle = look.accent;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-2.4, topY + 0.2);
+      ctx.lineTo(0, topY + 7);
+      ctx.lineTo(2.4, topY + 0.2);
+      ctx.stroke();
+      ctx.fillStyle = "#f7f7f2";
+      ctx.fillRect(-1.6, topY + 7, 3.2, 3.6);
+      ctx.fillStyle = look.accent;
+      ctx.fillRect(-1.6, topY + 7, 3.2, 1);
+    }
+    if (acc.has("stethoscope")) {
+      ctx.strokeStyle = "#3c4650";
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-3, topY + 0.3);
+      ctx.quadraticCurveTo(-3.6, topY + 7, 0.5, topY + 8.5);
+      ctx.moveTo(3, topY + 0.3);
+      ctx.quadraticCurveTo(3.4, topY + 5, 1.5, topY + 7.5);
+      ctx.stroke();
+      ctx.fillStyle = "#9aa6ae";
+      ctx.beginPath();
+      ctx.arc(0.8, topY + 8.8, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (acc.has("scarf")) {
+      ctx.fillStyle = look.accent;
+      rrect(ctx, -3.6, topY - 1, 7.2, 2.6, 1.2);
+      ctx.fill();
+      rrect(ctx, 1, topY + 1, 2, 7, 1);
+      ctx.fill();
+    }
+    if (acc.has("camera_strap")) {
+      ctx.strokeStyle = "#2f3237";
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-3.2, topY + 0.5);
+      ctx.lineTo(SW / 2 - 1.5, topY + T * 0.8);
+      ctx.stroke();
+    }
+    if (acc.has("headphones")) {
+      ctx.strokeStyle = look.accent;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(0, topY + 0.5, 3.6, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = look.accent;
+      ctx.fillRect(-4.6, topY - 0.6, 2, 2.6);
+      ctx.fillRect(2.6, topY - 0.6, 2, 2.6);
+    }
+  }
+
+  function drawProp(ctx, look, handY, o) {
+    const p = look.prop;
+    const y = handY;
+    ctx.save();
+    if (p === "flask") {
+      ctx.fillStyle = "rgba(200, 235, 245, 0.95)";
+      ctx.beginPath();
+      ctx.moveTo(-1, y - 1);
+      ctx.lineTo(1, y - 1);
+      ctx.lineTo(3, y + 4.5);
+      ctx.lineTo(-3, y + 4.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ff9f5a";
+      ctx.fillRect(-2.4, y + 2.4, 4.8, 2);
+    } else if (p === "tray") {
+      ctx.fillStyle = "#d7dde0";
+      ctx.fillRect(-4, y, 8, 1.6);
+      ctx.fillStyle = "#f4f0e6";
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(-2.4 + i * 2.4, y - 0.4, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (p === "notebook" || p === "clipboard") {
+      ctx.fillStyle = p === "notebook" ? "#3f6e8c" : "#b88a5a";
+      ctx.fillRect(-2.6, y - 1, 5.2, 6.4);
+      ctx.fillStyle = "#f8f6f0";
+      ctx.fillRect(-1.9, y - 0.2, 3.8, 4.9);
+      if (p === "clipboard") {
+        ctx.fillStyle = "#6b6f75";
+        ctx.fillRect(-1, y - 1.6, 2, 1.2);
+      }
+    } else if (p === "tablet" || p === "laptop") {
+      ctx.fillStyle = "#2f3a44";
+      ctx.fillRect(-3, y - 1, 6, p === "laptop" ? 4 : 7);
+      ctx.fillStyle = "#8fd2e2";
+      ctx.fillRect(-2.3, y - 0.3, 4.6, p === "laptop" ? 2.6 : 5.6);
+    } else if (p === "pipette" || p === "pen" || p === "pencil" || p === "red_pen") {
+      ctx.strokeStyle = p === "red_pen" ? "#c0392b" : p === "pencil" ? "#e2b23c" : p === "pipette" ? "#e9eef0" : "#2c2c2c";
+      ctx.lineWidth = p === "pipette" ? 1.5 : 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y - 3);
+      ctx.lineTo(0.6, y + 4);
+      ctx.stroke();
+      if (p === "pipette") {
+        ctx.fillStyle = "#7fb8d8";
+        ctx.fillRect(-0.9, y - 4.5, 1.8, 2);
+      }
+    } else if (p === "thermos" || p === "teacup") {
+      ctx.fillStyle = p === "thermos" ? "#56606a" : "#f4f1ea";
+      if (p === "thermos") ctx.fillRect(-1.4, y - 3, 2.8, 7);
+      else {
+        ctx.fillRect(-1.8, y - 0.5, 3.6, 2.6);
+        ctx.fillStyle = "#8bb87a";
+        ctx.fillRect(-1.5, y - 0.5, 3, 0.8);
+      }
+    } else if (p === "camera") {
+      ctx.fillStyle = "#26282c";
+      ctx.fillRect(-2.8, y - 1, 5.6, 3.6);
+      ctx.fillStyle = "#6f7f8c";
+      ctx.beginPath();
+      ctx.arc(0, y + 0.8, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p === "model") {
+      ctx.strokeStyle = "#8a8f95";
+      ctx.lineWidth = 0.6;
+      const r = o.phase * 1.5;
+      const pts = [0, 1, 2].map((i) => [Math.cos(r + (i * 2 * Math.PI) / 3) * 2.4, y + 1 + Math.sin(r + (i * 2 * Math.PI) / 3) * 1.6]);
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      ctx.lineTo(pts[1][0], pts[1][1]);
+      ctx.lineTo(pts[2][0], pts[2][1]);
+      ctx.closePath();
+      ctx.stroke();
+      ["#e04f4f", "#3d7fd1", "#f0f0f0"].forEach((col, i) => {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(pts[i][0], pts[i][1], 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else if (p === "sample_box") {
+      ctx.fillStyle = look.accent;
+      ctx.fillRect(-2.2, y - 0.5, 4.4, 3);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-1.6, y, 3.2, 0.8);
+    } else if (p === "walkie") {
+      ctx.fillStyle = "#2a2c30";
+      ctx.fillRect(-1.3, y - 2, 2.6, 5);
+      ctx.fillRect(0.6, y - 4.5, 0.6, 2.6);
+    }
+    ctx.restore();
+  }
+
+  function hairCap(ctx, hy, R, color, fringe = 0.35) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, hy, R + 0.45, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.quadraticCurveTo(R * 0.6, hy - R * (0.3 - fringe * 0.1), 0, hy - R * fringe);
+    ctx.quadraticCurveTo(-R * 0.7, hy - R * 0.2, -R - 0.45, hy - R * 0.05);
+    ctx.fill();
+  }
+
+  function drawHairBack(ctx, look, hy, R, color, fill) {
+    const h = look.hair;
+    ctx.fillStyle = color;
+    if (h === "long") {
+      rrect(ctx, -R - 0.8, hy - R * 0.9, R * 2 + 1.6, R * 2.9, R * 0.8);
+      ctx.fill();
+    } else if (h === "low_bun") {
+      ctx.beginPath();
+      ctx.arc(R * 0.55, hy + R * 0.55, R * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "high_ponytail") {
+      ctx.beginPath();
+      ctx.ellipse(R * 0.95, hy - R * 0.3, R * 0.42, R * 1.05, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "ponytail") {
+      ctx.beginPath();
+      ctx.ellipse(R * 0.85, hy + R * 0.9, R * 0.32, R * 0.9, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "wavy") {
+      rrect(ctx, -R - 0.8, hy - R * 0.6, R * 2 + 1.6, R * 1.9, R * 0.7);
+      ctx.fill();
+    }
+    void fill;
+  }
+
+  function drawHairFront(ctx, look, hy, R, color) {
+    const h = look.hair;
+    ctx.fillStyle = color;
+    if (h === "bald") {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(-R * 0.86, hy + R * 0.05, R * 0.32, 0, Math.PI * 2);
+      ctx.arc(R * 0.86, hy + R * 0.05, R * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(-R * 0.25, hy - R * 0.55, R * 0.3, R * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    if (h === "buzz" || h === "short_gray") {
+      ctx.globalAlpha *= h === "buzz" ? 0.85 : 1;
+      hairCap(ctx, hy, R, color, 0.55);
+      ctx.globalAlpha /= h === "buzz" ? 0.85 : 1;
+      return;
+    }
+    if (h === "slick_back") {
+      ctx.beginPath();
+      ctx.arc(0, hy, R + 0.5, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.quadraticCurveTo(0, hy - R * 0.62, -R - 0.5, hy - R * 0.15);
+      ctx.fill();
+      return;
+    }
+    hairCap(ctx, hy, R, color, h === "pixie" ? 0.2 : h === "side_part" ? 0.45 : 0.35);
+    if (h === "spiky") {
       ctx.beginPath();
       for (let i = -2; i <= 2; i++) {
-        ctx.moveTo(i * R * 0.35 - R * 0.2, hy - R * 0.75);
-        ctx.lineTo(i * R * 0.35, hy - R * 1.35);
-        ctx.lineTo(i * R * 0.35 + R * 0.2, hy - R * 0.75);
+        ctx.moveTo(i * R * 0.36 - R * 0.22, hy - R * 0.7);
+        ctx.lineTo(i * R * 0.36 + (i % 2) * 0.6, hy - R * 1.45);
+        ctx.lineTo(i * R * 0.36 + R * 0.22, hy - R * 0.7);
       }
+      ctx.fill();
+    } else if (h === "bun") {
+      ctx.beginPath();
+      ctx.arc(R * 0.1, hy - R * 1.08, R * 0.52, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "manbun") {
+      ctx.beginPath();
+      ctx.arc(-R * 0.1, hy - R * 1.05, R * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "bob" || h === "sleek_bob" || h === "long" || h === "wavy") {
+      const len = h === "long" ? 1.8 : h === "wavy" ? 1.4 : 1.25;
+      rrect(ctx, -R - 0.6, hy - R * 0.45, R * 0.55, R * len, R * 0.25);
+      ctx.fill();
+      rrect(ctx, R * 0.05, hy - R * 0.45, R * 0.55, R * len, R * 0.25);
+      ctx.translate(R * 0.5, 0);
+      ctx.fill();
+      ctx.translate(-R * 0.5, 0);
+      if (h === "sleek_bob") {
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-R * 0.25, hy - R * 0.95);
+        ctx.lineTo(-R * 0.45, hy - R * 0.3);
+        ctx.stroke();
+      }
+    } else if (h === "pigtails") {
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(side * R * 1.05, hy + R * 0.35, R * 0.32, R * 0.7, side * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (h === "undercut") {
+      ctx.beginPath();
+      ctx.ellipse(-R * 0.15, hy - R * 0.7, R * 0.95, R * 0.45, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (h === "high_ponytail") {
+      ctx.beginPath();
+      ctx.arc(R * 0.55, hy - R * 0.95, R * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if ((look.accessories || []).includes("gray_streak")) {
+      ctx.fillStyle = "rgba(225, 225, 225, 0.9)";
+      ctx.beginPath();
+      ctx.ellipse(-R * 0.35, hy - R * 0.72, R * 0.18, R * 0.42, 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
-  function drawAccessory(ctx, S, look, hy, R) {
-    const a = look.accessory;
-    if (a === "catears") {
-      ctx.fillStyle = look.accent;
-      for (const s of [-1, 1]) {
+
+  function drawHairAway(ctx, look, hy, R, color) {
+    const h = look.hair;
+    if (h === "bald") {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, hy + R * 0.25, R * 0.9, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.fill();
+      return;
+    }
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, hy, R + 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    if (h === "long" || h === "wavy") {
+      rrect(ctx, -R - 0.6, hy, R * 2 + 1.2, R * (h === "long" ? 1.9 : 1.3), R * 0.5);
+      ctx.fill();
+    }
+    if (h === "bun" || h === "manbun" || h === "low_bun") {
+      ctx.beginPath();
+      ctx.arc(0, h === "low_bun" ? hy + R * 0.5 : hy - R * 1.0, R * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (h === "high_ponytail" || h === "ponytail") {
+      ctx.beginPath();
+      ctx.ellipse(0, hy + (h === "ponytail" ? R * 1.1 : R * 0.4), R * 0.35, R * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (h === "pigtails") {
+      for (const side of [-1, 1]) {
         ctx.beginPath();
-        ctx.moveTo(s * R * 0.25, hy - R * 0.85);
-        ctx.lineTo(s * R * 0.75, hy - R * 1.55);
-        ctx.lineTo(s * R * 0.95, hy - R * 0.62);
-        ctx.closePath();
+        ctx.ellipse(side * R * 1.05, hy + R * 0.35, R * 0.32, R * 0.7, side * 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
-    } else if (a === "sprout") {
-      ctx.strokeStyle = "#4f8f4a";
-      ctx.lineWidth = 1;
+    }
+  }
+
+  function drawFace(ctx, look, hy, R, acc) {
+    ctx.fillStyle = "#2a2a2a";
+    const ey = hy + R * 0.12;
+    ctx.beginPath();
+    ctx.arc(-R * 0.38, ey, R * 0.11 + 0.25, 0, Math.PI * 2);
+    ctx.arc(R * 0.38, ey, R * 0.11 + 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    // 嘴：年轻人笑得开一点，长辈抿着
+    ctx.strokeStyle = "rgba(90, 50, 40, 0.75)";
+    ctx.lineWidth = Math.max(0.5, R * 0.09);
+    ctx.beginPath();
+    if (look.age === "senior") {
+      ctx.moveTo(-R * 0.18, hy + R * 0.52);
+      ctx.lineTo(R * 0.18, hy + R * 0.52);
+    } else {
+      ctx.arc(0, hy + R * 0.36, R * (look.age === "young" ? 0.24 : 0.18), 0.15 * Math.PI, 0.85 * Math.PI);
+    }
+    ctx.stroke();
+    if (acc.has("round_glasses")) {
+      ctx.strokeStyle = "#3b3b3b";
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(0, hy - R);
-      ctx.lineTo(0.5, hy - R * 1.6);
+      ctx.arc(-R * 0.4, ey, R * 0.3, 0, Math.PI * 2);
+      ctx.moveTo(R * 0.4 + R * 0.3, ey);
+      ctx.arc(R * 0.4, ey, R * 0.3, 0, Math.PI * 2);
+      ctx.moveTo(-R * 0.1, ey);
+      ctx.lineTo(R * 0.1, ey);
       ctx.stroke();
-      ctx.fillStyle = "#6fbf5a";
+    }
+    if (acc.has("half_glasses")) {
+      ctx.strokeStyle = "#3b3b3b";
+      ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.ellipse(-1.6, hy - R * 1.65, 2, 1, -0.4, 0, Math.PI * 2);
-      ctx.ellipse(2.4, hy - R * 1.7, 2, 1, 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (a === "goggles") {
+      ctx.moveTo(-R * 0.72, ey + R * 0.05);
+      ctx.lineTo(-R * 0.1, ey + R * 0.05);
+      ctx.moveTo(R * 0.1, ey + R * 0.05);
+      ctx.lineTo(R * 0.72, ey + R * 0.05);
+      ctx.stroke();
+    }
+    if (acc.has("mustache") || acc.has("beard") || acc.has("goatee")) {
+      ctx.fillStyle = look.hair === "bald" || look.age === "senior" ? "#e8e6e2" : look.hair_color;
+      if (acc.has("beard")) {
+        ctx.beginPath();
+        ctx.arc(0, hy + R * 0.35, R * 0.78, 0.05 * Math.PI, 0.95 * Math.PI);
+        ctx.fill();
+      }
+      if (acc.has("mustache")) {
+        rrect(ctx, -R * 0.42, hy + R * 0.42, R * 0.84, R * 0.2, R * 0.1);
+        ctx.fill();
+      }
+      if (acc.has("goatee")) {
+        ctx.beginPath();
+        ctx.ellipse(0, hy + R * 0.82, R * 0.2, R * 0.24, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (acc.has("goggles")) {
       ctx.fillStyle = look.accent;
-      ctx.fillRect(-R, hy - R * 0.6, R * 2, R * 0.32);
-      ctx.fillStyle = "rgba(190, 230, 240, 0.9)";
-      ctx.fillRect(-R * 0.75, hy - R * 0.68, R * 0.55, R * 0.45);
-      ctx.fillRect(R * 0.2, hy - R * 0.68, R * 0.55, R * 0.45);
-    } else if (a === "clips") {
+      ctx.fillRect(-R, hy - R * 0.62, R * 2, R * 0.3);
+      ctx.fillStyle = "rgba(190, 230, 240, 0.95)";
+      ctx.fillRect(-R * 0.78, hy - R * 0.72, R * 0.62, R * 0.46);
+      ctx.fillRect(R * 0.16, hy - R * 0.72, R * 0.62, R * 0.46);
+    }
+    if (acc.has("earrings")) {
+      ctx.fillStyle = "#f4f1ea";
+      ctx.beginPath();
+      ctx.arc(-R * 0.98, hy + R * 0.38, R * 0.13, 0, Math.PI * 2);
+      ctx.arc(R * 0.98, hy + R * 0.38, R * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawHeadwear(ctx, look, hy, R, acc, away) {
+    if (acc.has("hard_hat")) {
+      ctx.fillStyle = look.accent || "#f4f4f2";
+      ctx.beginPath();
+      ctx.arc(0, hy - R * 0.15, R * 1.05, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-R * 1.3, hy - R * 0.2, R * 2.6, R * 0.22);
+      ctx.fillStyle = shade("#f4f4f2", -0.15);
+      ctx.fillRect(-R * 0.12, hy - R * 1.15, R * 0.24, R * 0.95);
+    }
+    if (acc.has("bandana")) {
       ctx.fillStyle = look.accent;
       ctx.beginPath();
-      ctx.arc(-R * 0.75, hy - R * 0.55, R * 0.22, 0, Math.PI * 2);
-      ctx.arc(R * 0.75, hy - R * 0.55, R * 0.22, 0, Math.PI * 2);
+      ctx.arc(0, hy - R * 0.1, R * 1.02, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.lineTo(R * 0.8, hy - R * 0.45);
+      ctx.lineTo(-R * 0.8, hy - R * 0.45);
+      ctx.closePath();
       ctx.fill();
-    } else if (a === "cap") {
+    }
+    if (acc.has("catear_headphones")) {
+      ctx.strokeStyle = look.accent;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.arc(0, hy, R + 0.8, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+      ctx.fillStyle = look.accent;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * R * 0.25, hy - R * 0.92);
+        ctx.lineTo(side * R * 0.72, hy - R * 1.62);
+        ctx.lineTo(side * R * 0.95, hy - R * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        rrect(ctx, side * (R + 0.4) - 1.3, hy - R * 0.3, 2.6, R * 0.75, 1);
+        ctx.fill();
+      }
+    }
+    if (acc.has("hairclips") && !away) {
       ctx.fillStyle = look.accent;
       ctx.beginPath();
-      ctx.arc(0, hy - R * 0.2, R * 1.02, Math.PI, Math.PI * 2);
+      ctx.arc(-R * 0.72, hy - R * 0.55, R * 0.2, 0, Math.PI * 2);
+      ctx.arc(R * 0.72, hy - R * 0.55, R * 0.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillRect(-R * 0.2, hy - R * 0.32, R * 1.4, R * 0.25);
     }
   }
 
@@ -691,7 +1213,7 @@
           const a = state.actors.get(id);
           if (!a) return;
           const parts = Object.entries(e.data.amounts || {}).map(
-            ([k, v]) => `${v >= 0 ? "+" : ""}${v.toFixed(1)} ${e.data.labels?.[k] || k}`,
+            ([k, v]) => `${v >= 0 ? "+" : ""}${Math.round(v)} ${e.data.labels?.[k] || k}`,
           );
           popup({ x: a.x, y: a.y, z: personHeight() + 8 }, parts.join("  "), state.make, i * 0.15);
           sparkle(a, state.make);
@@ -722,9 +1244,16 @@
             e.type === "room_built" ? `${room.name}落成` : `设备升到 ${e.data.level} 级`, state.accent);
           dust(room);
         }
-      } else if (e.type === "product_launched") {
+      } else if (e.type === "product_launched" || e.type === "award_won" || e.type === "legacy_reached") {
         for (const id of state.actors.keys()) celebrate(id);
         confettiBurst();
+      } else if (e.type === "study_completed") {
+        const at = where();
+        if (at) popup(at, `能力 +${e.data.gain}`, state.accent);
+        e.actors.forEach((id) => celebrate(id));
+      } else if (e.type === "patent_granted") {
+        const room = ROOMS.find((r) => r.id === (ENGINE_ROOMS[e.room] || e.room)) || ROOMS[2];
+        popup({ x: (room.x0 + room.x1) / 2, y: (room.y0 + room.y1) / 2, z: 34 }, "专利授权", state.accent);
       }
     }
     function popup(at, text, color, delay = 0) {
@@ -1019,8 +1548,8 @@
           ctx.fillText(s.title, x0, 8);
           const top = 11;
           const bottom = Hb - 4;
-          const lo = s.limit - 24;
-          const hi = s.limit + 24;
+          const lo = s.limit - 240;
+          const hi = s.limit + 240;
           const yOf = (val) => bottom - ((Math.max(lo, Math.min(hi, val)) - lo) / (hi - lo)) * (bottom - top);
           ctx.strokeStyle = "rgba(178, 62, 51, 0.8)";
           ctx.setLineDash([2.5, 2]);
@@ -1205,17 +1734,18 @@
 
     function helperLook(st, i) {
       return {
+        build: "average", height: i % 2 ? 0 : -1, age: "young",
         skin: ["#e9c4a0", "#d9aa82", "#f1cfae"][i % 3],
-        hair: i % 2 ? "short" : "bob",
-        hairColor: ["#2c2420", "#4a3628", "#1e1b1a"][i % 3],
-        shirt: st.c.helper,
-        coat: true,
+        hair: i % 2 ? "side_part" : "bob",
+        hair_color: ["#2c2420", "#4a3628", "#1e1b1a"][i % 3],
+        coat: true, top: "tee", top_color: st.c.helper, pants: "#4a5260",
+        accessories: [], accent: "#555", prop: "none", idle: "write",
       };
     }
 
     function drawActor(st, id, a, look) {
       const p = iso(a.x, a.y);
-      const working = !a.path.length && (a.mode === "make" || a.mode === "test" || a.mode === "service");
+      const working = !a.path.length && (a.mode === "make" || a.mode === "test" || a.mode === "service" || a.mode === "study");
       const facing = a.path.length ? a.face : a.target?.face || a.face;
       const away = facing === "up" || facing === "left";
       const flip = a.path.length ? a.flipWalk : facing === "left";
@@ -1229,8 +1759,9 @@
     function drawCro(st) {
       const p = iso(CRO_SPOT.x, CRO_SPOT.y);
       drawPerson(ctx, st, {
-        skin: "#e2b894", hair: "short", hairColor: "#3a3a3a", shirt: st.c.cro, coat: false, holds: "tablet",
-        pants: "#4b5560",
+        build: "average", height: 0, age: "mid", skin: "#e2b894", hair: "side_part", hair_color: "#3a3a3a",
+        coat: false, top: "shirt", top_color: "#d7dde3", pants: "#3f4652", accessories: ["tie", "lanyard"],
+        accent: st.c.cro, prop: "tablet", idle: "tap",
       }, { x: p.x, y: p.y, phase: state.time * 2, working: true, away: false });
     }
 
@@ -1262,7 +1793,7 @@
         const look = state.looks[id];
         if (!look) continue;
         const s = toScreen(iso(a.x, a.y, personHeight() + 5 + a.jump));
-        const color = { make: state.make, test: state.test, service: state.good }[a.mode] || "rgba(120,130,135,0.7)";
+        const color = { make: state.make, test: state.test, service: state.good, study: state.accent }[a.mode] || "rgba(120,130,135,0.7)";
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(s.x, s.y, 3.2, 0, Math.PI * 2);
@@ -1359,12 +1890,15 @@
       c2.setTransform(dpr, 0, 0, dpr, 0, 0);
       c2.clearRect(0, 0, size, size);
       const st = S();
-      const P = st.person;
-      const scale = (size * 0.9) / (P.head * 2 + P.torso * 0.75);
+      const D = dims(st, look);
+      // 取景：头顶留出帽子、猫耳、发髻的位置，下面到胸口
+      const top = -D.L - D.T - D.R * 3.1;
+      const bottom = -D.L - D.T * 0.15;
+      const scale = (size * 0.96) / (bottom - top);
       c2.save();
-      c2.translate(size / 2, size * 0.98 + (P.legs + P.torso * 0.25) * scale);
+      c2.translate(size / 2, size * 0.03 - top * scale);
       c2.scale(scale, scale);
-      drawPerson(c2, st, look, { x: 0, y: 0, phase: 0, walking: false, working: false, away: false });
+      drawPerson(c2, st, look, { x: 0, y: 0, phase: 0, walking: false, working: false, away: false, still: true });
       c2.restore();
     }
 

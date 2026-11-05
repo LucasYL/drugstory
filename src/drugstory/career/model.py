@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 7
+VERSION = 8
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
@@ -219,7 +219,7 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") == VERSION,
-            "开发版只读取独立 v7 存档；v6 请在 8881、v5 请在 8880 继续游玩",
+            "研究所版只读取独立 v8 存档；v7 请在 8883、v6 请在 8881 继续游玩",
         )
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")

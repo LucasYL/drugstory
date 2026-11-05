@@ -28,7 +28,7 @@ function honorsView() {
     )
   }
   <div class="card-grid">${h.proofs.map((p) => `<article class="candidate"><h4>${esc(p.name)} · 第 ${p.step + 1} 轮</h4><p class="${p.passed ? "good" : "danger"}">${p.passed ? "取得独立支持" : "本轮证据未获支持"}</p><p>获益 ${p.values.effect} / ≥${p.limits.effect} · 安全 ${p.values.safety} / ≥${p.limits.safety}</p></article>`).join("")}</div>
-  <h3>成长纪念</h3><div class="achievement-row">${h.achievements.map((a) => `<span class="badge">${esc(a.name)} · 第 ${a.week} 周</span>`).join("") || "还没有纪念。第一粒药、第一位精英、第一次带教都会留下记录。"}</div>
+  <h3>公司大事记</h3><div class="achievement-row">${h.achievements.map((a) => `<span class="badge">${esc(a.name)} · 第 ${a.week} 周</span>`).join("") || "还没有记录。第一粒药、第一项专利、搬进新场地、第一位精英都会记在这里。"}</div>
   <h3>奖杯室</h3>${h.awards.map((a) => `<p>第 ${a.year} 年 · <b>${esc(a.name)}</b> · 成果分 ${a.score}</p>`).join("") || '<p class="muted">现在还是空的。这里会记录你的第一次获奖，以及后来的每一次突破。</p>'}
   <h3>历届大会</h3>${h.festivals.length ? modalButton("回看最近一届颁奖", "ceremony") : ""}${
     h.festivals

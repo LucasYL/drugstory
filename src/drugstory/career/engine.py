@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 
-from . import challenge, development, events, honors, product_design, readouts, stories, trial_choices
+from . import challenge, development, events, honors, patents, product_design, readouts, stories, trial_choices
 from . import economy as e
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
@@ -172,8 +172,14 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
         "phase_started",
         actors=heroes,
         project=p["id"],
-        room="room_clinical" if key in CLINICAL else "room_lab",
-        data={"name": p["name"], "stage": STAGES[key]["name"], "weeks": execution["weeks"]},
+        room=STAGES[key]["room"],
+        data={
+            "name": p["name"],
+            "stage": STAGES[key]["name"],
+            "weeks": execution["weeks"],
+            "executor": mode,
+            "note": "，由外包 CRO 执行" if cro else "",
+        },
     )
 
 
@@ -273,7 +279,18 @@ def launch(s, project: str, name: str = ""):
     p["status"] = "approved"
     d = e.make_product(s, p, name=name.strip() or p["name"])
     finish_case(s, p)
-    log(s, f"{d['name']}获批上市！采用委托生产，收入随市场导入逐步形成。角色履历与公司口碑提升。")
+    events.emit(
+        s,
+        "product_launched",
+        actors=list(p["contributors"]),
+        project=p["id"],
+        room=STAGES["review"]["room"],
+        data={
+            "name": d["name"],
+            "kind": p["kind"],
+            "text": "采用委托生产，收入随市场导入逐步形成；角色履历与公司口碑提升。",
+        },
+    )
 
 
 def license_project(s, project: str, terms: str):
@@ -301,7 +318,12 @@ def license_project(s, project: str, terms: str):
     start_partner_phase(s, p, d)
     finish_case(s, p)
     s["reputation"] += 3
-    log(s, f"{p['name']}签下{quote['name']}：首付款 ¥{quote['upfront']} 万已到账；后续款项以实际里程碑为条件。")
+    events.emit(
+        s,
+        "deal_signed",
+        project=p["id"],
+        data={"name": p["name"], "terms": quote["name"], "upfront": quote["upfront"], "partner": d["partner"]},
+    )
 
 
 def start_partner_phase(s, p, d):
@@ -447,7 +469,7 @@ def upgrade(s):
     available_money(s, c["cost"])
     spend(s, c["cost"], "facility")
     s["facility"] += 1
-    log(s, f"搬入{c['name']}：更多团队、自营临床席位和生产线，同时租金上升。")
+    events.emit(s, "facility_upgraded", data={"name": c["name"], "level": s["facility"], "rent": c["rent"]})
 
 
 def finish_phase(s, p):
@@ -459,10 +481,12 @@ def finish_phase(s, p):
         "phase_finished",
         actors=p["team"],
         project=p["id"],
-        room="room_clinical" if key in CLINICAL else "room_lab",
+        room=STAGES[key]["room"],
         data={
             "name": p["name"],
             "stage": STAGES[key]["name"],
+            "passed": result["passed"],
+            "executor": p.get("mode", "internal") if key in CLINICAL else "internal",
             "outcome": "取得支持证据" if result["passed"] else "未取得支持证据",
         },
         journal=False,
@@ -471,6 +495,7 @@ def finish_phase(s, p):
     if result["passed"]:
         p["status"] = "result"
         s["milestones"] += 1
+        patents.maybe_file(s, p, key)
         p["feedback"] = f"{STAGES[key]['name']}完成，取得本阶段支持证据；后续阶段仍有新的未知项。"
         log(s, p["name"] + "：" + p["feedback"])
     else:
@@ -540,6 +565,7 @@ def advance(s, weeks: int = 4):
         spend(s, payroll(s), "payroll")
         spend(s, FACILITIES[s["facility"]]["rent"], "rent")
         spend(s, challenge.upkeep(s), "platform_maintenance")
+        spend(s, development.upkeep(s), "equipment_upkeep")
         for job in list(s["jobs"]):
             job["left"] -= 1
             if job["left"] <= 0:
@@ -586,6 +612,7 @@ def advance(s, weeks: int = 4):
             else:
                 finish_phase(s, p)
         partner_step(s)
+        patents.tick(s)
         e.market_step(s)
         honors.annual(s)
         s["minimum_cash"] = min(s["minimum_cash"], s["cash"])
@@ -733,9 +760,25 @@ def execute(state, command, args=None):
     candidate = copy.deepcopy(state)
     candidate["transition_events"] = []
     fn(candidate, **args)
-    if candidate["cash"] != state["cash"]:
+    if abs(candidate["cash"] - state["cash"]) >= 0.01:
+
+        def changes(field):
+            before = state[field]
+            return {
+                k: round(v - before.get(k, 0), 2)
+                for k, v in candidate[field].items()
+                if abs(v - before.get(k, 0)) >= 0.01
+            }
+
         events.emit(
-            candidate, "cash_changed", data={"amount": round(candidate["cash"] - state["cash"], 2)}, journal=False
+            candidate,
+            "cash_changed",
+            data={
+                "amount": round(candidate["cash"] - state["cash"], 2),
+                "income": changes("income"),
+                "expense": changes("expense"),
+            },
+            journal=False,
         )
     for rank in (2, 3, 4):
         field = f"first_rank{rank}"

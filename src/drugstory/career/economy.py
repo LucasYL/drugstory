@@ -4,8 +4,19 @@ from __future__ import annotations
 
 import math
 
-from . import challenge, competition, honors, product_design, stories, talents
-from .content import CATALOG, FACILITIES, PATHS, PROFESSIONS, PROMOTION, RANKS, ROSTER, TERMS
+from . import challenge, competition, development, events, honors, patents, product_design, stories, talents
+from .content import (
+    CATALOG,
+    COMMERCIAL,
+    FACILITIES,
+    PATHS,
+    PROFESSION_ROOM,
+    PROFESSIONS,
+    PROMOTION,
+    RANKS,
+    ROSTER,
+    TERMS,
+)
 from .model import earn, gain_work, log, payroll, rand, spend
 from .science import outlook, plan_phase, selected
 
@@ -140,6 +151,7 @@ def make_product(s, p, partner=False, name=None):
             0.82, {"generic": 0.46, "improved": 0.56, "innovative": 0.66}[p["kind"]] + (values["quality"] - 60) / 300
         ),
         "partner": partner,
+        "exclusive_until": patents.exclusive_until(p),
         "active": True,
         "production": "contract",
         "total_revenue": 0.0,
@@ -177,7 +189,11 @@ def base_sales(s, d):
     ramp = 12 if d["kind"] == "generic" else 40
     if d.get("design_reward") == "adherence":
         ramp *= 0.75
-    curve = min(1, (age + 1) / ramp) * max(0.2, 1 - max(0, age - life * 0.65) / (life * 0.5))
+    if d.get("exclusive_until") is not None:
+        # Patent-protected sales hold until expiry, then generic entry pulls them down to a floor.
+        curve = min(1, (age + 1) / ramp) * patents.erosion(s, d)
+    else:
+        curve = min(1, (age + 1) / ramp) * max(0.2, 1 - max(0, age - life * 0.65) / (life * 0.5))
     competitors = competition.pressure(s, d["market"])
     siblings = sum(
         1
@@ -204,10 +220,17 @@ def market_capacity(s, market):
     return {"capacity": capacity, "demand": round(demand, 1), "factor": min(1, capacity / max(1, demand))}
 
 
+def commercial_rate(d):
+    """Sales force, medical affairs and market access for products the company sells itself."""
+    return 0 if d["partner"] else COMMERCIAL[d["kind"]]
+
+
 def expected_sales(s, d):
-    revenue, profit = base_sales(s, d)
+    """Weekly revenue and net profit after manufacturing and commercial costs."""
+    revenue, gross = base_sales(s, d)
     factor = market_capacity(s, d["market"])["factor"]
-    return revenue * factor, profit * factor
+    revenue, gross = revenue * factor, gross * factor
+    return revenue, gross - revenue * commercial_rate(d)
 
 
 def market_step(s):
@@ -232,7 +255,9 @@ def market_step(s):
             deal["weekly_royalty"] = royalty
         else:
             earn(s, revenue, "sales")
-            spend(s, revenue - profit, "manufacturing")
+            commercial = revenue * commercial_rate(d)
+            spend(s, revenue - profit - commercial, "manufacturing")
+            spend(s, commercial, "commercial")
         if revenue > 0 and s["first_income"] is None:
             s["first_income"] = s["week"]
 
@@ -281,6 +306,7 @@ def costs_per_week(s):
         payroll(s)
         + FACILITIES[s["facility"]]["rent"]
         + challenge.upkeep(s)
+        + development.upkeep(s)
         + sum(p.get("cost_per_week", 0) for p in s["projects"] if p["status"] in ("screening", "running"))
         + sum(d.get("cost_per_week", 0) * d["cost_share"] for d in s["deals"] if d["status"] == "developing")
     )
@@ -300,7 +326,14 @@ def finish_job(s, job):
         gain_work(s, job["heroes"], "service-" + job["profession"], 4)
         if s["first_income"] is None:
             s["first_income"] = s["week"]
-        log(s, f"{job['name']}交付，收到 ¥{job['reward']} 万；常规服务的经验会逐渐递减。")
+        who = next(h for h in s["heroes"] if h["id"] == job["heroes"][0])
+        events.emit(
+            s,
+            "service_completed",
+            actors=list(job["heroes"]),
+            room=PROFESSION_ROOM[job["profession"]],
+            data={"name": who["name"], "service": job["name"], "reward": job["reward"]},
+        )
     elif job["kind"] == "train":
         h = next(h for h in s["heroes"] if h["id"] == job["heroes"][0])
         h["training"] += 3

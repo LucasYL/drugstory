@@ -292,7 +292,7 @@ def test_high_tier_requires_cooperation_before_hire():
     assert busy(s)["pill"]
     s = g.execute(s, "advance", {"weeks": 48})
     s = g.execute(s, "hire", {"character": "architect"})
-    assert s["heroes"][-1]["rank"] == 4 and s["heroes"][-1]["name"] == "药剂造物主"
+    assert s["heroes"][-1]["rank"] == 4 and s["heroes"][-1]["name"] == "高铁峰"
 
 
 def test_mentor_is_professional_once_only_and_no_fake_cases():

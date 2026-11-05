@@ -60,7 +60,7 @@ def run(s, rank, members):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seeds", type=int, default=400)
-    parser.add_argument("--output", type=Path, default=Path(".artifacts/v07-benchmark.json"))
+    parser.add_argument("--output", type=Path, default=Path(".artifacts/v08-benchmark.json"))
     args = parser.parse_args()
     rows = []
     for catalog in ("n_lung", "n_resistance"):

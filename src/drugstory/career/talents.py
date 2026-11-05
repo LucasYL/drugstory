@@ -3,6 +3,7 @@
 import json
 
 from .content import DATA, STAGES, STATS
+from .units import pts
 
 ABILITIES = json.loads((DATA / "abilities.json").read_text())
 
@@ -16,8 +17,8 @@ def trait(key):
     a = ABILITIES[key]
     if a["kind"] == "work":
         text = (
-            f"在{STAGES[a['stage']]['name']}额外贡献 {a['base']} 点{STATS[a['stat']]}开发量；"
-            f"个人课题后为 {a['advanced']} 点。"
+            f"在{STAGES[a['stage']]['name']}额外贡献 {pts(a['base'])} 点{STATS[a['stat']]}开发量；"
+            f"个人课题后为 {pts(a['advanced'])} 点。"
         )
     elif a["kind"] == "schedule":
         stage = STAGES[a["stage"]]["name"] if a["stage"] != "*" else "临床阶段"

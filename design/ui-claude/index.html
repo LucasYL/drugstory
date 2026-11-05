@@ -24,6 +24,8 @@
     </dl>
     <div class="controls">
       <button class="pending" id="pending" type="button" hidden>1 件事待决定</button>
+      <button class="ghost small-btn" id="open-gallery" type="button">伙伴图鉴</button>
+      <button class="ghost small-btn" id="help" type="button" aria-label="重看操作引导">? 怎么玩</button>
       <div class="clock" role="group" aria-label="时间速度">
         <button type="button" data-speed="0" aria-pressed="false" title="暂停（空格）"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2.5" width="3.4" height="11" rx="1"/><rect x="9.6" y="2.5" width="3.4" height="11" rx="1"/></svg><span class="sr">暂停</span></button>
         <button type="button" data-speed="1" aria-pressed="true" title="1×（按 1）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg><span class="sr">一倍速</span></button>
@@ -42,6 +44,8 @@
     <section class="scene" aria-label="研究所场景，可以点房间和人物">
       <canvas id="canvas"></canvas>
       <div class="scene-labels" id="labels"></div>
+      <div class="guide" id="guide" aria-live="polite"></div>
+      <div class="toast" id="toast" role="status" hidden></div>
       <p class="scene-legend"><span class="kind" data-kind="make">做</span>团队把药做好 <span class="kind" data-kind="test">测</span>数据揭晓真相</p>
       <ol class="ticker" id="ticker" aria-label="最近发生的事"></ol>
       <div class="notice" id="notice" role="status" hidden></div>
@@ -55,6 +59,9 @@
     <div class="projects" id="projects" aria-label="项目"></div>
   </footer>
 </div>
+<div class="tour" id="tour" hidden><div class="tour-hole"></div><div class="tour-card" role="dialog" aria-modal="true"></div></div>
+<div class="gallery" id="gallery" hidden></div>
+<script src="cast.js"></script>
 <script src="scene.js"></script>
 <script src="sim.js"></script>
 <script src="ui.js"></script>

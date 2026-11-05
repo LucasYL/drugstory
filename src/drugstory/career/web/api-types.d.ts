@@ -5,10 +5,10 @@ export type Event = {
   "version": 1;
   "id": number;
   "week": number;
-  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "cash_changed" | "notice";
+  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "cash_changed" | "notice";
   "actors": (string)[];
   "project": string | null;
-  "room": string | null;
+  "room": RoomId | null;
   "data": { [key: string]: JsonValue };
 };
 
@@ -41,6 +41,7 @@ export type Work = {
   "role": string;
   "members": number;
   "amounts": { [key: string]: number };
+  "planned"?: { [key: string]: number };
 };
 
 export type Reading = {
@@ -96,22 +97,76 @@ export type Project = {
   "future_base_cost": JsonValue;
   "outlook": JsonValue;
   "can_focus": JsonValue;
+  "patent": JsonValue;
+};
+
+export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
+
+export type Look = {
+  "build": "slim" | "average" | "broad";
+  "height": number;
+  "age": "young" | "mid" | "senior";
+  "skin": string;
+  "hair": string;
+  "hair_color": string;
+  "coat": boolean;
+  "top": string;
+  "top_color": string;
+  "pants": string;
+  "accessories": (string)[];
+  "accent": string;
+  "prop": string;
+  "idle": string;
+};
+
+export type Hero = {
+  "id": string;
+  "name": string;
+  "nickname": string;
+  "profession": "bio" | "chem" | "tox" | "proc" | "clinical";
+  "profession_name": string;
+  "tier": number;
+  "rank": number;
+  "rank_name": string;
+  "title": string;
+  "ability": number;
+  "members": number;
+  "xp": number;
+  "story": string;
+  "bio": string;
+  "look": Look;
+  "room": RoomId | null;
+  "activity": "make" | "test" | "service" | "study" | "idle";
+  "busy": string | null;
+  "weekly_salary": number;
+};
+
+export type Patent = {
+  "project": string;
+  "name": string;
+  "filed": number;
+  "granted": number | null;
+  "expires": number;
+  "expires_label": string;
+  "status": "\u5ba1\u67e5\u4e2d" | "\u5df2\u6388\u6743" | "\u5df2\u5230\u671f";
+  "on_market": boolean;
 };
 
 export type GameState = {
   "version": string;
-  "api_version": 1;
+  "api_version": 2;
   "event_cursor": number;
   "events": (Event)[];
   "transition_events": (Event)[];
   "equipment": ({
-  "id": string;
+  "id": RoomId;
   "profession": string;
   "name": string;
   "level": number;
   "cost": number | null;
   "available": boolean;
   "text": string;
+  "upkeep": number;
 })[];
   "notebook": JsonValue;
   "challenge": JsonValue;
@@ -137,7 +192,7 @@ export type GameState = {
   "opening": JsonValue;
   "goals": JsonValue;
   "objective_done": boolean;
-  "heroes": JsonValue;
+  "heroes": (Hero)[];
   "roster": JsonValue;
   "projects": (Project)[];
   "products": JsonValue;
@@ -169,4 +224,6 @@ export type GameState = {
   "revision": number;
   "token": string;
   "saved_at": string | null;
+  "display_scale": 10;
+  "patents": (Patent)[];
 };

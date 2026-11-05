@@ -31,7 +31,7 @@
 
   /* ---------- 时间 ---------- */
   function frame(dt) {
-    if (speed > 0 && !view.blocking) {
+    if (speed > 0 && !view.blocking && !touring && $("#gallery").hidden) {
       acc += dt;
       const spw = SECONDS_PER_WEEK / speed;
       if (acc >= spw) {
@@ -56,6 +56,11 @@
     for (const e of events) {
       scene.event(e);
       if (e.type !== "cash_changed") ticker.unshift(e);
+      if (e.type === "work_completed") goal("make");
+      if (e.type === "product_launched") goal("launch");
+      if (e.type === "milestone_reached") toast(`公司大事记 · ${e.data.title}`);
+      if (e.type === "patent_granted") toast(`专利授权 · ${e.data.name}`);
+      if (e.type === "product_launched") toast(`上市 · ${e.data.name}`);
     }
     ticker.length = Math.min(ticker.length, 40);
     renderTop();
@@ -63,7 +68,8 @@
     renderTicker();
     renderPanel();
     renderOverlays();
-    maybeOpenModal();
+    renderGuide();
+    if (!touring) maybeOpenModal();
   }
 
   function renderTop() {
@@ -178,46 +184,55 @@
   }
 
   /* ---------- 场景上的标签和提醒 ---------- */
-  let lastLabels = "";
+  // 标签和提醒原地更新文字，不整块重建：加速时点下去的按钮不会突然被换掉
   function renderOverlays() {
-    const rooms = scene.rooms;
-    const html = [];
-    for (const r of rooms) {
+    for (const r of scene.rooms) {
       const info = view.rooms[r.id];
-      let status = roomStatus(r.id);
-      let cls = "room-tag";
-      if (r.id === "bio" && !info.built) {
-        cls += " lot";
-        status = info.building ? `施工中 ${info.building.total - info.building.left}/${info.building.total} 周` : "空地 · 可以扩建";
+      let el = labels.querySelector(`[data-room="${r.id}"]`);
+      if (!el) {
+        el = document.createElement("button");
+        el.type = "button";
+        el.dataset.room = r.id;
+        el.innerHTML = "<b></b><small></small>";
+        el.addEventListener("click", () => select({ type: "room", id: r.id }));
+        labels.appendChild(el);
       }
-      html.push(
-        `<button class="${cls}" type="button" data-room="${r.id}" aria-pressed="${selection?.type === "room" && selection.id === r.id}">
-          <b>${esc(r.id === "bio" && !info.built ? "+ 生物实验室" : r.name)}</b><small>${esc(status)}</small></button>`,
-      );
+      const lot = r.id === "bio" && !info.built;
+      const status = lot
+        ? info.building
+          ? `施工中 ${info.building.total - info.building.left}/${info.building.total} 周`
+          : "空地 · 可以扩建"
+        : roomStatus(r.id);
+      el.className = lot ? "room-tag lot" : "room-tag";
+      el.setAttribute("aria-pressed", String(selection?.type === "room" && selection.id === r.id));
+      setText(el.querySelector("b"), lot ? "+ 生物实验室" : r.name);
+      setText(el.querySelector("small"), status);
     }
+    const live = new Set(view.decisions.map((d) => d.id));
+    for (const el of labels.querySelectorAll("[data-decision]")) if (!live.has(el.dataset.decision)) el.remove();
     for (const d of view.decisions) {
+      let el = labels.querySelector(`[data-decision="${d.id}"]`);
+      if (!el) {
+        el = document.createElement("button");
+        el.type = "button";
+        el.dataset.decision = d.id;
+        el.innerHTML = '<span aria-hidden="true">!</span><em></em>';
+        el.addEventListener("click", () => {
+          const q = view.decisions.find((x) => x.id === d.id);
+          if (q?.deferred) refresh(sim.act("resume", { decision: d.id }));
+          openModal(d.id);
+        });
+        labels.appendChild(el);
+      }
       const short = { choose: "选候选", next: "安排下一步", interim: "期中决定", failed: "没过，怎么办", launch: "上市命名", license: "III 期还是授权" }[d.kind];
-      html.push(
-        `<button class="bubble${d.deferred ? " deferred" : ""}" type="button" data-decision="${d.id}" data-anchor="${d.room}">
-          <span aria-hidden="true">!</span>${esc(d.projectName)} · ${esc(short)}</button>`,
-      );
-    }
-    const markup = html.join("");
-    if (markup === lastLabels) {
-      placeOverlays();
-      return;
-    }
-    lastLabels = markup;
-    labels.innerHTML = markup;
-    for (const b of labels.querySelectorAll("[data-room]")) b.addEventListener("click", () => select({ type: "room", id: b.dataset.room }));
-    for (const b of labels.querySelectorAll("[data-decision]")) {
-      b.addEventListener("click", () => {
-        const d = view.decisions.find((q) => q.id === b.dataset.decision);
-        if (d?.deferred) refresh(sim.act("resume", { decision: d.id }));
-        openModal(b.dataset.decision);
-      });
+      el.className = d.deferred ? "bubble deferred" : "bubble";
+      el.dataset.anchor = d.room;
+      setText(el.querySelector("em"), `${d.projectName} · ${short}`);
     }
     placeOverlays();
+  }
+  function setText(el, text) {
+    if (el.textContent !== text) el.textContent = text;
   }
   function placeOverlays() {
     if (!labels) return;
@@ -251,14 +266,24 @@
   /* ---------- 选择与面板 ---------- */
   function select(hit) {
     selection = hit;
+    if (hit?.type === "hero") goal("hero");
     scene.select(hit && (hit.type === "hero" || hit.type === "room") ? hit : null);
-    renderPanel();
+    renderPanel(true);
     renderDock();
     renderOverlays();
   }
 
   let lastPanel = "";
-  function renderPanel() {
+  let pointerInPanel = false;
+  panel.addEventListener("pointerenter", () => {
+    pointerInPanel = true;
+  });
+  panel.addEventListener("pointerleave", () => {
+    pointerInPanel = false;
+    renderPanel();
+  });
+  function renderPanel(force = false) {
+    if (pointerInPanel && !force) return;
     let html;
     if (!selection) html = overviewPanel();
     else if (selection.type === "hero") html = heroPanel(view.heroes.find((h) => h.id === selection.id));
@@ -276,7 +301,9 @@
     for (const b of panel.querySelectorAll("[data-act]")) {
       b.addEventListener("click", () => {
         try {
+          if (b.dataset.act === "build" || b.dataset.act === "upgrade") goal("build");
           refresh(sim.act(b.dataset.act, JSON.parse(b.dataset.args || "{}")));
+          renderPanel(true);
         } catch (err) {
           notice(err.message);
         }
@@ -323,13 +350,16 @@
     return `<div class="panel-body">${back()}
       <header class="hero-head">
         <canvas class="portrait big" data-hero="${h.id}" aria-hidden="true"></canvas>
-        <div><p class="eyebrow">${esc(h.rankName)} · ${esc(h.professionName)}</p><h2>${esc(h.name)}</h2></div>
+        <div><p class="eyebrow">${esc(h.rankName)} · ${esc(h.professionName)}</p><h2>${esc(h.name)}</h2><p class="nick">「${esc(h.nickname)}」</p></div>
       </header>
+      <p class="lede">${esc(h.story)}</p>
+      <p class="small">${esc(h.bio)}</p>
       <dl class="facts">
         <div><dt>专业能力</dt><dd><span class="meter"><i style="width:${h.ability}%"></i></span><span class="num">${h.ability}</span></dd></div>
         <div><dt>团队成员</dt><dd>${h.members} 人（开发时站在旁边帮忙，越多越快）</dd></div>
         <div><dt>正在做</dt><dd><i class="pip" data-mode="${h.mode}"></i>${esc(h.task)}</dd></div>
         <div><dt>招牌能力</dt><dd><b>${esc(h.signature.name)}</b>：${esc(h.signature.text)}</dd></div>
+        <div><dt>个人课题</dt><dd>「${esc(h.quest)}」</dd></div>
       </dl>
       <h3>最近的开发贡献</h3>
       ${recent.length ? `<ul class="plain">${recent.map((e) => `<li><span class="num">第 ${(e.week % 48) + 1} 周</span> ${esc(e.data.detail)}</li>`).join("")}</ul>` : `<p class="small">还没有。安排进“做”的阶段后，每批开发都会记在这里。</p>`}
@@ -369,7 +399,7 @@
         <div><dt>现在</dt><dd>${esc(roomStatus(id))}</dd></div>
         <div><dt>在这里的人</dt><dd>${here.length ? here.map((h) => `<button class="link" type="button" data-select="hero:${h.id}">${esc(h.name)}</button>`).join("、") : "没有人"}</dd></div>
         <div><dt>设备</dt><dd>${info.level} 级 · 每升一级，本专业每次开发量 +2，房间里会多一台仪器</dd></div>
-        ${board.length ? `<div><dt>白板</dt><dd>${board.map((b) => `${esc(b.title)}：${b.readings.map((v) => v.toFixed(1)).join("、") || "等第一批"}（门槛 ${b.limit}）`).join("<br>")}</dd></div>` : ""}
+        ${board.length ? `<div><dt>白板</dt><dd>${board.map((b) => `${esc(b.title)}：${b.readings.join("、") || "等第一批"}（门槛 ${b.limit}）`).join("<br>")}</dd></div>` : ""}
       </dl>
       ${upgrade}
     </div>`;
@@ -386,7 +416,7 @@
       const detail =
         st.kind === "make"
           ? `<p class="small">每批开发会把药的真实性质推高一点（橙点右移）。计划总量：${p.work
-              .map((w) => Object.entries(w.amounts).map(([k, v]) => `${esc(p.statNames[k])} +${v.toFixed(1)}`).join("、"))
+              .map((w) => Object.entries(w.amounts).map(([k, v]) => `${esc(p.statNames[k])} +${v}`).join("、"))
               .join("；")}</p>`
           : `${chart(p)}<p class="small">四批读数的平均值和门槛比较。读数本身有误差，单批高低不算数。</p>`;
       stage = `<section class="stage-box" data-kind="${st.kind}">
@@ -408,7 +438,7 @@
   }
 
   function evidenceBars(list) {
-    const pos = (v) => Math.max(0, Math.min(100, ((v - 40) / 60) * 100));
+    const pos = (v) => Math.max(0, Math.min(100, ((v - 400) / 600) * 100));
     return `<div class="ev-list">${list
       .map((e) => {
         const lo = pos(e.low);
@@ -427,12 +457,12 @@
   function chart(p) {
     const st = p.stage;
     const key = st.key;
-    const limits = window.DrugstoryDemo.STAGES[key].limits;
+    const limits = st.limits;
     const stat = Object.keys(limits)[0];
     const limit = limits[stat];
     const values = p.readings.filter((r) => r.stage === key).map((r) => r.values[stat]);
-    const lo = limit - 24;
-    const hi = limit + 24;
+    const lo = limit - 240;
+    const hi = limit + 240;
     const y = (v) => 80 - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * 64;
     const x = (i) => 40 + i * 50;
     const mean = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -441,7 +471,7 @@
       <text x="0" y="${y(limit) + 4}" class="axis">${limit}</text>
       ${[0, 1, 2, 3].map((i) => `<text x="${x(i) - 8}" y="91" class="axis">第${i + 1}批</text>`).join("")}
       ${mean != null && values.length > 1 ? `<line x1="30" x2="232" y1="${y(mean)}" y2="${y(mean)}" class="mean"></line>` : ""}
-      ${values.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="dot"></circle><text x="${x(i) + 7}" y="${y(v) - 6}" class="val">${v.toFixed(1)}</text>`).join("")}
+      ${values.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="dot"></circle><text x="${x(i) + 7}" y="${y(v) - 6}" class="val">${v}</text>`).join("")}
     </svg>`;
   }
 
@@ -495,6 +525,9 @@
     modal.querySelector("button:not([disabled]), input")?.focus({ preventScroll: true });
   }
   function act(name, args) {
+    if (name === "choose") goal("choose");
+    if (name === "interim") goal("interim");
+    if (name === "build" || name === "upgrade") goal("build");
     try {
       modal.hidden = true;
       modalId = null;
@@ -511,6 +544,167 @@
     notice.t = setTimeout(() => {
       n.hidden = true;
     }, 2600);
+  }
+
+
+  /* ---------- 目标条：一直告诉玩家下一步做什么 ---------- */
+  const GOALS = [
+    { key: "choose", title: "选一个候选处方", hint: "在下方卡片里比较三个处方，点「选这个」。红线是后面要过的门槛。" },
+    { key: "make", title: "看一次“做”", hint: "时间在走。等陈一鸣、苏小禾在实验室里干完一批，头上会冒出橙色数字。" },
+    { key: "interim", title: "做一次期中决定", hint: "临床办公室的白板会多一个蓝点，时间停下后，选继续收集或提前止损。" },
+    { key: "hero", title: "认识一位伙伴", hint: "点底部任意一张人物卡，或直接点场景里的人，看看他的背景和招牌能力。" },
+    { key: "build", title: "花一笔钱扩建", hint: "点右下角虚线空地扩建生物实验室，或点一个房间升级设备。" },
+    { key: "launch", title: "让稳压片上市", hint: "按卡片一步步安排下一阶段：质量 → 生物等效性 → 审评 → 上市。可以按 ▶▶▶ 加速。" },
+    { key: "gallery", title: "翻一翻伙伴图鉴", hint: "右上角「伙伴图鉴」里有全部 20 位伙伴的样子和故事。" },
+  ];
+  const goals = new Set();
+  function goal(key) {
+    if (goals.has(key)) return;
+    goals.add(key);
+    renderGuide();
+  }
+  function renderGuide() {
+    const box = $("#guide");
+    if (!box) return;
+    const next = GOALS.find((g) => !goals.has(g.key));
+    const done = GOALS.filter((g) => goals.has(g.key)).length;
+    let line;
+    if (view.blocking) line = "时间停了：先在下方卡片里做决定。";
+    else if (view.decisions.some((d) => d.deferred)) line = "有事被暂缓了：点场景里的橙色气泡继续处理。";
+    else line = next ? next.hint : "全部完成。可以自由玩下去，或者看看图鉴里还没加入的伙伴。";
+    const html = `<button class="guide-toggle" type="button" aria-expanded="${guideOpen}">
+        <span class="guide-count">${done}/${GOALS.length}</span>
+        <span class="guide-text"><b>${next ? esc(next.title) : "新手目标完成"}</b><small>${esc(line)}</small></span>
+      </button>
+      ${guideOpen ? `<ol class="guide-list">${GOALS.map((g) => `<li data-done="${goals.has(g.key)}">${esc(g.title)}</li>`).join("")}</ol>` : ""}`;
+    if (box.innerHTML !== html) {
+      box.innerHTML = html;
+      box.querySelector(".guide-toggle").addEventListener("click", () => {
+        guideOpen = !guideOpen;
+        renderGuide();
+      });
+    }
+  }
+  let guideOpen = false;
+
+  /* ---------- 大事记横幅 ---------- */
+  const toasts = [];
+  function toast(text) {
+    toasts.push(text);
+    if (toasts.length === 1) showToast();
+  }
+  function showToast() {
+    const el = $("#toast");
+    if (!toasts.length) {
+      el.hidden = true;
+      return;
+    }
+    el.textContent = toasts[0];
+    el.hidden = false;
+    setTimeout(() => {
+      toasts.shift();
+      showToast();
+    }, 2600);
+  }
+
+  /* ---------- 第一次打开：四步引导 ---------- */
+  const TOUR = [
+    { target: ".scene", title: "这是你的研究所", text: "整个公司在这一屏里。伙伴会自己走到房间干活：头上冒橙色数字，是在把药做好；白板上多一个蓝点，是数据回来了。" },
+    { target: ".clock", title: "时间自己走", text: "这里暂停或加速，空格键也能暂停。遇到要你拿主意的事，时间会自动停下。" },
+    { target: "#guide", title: "不知道做什么，就看这里", text: "这条目标会一直告诉你下一步。做完一项打一个勾，点开能看全部目标。" },
+    { target: ".panel", title: "点什么，这里就讲什么", text: "点房间、点人、点底部的卡片，右边会显示详情和能做的事，比如升级设备、看证据。" },
+  ];
+  let touring = false;
+  let tourStep = 0;
+  function startTour() {
+    touring = true;
+    tourStep = 0;
+    modal.hidden = true;
+    $("#tour").hidden = false;
+    showTourStep();
+  }
+  function showTourStep() {
+    const step = TOUR[tourStep];
+    const target = document.querySelector(step.target);
+    const tour = $("#tour");
+    const hole = tour.querySelector(".tour-hole");
+    const card = tour.querySelector(".tour-card");
+    const r = target.getBoundingClientRect();
+    const pad = 6;
+    Object.assign(hole.style, {
+      left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px`,
+    });
+    card.innerHTML = `<p class="eyebrow">第 ${tourStep + 1} / ${TOUR.length} 步</p><h3>${esc(step.title)}</h3><p>${esc(step.text)}</p>
+      <div class="actions"><button class="primary" type="button" data-tour="next">${tourStep === TOUR.length - 1 ? "开始玩" : "下一步"}</button>
+      <button class="ghost" type="button" data-tour="skip">跳过引导</button></div>`;
+    const cw = Math.min(340, window.innerWidth - 32);
+    let left = r.left + r.width / 2 - cw / 2;
+    left = Math.max(16, Math.min(window.innerWidth - cw - 16, left));
+    let top = r.bottom + 14;
+    if (top + 200 > window.innerHeight) top = Math.max(16, r.top - 214);
+    if (r.height > window.innerHeight * 0.6) top = Math.max(16, r.top + 24);
+    Object.assign(card.style, { left: `${left}px`, top: `${top}px`, width: `${cw}px` });
+    card.querySelector('[data-tour="next"]').addEventListener("click", () => {
+      tourStep += 1;
+      if (tourStep >= TOUR.length) endTour();
+      else showTourStep();
+    });
+    card.querySelector('[data-tour="skip"]').addEventListener("click", endTour);
+    card.querySelector('[data-tour="next"]').focus({ preventScroll: true });
+  }
+  function endTour() {
+    touring = false;
+    $("#tour").hidden = true;
+    try {
+      localStorage.setItem("drugstory-tour-done", "1");
+    } catch (err) {
+      void err;
+    }
+    maybeOpenModal();
+  }
+  window.addEventListener("resize", () => {
+    if (touring) showTourStep();
+  });
+
+  /* ---------- 伙伴图鉴 ---------- */
+  function openGallery() {
+    goal("gallery");
+    const cast = window.DrugstoryCast || [];
+    const employed = new Set(view.heroes.map((h) => h.id));
+    const groups = ["bio", "chem", "tox", "proc", "clinical"];
+    const box = $("#gallery");
+    box.innerHTML = `<div class="gallery-card" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+      <div class="gallery-head"><div><p class="eyebrow">20 位伙伴 · 见习 → 精英 → 大师 → 传奇</p><h2 id="gallery-title">伙伴图鉴</h2></div>
+      <button class="ghost" type="button" data-close>关闭</button></div>
+      ${groups
+        .map((g) => {
+          const people = cast.filter((c) => c.profession === g);
+          return `<section><h3>${esc(people[0]?.profession_name || g)}</h3><div class="gallery-grid">${people
+            .map(
+              (c) => `<button class="mate" type="button" data-mate="${c.id}" aria-expanded="false">
+                <canvas class="portrait xl" data-cast="${c.id}" aria-hidden="true"></canvas>
+                <span class="mate-text"><b>${esc(c.name)}</b><small>「${esc(c.nickname)}」 · ${esc(c.tier_name)}${employed.has(c.id) ? " · 在研究社" : ""}</small>
+                <span class="mate-line">${esc(c.story)}</span>
+                <span class="mate-more"><span>${esc(c.bio)}</span><span><b>${esc(c.signature.name)}</b>：${esc(c.signature.text)}</span><span>个人课题「${esc(c.quest)}」</span></span></span>
+              </button>`,
+            )
+            .join("")}</div></section>`;
+        })
+        .join("")}
+    </div>`;
+    box.hidden = false;
+    for (const c of box.querySelectorAll("canvas[data-cast]")) {
+      const person = cast.find((q) => q.id === c.dataset.cast);
+      scene.drawPortrait(c, person.look);
+    }
+    for (const b of box.querySelectorAll("[data-mate]")) {
+      b.addEventListener("click", () => b.setAttribute("aria-expanded", String(b.getAttribute("aria-expanded") !== "true")));
+    }
+    box.querySelector("[data-close]").addEventListener("click", closeGallery);
+    box.querySelector("[data-close]").focus({ preventScroll: true });
+  }
+  function closeGallery() {
+    $("#gallery").hidden = true;
   }
 
   /* ---------- 控件 ---------- */
@@ -530,7 +724,7 @@
     openModal(d.id);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.target.closest("input, textarea")) return;
+    if (e.target.closest("input, textarea") || touring || !$("#gallery").hidden) return;
     if (e.key === "Escape" && modalId) {
       const d = view.decisions.find((q) => q.id === modalId);
       if (d?.deferrable) act("defer", { decision: d.id });
@@ -546,6 +740,19 @@
   });
   window.addEventListener("resize", () => placeOverlays());
 
+  $("#help").addEventListener("click", startTour);
+  $("#open-gallery").addEventListener("click", openGallery);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("#gallery").hidden) closeGallery();
+  });
   setSpeed(1);
+  let seen = false;
+  try {
+    seen = localStorage.getItem("drugstory-tour-done") === "1";
+  } catch (err) {
+    void err;
+  }
+  touring = !seen;
   refresh([]);
+  if (!seen) startTour();
 })();

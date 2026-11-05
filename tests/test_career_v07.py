@@ -190,7 +190,7 @@ def test_wire_schema_type_generation_and_static_content_separation(tmp_path):
     import jsonschema
 
     root = Path(__file__).resolve().parents[1]
-    schema = json.loads((root / "design/api/state-v1.schema.json").read_text())
+    schema = json.loads((root / "design/api/state-v2.schema.json").read_text())
     session = GameSession(tmp_path / "contract.json")
     session.state = checkpoint()
     public = api.state(session.view())

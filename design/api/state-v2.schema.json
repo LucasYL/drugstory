@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/LucasYL/drugstory/api/state-v1",
+  "$id": "https://github.com/LucasYL/drugstory/api/state-v2",
   "title": "GameState",
   "type": "object",
   "properties": {
@@ -8,7 +8,7 @@
       "type": "string"
     },
     "api_version": {
-      "const": 1
+      "const": 2
     },
     "event_cursor": {
       "type": "integer"
@@ -31,7 +31,7 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "$ref": "#/$defs/RoomId"
           },
           "profession": {
             "type": "string"
@@ -57,6 +57,9 @@
           },
           "text": {
             "type": "string"
+          },
+          "upkeep": {
+            "type": "number"
           }
         },
         "required": [
@@ -66,7 +69,8 @@
           "level",
           "cost",
           "available",
-          "text"
+          "text",
+          "upkeep"
         ],
         "additionalProperties": false
       }
@@ -144,7 +148,10 @@
       "type": "boolean"
     },
     "heroes": {
-      "$ref": "#/$defs/JsonValue"
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Hero"
+      }
     },
     "roster": {
       "$ref": "#/$defs/JsonValue"
@@ -278,6 +285,15 @@
           "type": "null"
         }
       ]
+    },
+    "display_scale": {
+      "const": 10
+    },
+    "patents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Patent"
+      }
     }
   },
   "required": [
@@ -330,7 +346,9 @@
     "catalog",
     "revision",
     "token",
-    "saved_at"
+    "saved_at",
+    "display_scale",
+    "patents"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -383,6 +401,16 @@
             "character_promoted",
             "personal_completed",
             "equipment_upgraded",
+            "facility_upgraded",
+            "product_launched",
+            "service_completed",
+            "deal_signed",
+            "patent_filed",
+            "patent_granted",
+            "patent_expired",
+            "milestone_reached",
+            "award_won",
+            "legacy_reached",
             "cash_changed",
             "notice"
           ]
@@ -406,7 +434,7 @@
         "room": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/RoomId"
             },
             {
               "type": "null"
@@ -535,6 +563,12 @@
           "type": "integer"
         },
         "amounts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "planned": {
           "type": "object",
           "additionalProperties": {
             "type": "number"
@@ -734,6 +768,9 @@
         },
         "can_focus": {
           "$ref": "#/$defs/JsonValue"
+        },
+        "patent": {
+          "$ref": "#/$defs/JsonValue"
         }
       },
       "required": [
@@ -779,7 +816,256 @@
         "running_experiment",
         "future_base_cost",
         "outlook",
-        "can_focus"
+        "can_focus",
+        "patent"
+      ],
+      "additionalProperties": false
+    },
+    "RoomId": {
+      "enum": [
+        "room_bio",
+        "room_chem",
+        "room_proc",
+        "room_tox",
+        "room_clinical",
+        "room_academy"
+      ]
+    },
+    "Look": {
+      "type": "object",
+      "properties": {
+        "build": {
+          "enum": [
+            "slim",
+            "average",
+            "broad"
+          ]
+        },
+        "height": {
+          "type": "integer"
+        },
+        "age": {
+          "enum": [
+            "young",
+            "mid",
+            "senior"
+          ]
+        },
+        "skin": {
+          "type": "string"
+        },
+        "hair": {
+          "type": "string"
+        },
+        "hair_color": {
+          "type": "string"
+        },
+        "coat": {
+          "type": "boolean"
+        },
+        "top": {
+          "type": "string"
+        },
+        "top_color": {
+          "type": "string"
+        },
+        "pants": {
+          "type": "string"
+        },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accent": {
+          "type": "string"
+        },
+        "prop": {
+          "type": "string"
+        },
+        "idle": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "build",
+        "height",
+        "age",
+        "skin",
+        "hair",
+        "hair_color",
+        "coat",
+        "top",
+        "top_color",
+        "pants",
+        "accessories",
+        "accent",
+        "prop",
+        "idle"
+      ],
+      "additionalProperties": false
+    },
+    "Hero": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "profession": {
+          "enum": [
+            "bio",
+            "chem",
+            "tox",
+            "proc",
+            "clinical"
+          ]
+        },
+        "profession_name": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "integer"
+        },
+        "rank": {
+          "type": "integer"
+        },
+        "rank_name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "ability": {
+          "type": "number"
+        },
+        "members": {
+          "type": "integer"
+        },
+        "xp": {
+          "type": "integer"
+        },
+        "story": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "look": {
+          "$ref": "#/$defs/Look"
+        },
+        "room": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoomId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "activity": {
+          "enum": [
+            "make",
+            "test",
+            "service",
+            "study",
+            "idle"
+          ]
+        },
+        "busy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weekly_salary": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "nickname",
+        "profession",
+        "profession_name",
+        "tier",
+        "rank",
+        "rank_name",
+        "title",
+        "ability",
+        "members",
+        "xp",
+        "story",
+        "bio",
+        "look",
+        "room",
+        "activity",
+        "busy",
+        "weekly_salary"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      }
+    },
+    "Patent": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "filed": {
+          "type": "integer"
+        },
+        "granted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires": {
+          "type": "integer"
+        },
+        "expires_label": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "审查中",
+            "已授权",
+            "已到期"
+          ]
+        },
+        "on_market": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project",
+        "name",
+        "filed",
+        "granted",
+        "expires",
+        "expires_label",
+        "status",
+        "on_market"
       ],
       "additionalProperties": false
     }

@@ -20,6 +20,11 @@ PLANS = _RULES["PLANS"]
 EXPERIMENTS = _RULES["EXPERIMENTS"]
 TERMS = _RULES["TERMS"]
 PROMOTION = _RULES["PROMOTION"]
+ROOMS = {room["id"]: room for room in _RULES["ROOMS"]}
+COMMERCIAL = _RULES["COMMERCIAL"]
+PATENT = _RULES["PATENT"]
+EQUIPMENT_UPKEEP = _RULES["EQUIPMENT_UPKEEP"]
+PROFESSION_ROOM = {prof: room["id"] for room in _RULES["ROOMS"] for prof in room["professions"]}
 RANKS = {int(k): v for k, v in RANKS.items()}
 PROMOTION = {int(k): v for k, v in PROMOTION.items()}
 CLINICAL = {"I", "II", "III", "bridge", "confirm", "be"}
@@ -81,7 +86,12 @@ def validate():
     assert len([c for c in CATALOG.values() if c["kind"] == "innovative"]) == 288
     for c in CATALOG.values():
         assert c["kind"] in PATHS and c["peak"] > 0
+    assert set(PROFESSION_ROOM) == set(PROFESSIONS)
+    for hero in ROSTER.values():
+        assert hero["name"] and hero["nickname"] and hero["bio"] and hero["look"]
+    assert len({hero["name"] for hero in ROSTER.values()}) == len(ROSTER)
     for stage in STAGES.values():
+        assert stage["room"] in ROOMS
         assert stage["weeks"] > 0 and stage["cost"] > 0
         assert set(stage["roles"]) <= PROFESSIONS.keys()
         assert set(stage["limits"]) <= STATS.keys()

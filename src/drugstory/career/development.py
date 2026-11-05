@@ -1,10 +1,12 @@
 """Finite engineering work improves a candidate before clinical testing."""
 
+import copy
 import math
 
 from . import events, talents
-from .content import BUILD, PROFESSIONS, STAGES, STATS
+from .content import BUILD, EQUIPMENT_UPKEEP, PROFESSION_ROOM, PROFESSIONS, STAGES, STATS
 from .model import ability, available_money, check, hero, spend
+from .units import pts_map, signed
 
 FOCUSES = {
     "balanced": {"name": "均衡开发", "text": "按团队分工改善相关性质，保留平衡。"},
@@ -22,8 +24,32 @@ ROLE_OUTPUT = {
     "quality": {"proc": {"quality": 0.35}, "tox": {"safety": 0.35}},
     "design": {"proc": {"quality": 0.6, "exposure": 0.7}, "chem": {"safety": 0.45}, "bio": {"effect": 0.45}},
 }
-ROOMS = {key: "room_" + key for key in PROFESSIONS}
 EQUIPMENT_COST = [0, 800, 3000, 9000]
+# The more a candidate has already been tuned, the less each further batch moves it. The first
+# FREE points per property are untouched, so a junior team's work counts in full; heavy development
+# by a senior team runs into diminishing returns. The tally is public (it is the sum of the shown
+# batches), so the size of a batch never reveals the hidden truth.
+FREE = 6
+KNEE = 6
+
+
+def efficiency(developed):
+    return 1 / (1 + max(0.0, developed - FREE) / KNEE)
+
+
+def step(c, stat, amount, truth=True):
+    if amount > 0:
+        done = c.setdefault("developed", {}).get(stat, 0.0)
+        amount *= efficiency(done)
+        c["developed"][stat] = done + amount
+    if truth:
+        c["truth"][stat] = min(98, max(10, c["truth"][stat] + amount))
+    c["belief"][stat]["mean"] = min(98, max(10, c["belief"][stat]["mean"] + amount))
+    return amount
+
+
+def upkeep(s):
+    return EQUIPMENT_UPKEEP * sum(s["equipment"].values())
 
 
 def packages(s, p, ids, key):
@@ -81,23 +107,19 @@ def tick(s, p):
     while plan["completed"] < target:
         c = p["candidates"][p["chosen"]]
         for package in plan["packages"]:
-            detail = []
-            for stat, total in package["amounts"].items():
-                delta = total / 3
-                c["truth"][stat] = min(98, max(10, c["truth"][stat] + delta))
-                c["belief"][stat]["mean"] = min(98, max(10, c["belief"][stat]["mean"] + delta))
-                detail.append(f"{STATS[stat]}开发量 {delta:+.1f}")
+            amounts = {stat: step(c, stat, total / 3) for stat, total in package["amounts"].items()}
             events.emit(
                 s,
                 "work_completed",
                 actors=[package["actor"]],
                 project=p["id"],
-                room=ROOMS[package["role"]],
+                room=PROFESSION_ROOM[package["role"]],
                 data={
                     "name": hero(s, package["actor"])["name"],
                     "stage": STAGES[key]["name"],
-                    "detail": "、".join(detail),
-                    "amounts": {k: round(v / 3, 2) for k, v in package["amounts"].items()},
+                    "detail": "、".join(f"{STATS[k]} {signed(v)}" for k, v in amounts.items()),
+                    "amounts": pts_map(amounts),
+                    "batch": plan["completed"] + 1,
                 },
             )
         plan["completed"] += 1
@@ -114,7 +136,7 @@ def upgrade(s, profession):
     events.emit(
         s,
         "equipment_upgraded",
-        room=ROOMS[profession],
+        room=PROFESSION_ROOM[profession],
         data={"name": PROFESSIONS[profession] + "实验室", "level": level + 1},
     )
 
@@ -122,13 +144,16 @@ def upgrade(s, profession):
 def view(s):
     return [
         {
-            "id": ROOMS[k],
+            "id": PROFESSION_ROOM[k],
             "profession": k,
             "name": v + "实验室",
             "level": s["equipment"][k],
             "cost": EQUIPMENT_COST[s["equipment"][k] + 1] if s["equipment"][k] < 3 else None,
             "available": s["equipment"][k] < 3 and s["facility"] >= s["equipment"][k],
-            "text": "每级为本专业开发工作增加 2 点基础开发量；高级分子类型需要相应设备。",
+            "upkeep": EQUIPMENT_UPKEEP * s["equipment"][k],
+            "text": (
+                f"每级让本专业每次开发多 20 点基础开发量，运营费每周 ¥{EQUIPMENT_UPKEEP} 万；高级分子类型需要相应设备。"
+            ),
         }
         for k, v in PROFESSIONS.items()
         if k != "clinical"
@@ -136,13 +161,29 @@ def view(s):
 
 
 def projected(p, key, packages):
-    """Read-only remaining planned improvements, without looking at hidden truth."""
-    import copy
-
+    """Read-only: the public estimate after the remaining planned batches, without looking at hidden truth."""
     result = copy.deepcopy(p)
     c = result["candidates"][result["chosen"]]
     completed = c.get("build_plans", {}).get(key, {}).get("completed", 0)
-    for package in packages:
-        for stat, total in package["amounts"].items():
-            c["belief"][stat]["mean"] = min(98, max(10, c["belief"][stat]["mean"] + total * (3 - completed) / 3))
+    for _ in range(3 - completed):
+        for package in packages:
+            for stat, total in package["amounts"].items():
+                step(c, stat, total / 3, truth=False)
     return result
+
+
+def expected(p, key, packages):
+    """Planned contribution in points, after the diminishing-returns factor, for screens and previews."""
+    if p.get("chosen") is None or not packages:
+        return []
+    c = copy.deepcopy(p["candidates"][p["chosen"]])
+    completed = c.get("build_plans", {}).get(key, {}).get("completed", 0)
+    totals = [dict.fromkeys(package["amounts"], 0.0) for package in packages]
+    for _ in range(3 - completed):
+        for i, package in enumerate(packages):
+            for stat, total in package["amounts"].items():
+                totals[i][stat] += step(c, stat, total / 3, truth=False)
+    return [
+        {**package, "amounts": pts_map(total), "planned": pts_map(package["amounts"])}
+        for package, total in zip(packages, totals, strict=True)
+    ]
