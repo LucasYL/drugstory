@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f5f5ef" />
-    <title>新药物语 · 开发与证据版 v0.7</title>
+    <title>新药物语 · 一屏研究所 v0.9</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="/api-driver.js" defer></script>
     <script src="/honors.js" defer></script>
     <script src="/projects.js" defer></script>
     <script src="/app.js" defer></script>
@@ -15,11 +16,11 @@
       <a class="brand" href="/" aria-label="新药物语首页"
         ><span class="brand-mark">药</span
         ><span
-          >新药物语<small>开发与证据版 v0.7 · 普通角色，也有传奇之路</small></span
+          >新药物语<small>一屏研究所 v0.9 · 普通角色，也有传奇之路</small></span
         ></a
       >
       <div class="save-tools">
-        <span id="save-status">连接中…</span
+        <a class="button quiet" href="/scene">进入研究所场景</a><span id="save-status">连接中…</span
         ><button data-action="save" class="quiet">保存</button
         ><a class="button quiet" href="/api/save" download>导出存档</a
         ><button data-modal="help" class="icon-button" aria-label="玩法帮助">
@@ -33,7 +34,7 @@
       <div id="modal-body"></div>
     </dialog>
     <footer>
-      新药物语 · 开发与证据版 v0.7
+      新药物语 · 一屏研究所 v0.9
       <span>每次操作自动保存 · 关闭页面后，下次从这里继续</span>
     </footer>
   </body>

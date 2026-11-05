@@ -12,7 +12,7 @@ from .view import snapshot
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="新药物语 · 研究所版 v0.8")
+    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.9")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")

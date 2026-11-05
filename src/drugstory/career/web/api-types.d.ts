@@ -98,6 +98,7 @@ export type Project = {
   "outlook": JsonValue;
   "can_focus": JsonValue;
   "patent": JsonValue;
+  "scene": ProjectScene;
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -150,6 +151,15 @@ export type Patent = {
   "expires_label": string;
   "status": "\u5ba1\u67e5\u4e2d" | "\u5df2\u6388\u6743" | "\u5df2\u5230\u671f";
   "on_market": boolean;
+};
+
+export type ProjectScene = {
+  "room": RoomId;
+  "activity": "make" | "test" | "idle";
+  "total": number;
+  "elapsed": number;
+  "executor": "cro" | "internal";
+  "limits": { [key: string]: number };
 };
 
 export type GameState = {

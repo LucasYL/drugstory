@@ -19,7 +19,7 @@ from drugstory.career.model import load, new_game
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/institute-autosave.json")
+DEFAULT_SAVE = Path("saves/scene-autosave.json")
 
 
 class Conflict(ValueError):
@@ -87,7 +87,7 @@ class GameSession:
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8884) -> ThreadingHTTPServer:
+def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
@@ -101,7 +101,8 @@ def create_server(session: GameSession, port: int = 8884) -> ThreadingHTTPServer
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header(
                 "Content-Security-Policy",
-                "default-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+                "default-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; "
+                "object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
             )
             if download:
                 self.send_header("Content-Disposition", f'attachment; filename="{download}"')
@@ -132,7 +133,19 @@ def create_server(session: GameSession, port: int = 8884) -> ThreadingHTTPServer
                         "application/json; charset=utf-8",
                         download=f"drugstory-week-{session.state['week']}.json",
                     )
-            elif path in ("/", "/app.js", "/honors.js", "/projects.js", "/style.css"):
+            elif path in (
+                "/scene",
+                "/scene/",
+                "/scene/index.html",
+                "/scene/renderer.js",
+                "/scene/world.js",
+                "/scene/ui.js",
+                "/scene/style.css",
+            ):
+                name = "index.html" if path in ("/scene", "/scene/") else path.rsplit("/", 1)[-1]
+                kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
+                self.send_bytes((ASSETS / "scene" / name).read_bytes(), f"{kind}; charset=utf-8")
+            elif path in ("/", "/app.js", "/honors.js", "/projects.js", "/style.css", "/api-driver.js"):
                 name = {"/": "index.html"}.get(path, path.lstrip("/"))
                 kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
                 self.send_bytes((ASSETS / name).read_bytes(), f"{kind}; charset=utf-8")
@@ -173,8 +186,8 @@ def create_server(session: GameSession, port: int = 8884) -> ThreadingHTTPServer
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 研究所版 v0.8")
-    parser.add_argument("--port", type=int, default=8884)
+    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.9")
+    parser.add_argument("--port", type=int, default=8885)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")

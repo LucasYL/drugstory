@@ -1,0 +1,578 @@
+:root {
+  --scene: #e3e9e6;
+  --surface: #fffef9;
+  --accent: #286854;
+  --make: #b86720;
+  --test: #316ca3;
+  --ink: #26332e;
+}
+* {
+  box-sizing: border-box;
+}
+.scene-page {
+  margin: 0;
+  padding: 16px;
+  background: #f2f3ed;
+  color: var(--ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    "PingFang SC",
+    sans-serif;
+}
+.scene-header {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0 4px 14px;
+}
+.scene-header .brand {
+  font-size: 22px;
+  min-width: 210px;
+}
+.scene-header .brand small {
+  font-size: 11px;
+  display: block;
+}
+.scene-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+}
+#scene-metrics {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+}
+#scene-metrics b {
+  display: block;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.scene-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px;
+  background: #fffef9;
+  border: 1px solid #d8ddd4;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.scene-toolbar button,
+.scene-tools button,
+.scene-tools a {
+  padding: 7px 11px;
+  min-height: 34px;
+  font-size: 12px;
+}
+.clock {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+[aria-pressed="true"] {
+  background: #286854 !important;
+  color: white !important;
+}
+.institute {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  gap: 14px;
+  align-items: start;
+}
+.scene-stage {
+  position: sticky;
+  top: 12px;
+  height: min(68vh, 750px);
+  min-height: 450px;
+  border: 1px solid #cdd8ce;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--scene);
+}
+#scene-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+}
+#room-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.room-label {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  max-width: 170px;
+  padding: 6px 9px;
+  background: #fffffff0;
+  font-size: 12px;
+  text-align: left;
+  box-shadow: 0 2px 10px #213b2118;
+  line-height: 1.35;
+}
+.room-label small {
+  display: block;
+  font-size: 10px;
+  color: #56665f;
+  max-width: 155px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.room-label.pending {
+  border: 2px solid #ba7727;
+}
+#scene-goal {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  background: #fffef4ee;
+  border: 1px solid #b7c6b6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  pointer-events: auto;
+}
+#scene-goal b {
+  display: block;
+  font-size: 14px;
+}
+#scene-goal button {
+  padding: 4px 10px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.scene-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #405b52;
+  pointer-events: none;
+}
+.scene-legend span:first-child {
+  color: var(--make);
+}
+.scene-legend span:nth-child(2) {
+  color: var(--test);
+}
+.scene-legend small {
+  width: 100%;
+}
+#scene-toast {
+  position: absolute;
+  z-index: 3;
+  left: 15%;
+  right: 15%;
+  bottom: 55px;
+  background: #286854;
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px #1b322333;
+  white-space: pre-line;
+}
+.scene-panel {
+  min-width: 0;
+  max-height: 68vh;
+  overflow: auto;
+  background: #fffef9;
+  border: 1px solid #d8ddd4;
+  border-radius: 14px;
+  padding: 18px;
+  scrollbar-gutter: stable;
+}
+.scene-panel h2 {
+  font-size: 21px;
+}
+.scene-panel h3 {
+  font-size: 18px;
+}
+.scene-panel .card-grid,
+.scene-panel .candidate-grid,
+.scene-panel .hero-grid,
+.scene-panel .legacy-grid {
+  grid-template-columns: 1fr;
+}
+.scene-panel .project-card {
+  margin-top: 12px;
+  padding: 15px;
+}
+.scene-panel .evidence-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.scene-panel .business-totals,
+.scene-panel .knowledge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.scene-panel .actions {
+  gap: 8px;
+}
+.scene-panel button {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.scene-panel table {
+  font-size: 12px;
+}
+.scene-panel .section-head {
+  align-items: start;
+  flex-wrap: wrap;
+}
+.scene-nav {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 12px 0;
+}
+.scene-nav button {
+  flex: none;
+  font-size: 13px;
+  padding: 9px 15px;
+}
+.scene-nav button.active {
+  background: #286854;
+  color: white;
+}
+.scene-portrait {
+  width: 56px;
+  height: 66px;
+  flex: none;
+}
+.hero-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-detail canvas {
+  width: 90px;
+  height: 105px;
+}
+.scene-chip {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 8px;
+  min-width: 170px;
+  max-width: 230px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: #fffef9;
+  flex: none;
+}
+.scene-chip small {
+  display: block;
+  color: #667468;
+  font-size: 11px;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scene-chip b {
+  font-size: 14px;
+}
+#scene-people,
+#scene-projects {
+  display: flex;
+  gap: 9px;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+.scene-project {
+  min-width: 210px;
+  display: block;
+  padding: 10px;
+}
+.scene-project progress {
+  width: 100%;
+  height: 5px;
+}
+.scene-log {
+  margin: 8px 0;
+  font-size: 12px;
+}
+.scene-log ol {
+  max-height: 200px;
+  overflow: auto;
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.gallery-grid button {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+}
+.gallery-grid canvas {
+  width: 100px;
+  height: 115px;
+}
+.scene-page dialog {
+  max-width: min(850px, 96vw);
+}
+.scene-page dialog .hero-picker {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.scene-page #notice {
+  z-index: 1000;
+}
+.scene-page .muted {
+  line-height: 1.7;
+}
+.scene-panel p {
+  overflow-wrap: anywhere;
+}
+.scene-panel details {
+  margin: 10px 0;
+}
+.scene-panel .candidate h3 {
+  font-size: 16px;
+}
+.scene-panel .phase-track {
+  flex-wrap: wrap;
+}
+.scene-page button:focus-visible,
+.scene-page a:focus-visible {
+  outline: 3px solid #c47a26;
+  outline-offset: 3px;
+}
+@media (max-width: 1100px) {
+  .institute {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .scene-tools {
+    margin-left: 0;
+  }
+  .scene-header {
+    gap: 12px;
+  }
+}
+@media (max-width: 800px) {
+  .institute {
+    grid-template-columns: 1fr;
+  }
+  .scene-stage {
+    position: relative;
+    top: auto;
+    height: 440px;
+    min-height: 0;
+  }
+  .scene-panel {
+    max-height: 60vh;
+  }
+  .scene-page {
+    padding: 10px;
+  }
+  .scene-header {
+    align-items: flex-start;
+  }
+  #scene-metrics {
+    gap: 15px;
+  }
+  .scene-toolbar {
+    gap: 8px;
+  }
+  #clock-status {
+    font-size: 12px;
+  }
+  .room-label {
+    font-size: 10px;
+    max-width: 130px;
+  }
+  .room-label small {
+    max-width: 115px;
+    font-size: 9px;
+  }
+  #scene-goal {
+    font-size: 11px;
+    padding: 8px;
+  }
+  .scene-legend {
+    font-size: 10px;
+  }
+  .scene-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    background: #f2f3ed;
+  }
+  .scene-tools {
+    font-size: 10px;
+  }
+  .scene-tools a,
+  .scene-tools button {
+    font-size: 11px;
+    padding: 5px 7px;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scene: #182322;
+    --surface: #202c29;
+    --ink: #e2ebe4;
+  }
+  .scene-page {
+    background: #111b19;
+    color: var(--ink);
+  }
+  .scene-toolbar,
+  .scene-panel,
+  .scene-chip {
+    background: #202c29;
+    border-color: #40534a;
+  }
+  .scene-nav {
+    background: #111b19;
+  }
+  #scene-goal {
+    background: #23372df5;
+    border-color: #647e66;
+  }
+  .room-label {
+    background: #24372ff5;
+    color: #e2ebe4;
+  }
+  .room-label small,
+  .scene-chip small {
+    color: #adbcaf;
+  }
+  .scene-legend {
+    color: #b4c6b7;
+  }
+  .scene-page .muted {
+    color: #a8bbae;
+  }
+  .scene-page dialog {
+    background: #202c29;
+    color: #e2ebe4;
+  }
+  .scene-page button {
+    border-color: #53685a;
+  }
+  .scene-page .project-card,
+  .scene-page .candidate,
+  .scene-page .hint,
+  .scene-page .hero-card {
+    background: #25342d;
+    color: #e2ebe4;
+  }
+  .scene-page input,
+  .scene-page select {
+    color: #e2ebe4;
+    background: #18251f;
+  }
+  .scene-page th,
+  .scene-page td {
+    border-color: #465b4a;
+  }
+}
+.room-label {
+  display: block;
+}
+.room-label b {
+  display: block;
+  white-space: nowrap;
+  font-size: inherit;
+}
+.room-label small {
+  line-height: 1.4;
+}
+.scene-panel .muted,
+.scene-panel .project-kicker {
+  color: #65756a;
+}
+.scene-page .scene-tools button,
+.scene-page .clock button,
+.scene-page .scene-toolbar > div > button {
+  flex: none;
+}
+@media (prefers-color-scheme: dark) {
+  .scene-page button,
+  .scene-page .button {
+    background: #2d4238;
+    color: #e3eee5;
+    border-color: #607968;
+  }
+  .scene-page button:disabled {
+    opacity: 0.45;
+  }
+  .scene-page .primary,
+  .scene-page button.primary {
+    background: #377a58;
+    color: white;
+  }
+  .scene-page .scene-panel .muted,
+  .scene-page .scene-panel .project-kicker,
+  .scene-page .evidence-grid span,
+  .scene-page .evidence-grid small {
+    color: #b4c8b8;
+  }
+  .scene-page summary {
+    color: #adcfb5;
+  }
+  .scene-page .badge {
+    background: #344e3e;
+    color: #e0eadf;
+  }
+  .scene-page .stage-step,
+  .scene-page .phase-track span {
+    background: #304638;
+    color: #d9e4db;
+  }
+  .scene-page .phase-track .done {
+    background: #27543b;
+  }
+  .scene-page .scene-panel .good {
+    color: #a7d1af;
+  }
+}
+.room-label:active {
+  transform: translate(-50%, -50%);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #111b19;
+    --white: #24372f;
+    --light: #304638;
+    --soft: #304638;
+    --muted: #b4c8b8;
+    --line: #496453;
+    --green: #83b695;
+    --red: #efa89b;
+    --red-bg: #4c322f;
+    --amber: #e1be77;
+    --amber-bg: #443b27;
+  }
+  .scene-page .team-picker label,
+  .scene-page .hero-picker label,
+  .scene-page .legacy-won {
+    background: #304638;
+  }
+  .scene-page .brand-mark {
+    background: #355d46;
+    color: #e4eee5;
+  }
+}

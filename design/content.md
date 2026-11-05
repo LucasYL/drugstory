@@ -1,4 +1,4 @@
-# 当前内容结构 · v0.8
+# 当前内容结构 · v0.9
 
 唯一在用内容位于 `src/drugstory/career/data/`，由 `career/content.py` 加载并校验。旧 TOML 组合来源在 v0.3.0 tag 中可追溯，288 个组合的档位与理由已提取，运行时不再依赖旧引擎。
 
@@ -12,7 +12,7 @@
 
 创新项目编号通常为 `n_{target}__{modality}`；保留六个原有别名 n_lung、n_inflammation、n_lipid、n_resistance、n_reset、n_rna。这些别名现在同样代表真实组合，并非额外六个项目。共 297 个立项方向。
 
-角色资源按 `asset_id` 绑定。房间表固定为 room_bio、room_chem、room_proc、room_tox、room_clinical、room_academy 六间，每个阶段在 rules.json 里写明所在房间；事件里不再出现 room_lab。场景可以把几间合并画在同一个房间里（原型把药化和制剂画成一间）。
+角色资源按 `asset_id` 绑定。房间表固定为 room_bio、room_chem、room_proc、room_tox、room_clinical、room_academy 六间，每个阶段在 rules.json 里写明所在房间；事件里不再出现 room_lab。实际场景把药化和制剂合并；场地升级依次开放生物室、共研教室、大会与荣誉室。大会与荣誉室是展示空间，不增加引擎专业编号。未扩建时，生物和培训工作使用共享实验室或办公室，不限制原有玩法。
 
 ## 角色
 
@@ -24,7 +24,7 @@
 | 制剂与工艺 | 苏小禾「烘焙师」 | 江屿「晶体摄影师」 | 傅以宁「一月一针」 | 高铁峰「厂长」 |
 | 临床与统计 | 米可「曲线猫」 | 周默「数据侦探」 | 欧阳岚「军师」 | 陆观潮「观潮人」 |
 
-每位角色在 rules.json 里有 `story`（一句话）、`bio`（背景）和 `look`（外观）。`look` 的字段：体型 build、高矮 height、年龄段 age、肤色 skin、发型 hair 与发色 hair_color、是否穿白大褂 coat、上衣 top 与颜色 top_color、裤子 pants、配饰 accessories、配饰颜色 accent、手里的道具 prop、空闲时的小动作 idle。场景原型按这份数据画人；改了角色数据后运行 `uv run python design/tools/cast_js.py` 重新生成原型用的 cast.js。内部编号（beaker、pill……）沿用旧版，存档和代码不受改名影响。
+每位角色在 rules.json 里有 `story`（一句话）、`bio`（背景）和 `look`（外观）。`look` 的字段：体型 build、高矮 height、年龄段 age、肤色 skin、发型 hair 与发色 hair_color、是否穿白大褂 coat、上衣 top 与颜色 top_color、裤子 pants、配饰 accessories、配饰颜色 accent、手里的道具 prop、空闲时的小动作 idle。真实场景直接读取 `/api/content` 中的这份数据画人；历史原型在改了角色数据后运行 `uv run python design/tools/cast_js.py` 重新生成原型用的 cast.js。内部编号（beaker、pill……）沿用旧版，存档和代码不受改名影响。
 
 能力目前按工作贡献、候选线索、排程、带教四类机制区分，专业与适用阶段不同；不能宣称已有 20 套完全不同的交互。普通角色的成长、课题和履历保留价值，高阶招募不删除他们的成果。
 

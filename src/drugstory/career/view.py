@@ -127,7 +127,7 @@ def whereabouts(s):
         for hid in p["team"]:
             if hid not in heroes:
                 continue
-            building = p["status"] == "screening" or p.get("experiment") or key in BUILD
+            building = project_scene(p, key)["activity"] == "make"
             room = PROFESSION_ROOM[heroes[hid]["profession"]] if building else STAGES[key]["room"]
             found[hid] = {"room": room, "activity": "make" if building else "test", "task": p["id"]}
     for job in s["jobs"]:
@@ -203,6 +203,7 @@ def project_view(s, p):
             "ended",
         )
     } | {
+        "scene": project_scene(p, key),
         "kind_name": KINDS[p["kind"]],
         "results": [shown_result(r) for r in p["results"]],
         "patent": patent_view(s, p),
@@ -251,6 +252,25 @@ def project_view(s, p):
     }
 
 
+def project_scene(p, key):
+    """Only public timing and location, never a preview of future evidence."""
+    running = p["status"] in ("screening", "running", "checkpoint")
+    experiment = p.get("experiment")
+    screening = p["status"] == "screening"
+    weeks = 8 if screening else (experiment or p.get("execution") or {}).get("weeks", 0)
+    if experiment and experiment["kind"] == "rework":
+        weeks = 8
+    making = experiment["kind"] in ("refine", "rework") if experiment else screening or key in BUILD
+    return {
+        "room": STAGES[key]["room"],
+        "limits": pts_map(sc.limits(p, key)),
+        "activity": ("make" if making else "test") if running else "idle",
+        "total": weeks if running else 0,
+        "elapsed": max(0, weeks - p["left"]) if running else 0,
+        "executor": "cro" if running and key in CLINICAL and p["mode"] == "cro" and not experiment else "internal",
+    }
+
+
 def snapshot(s):
     occupied = busy(s)
     places = whereabouts(s)
@@ -281,7 +301,9 @@ def snapshot(s):
                 "story": ROSTER[h["id"]]["story"],
                 "trait": talents.trait(h["id"]),
                 "personal_project": stories.options(s, h),
-                "signature_value": talents.value(h),
+                "signature_value": pts(talents.value(h))
+                if talents.ABILITIES[h["id"]]["kind"] == "work"
+                else talents.value(h),
             }
         )
     roster = []
@@ -326,7 +348,7 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.8",
+        "version": "0.9",
         "api_version": 2,
         "display_scale": 10,
         "event_cursor": s["event_seq"],

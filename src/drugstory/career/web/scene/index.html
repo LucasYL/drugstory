@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>新药物语 · 一屏研究所 v0.9</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/scene/style.css" />
+    <script src="/api-driver.js" defer></script>
+    <script src="/honors.js" defer></script>
+    <script src="/projects.js" defer></script>
+    <script src="/scene/renderer.js" defer></script>
+    <script src="/scene/world.js" defer></script>
+    <script src="/scene/ui.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body class="scene-page">
+    <header class="scene-header">
+      <a class="brand" href="/scene"
+        ><span class="brand-mark">药</span
+        ><span>新药物语<small>一屏研究所 · v0.9 · 真实经营</small></span></a
+      >
+      <div id="scene-metrics">连接研究所…</div>
+      <div class="scene-tools">
+        <span id="save-status">连接中…</span
+        ><button data-scene="reconnect">重新连接</button
+        ><a href="/" class="button quiet">文字手记</a
+        ><a href="/api/save" download class="button quiet">导出存档</a
+        ><button data-scene="help">怎么开始</button>
+      </div>
+    </header>
+    <div class="scene-toolbar">
+      <div class="clock" aria-label="时间控制">
+        <button data-speed="0" aria-pressed="true">暂停</button
+        ><button data-speed="1" aria-pressed="false">1×</button
+        ><button data-speed="2" aria-pressed="false">2×</button
+        ><button data-speed="4" aria-pressed="false">4×</button
+        ><button data-scene="step">推进 1 周</button
+        ><button data-scene="next">下一件事</button>
+      </div>
+      <span id="clock-status" role="status">已暂停</span>
+      <div>
+        <button data-style="calm" aria-pressed="true">沉稳</button
+        ><button data-style="bright" aria-pressed="false">明快</button
+        ><button data-scene="gallery">伙伴图鉴</button>
+      </div>
+    </div>
+    <main class="institute">
+      <section class="scene-stage" aria-label="可交互研究所">
+        <div id="scene-goal" aria-live="polite"></div>
+        <canvas
+          id="scene-canvas"
+          aria-label="点击房间或人物查看经营操作"
+        ></canvas>
+        <div id="room-labels"></div>
+        <div id="scene-toast" role="status" hidden></div>
+        <div class="scene-legend">
+          <span>橙 · 开发改善药物</span><span>蓝 · 验证收集证据</span
+          ><small>画面最多显示两位成员代表；实际人数见人物卡</small>
+        </div>
+      </section>
+      <aside id="app" class="scene-panel"><p>正在载入进度…</p></aside>
+    </main>
+    <nav class="scene-nav" aria-label="经营菜单">
+      <button data-tab="pipeline">研发项目</button
+      ><button data-tab="characters">伙伴养成</button
+      ><button data-tab="services">技术服务</button
+      ><button data-tab="market">产品与授权</button
+      ><button data-tab="competition">产业动态</button
+      ><button data-tab="honors">大会与荣誉</button
+      ><button data-tab="journal">经营复盘</button>
+    </nav>
+    <section id="scene-people" aria-label="伙伴快捷栏"></section>
+    <section id="scene-projects" aria-label="项目快捷栏"></section>
+    <details class="scene-log">
+      <summary>研究所日志</summary>
+      <ol id="scene-journal"></ol>
+    </details>
+    <div id="notice" role="alert" hidden></div>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div id="modal-body"></div>
+    </dialog>
+  </body>
+</html>

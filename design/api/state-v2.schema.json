@@ -771,6 +771,9 @@
         },
         "patent": {
           "$ref": "#/$defs/JsonValue"
+        },
+        "scene": {
+          "$ref": "#/$defs/ProjectScene"
         }
       },
       "required": [
@@ -817,7 +820,8 @@
         "future_base_cost",
         "outlook",
         "can_focus",
-        "patent"
+        "patent",
+        "scene"
       ],
       "additionalProperties": false
     },
@@ -1066,6 +1070,48 @@
         "expires_label",
         "status",
         "on_market"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectScene": {
+      "type": "object",
+      "properties": {
+        "room": {
+          "$ref": "#/$defs/RoomId"
+        },
+        "activity": {
+          "enum": [
+            "make",
+            "test",
+            "idle"
+          ]
+        },
+        "total": {
+          "type": "integer"
+        },
+        "elapsed": {
+          "type": "integer"
+        },
+        "executor": {
+          "enum": [
+            "cro",
+            "internal"
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "room",
+        "activity",
+        "total",
+        "elapsed",
+        "executor",
+        "limits"
       ],
       "additionalProperties": false
     }

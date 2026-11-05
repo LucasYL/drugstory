@@ -1,7 +1,19 @@
+const driver = new window.DrugstoryApiDriver();
 let staticContent;
 function hydrate(data) {
- const library = new Map(staticContent.catalog.map(c=>[c.key,c]));
- return {...staticContent,...data,catalog:data.catalog.map(c=>({...library.get(c.key),...c,requirements:c.requirements.map((ok,i)=>({ok,text:library.get(c.key).requirement_labels[i]}))}))};
+  const library = new Map(staticContent.catalog.map((c) => [c.key, c]));
+  return {
+    ...staticContent,
+    ...data,
+    catalog: data.catalog.map((c) => ({
+      ...library.get(c.key),
+      ...c,
+      requirements: c.requirements.map((ok, i) => ({
+        ok,
+        text: library.get(c.key).requirement_labels[i],
+      })),
+    })),
+  };
 }
 const $ = (selector) => document.querySelector(selector);
 let state,
@@ -43,22 +55,7 @@ async function send(name, args = {}) {
   requestBusy = true;
   const priorFestivalYear = state?.honors?.festivals.at(-1)?.year || 0;
   try {
-    const response = await fetch("/api/action", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Game-Token": state.token,
-      },
-      body: JSON.stringify({ name, args, revision: state.revision, request_id: crypto.randomUUID() }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      if (data.state) {
-        state = hydrate(data.state);
-        render();
-      }
-      throw new Error(data.error);
-    }
+    const data = await driver.act(name, args);
     state = hydrate(data);
     $("#modal").close();
     render();
@@ -66,6 +63,11 @@ async function send(name, args = {}) {
     if ((data.honors.festivals.at(-1)?.year || 0) > priorFestivalYear)
       showModal("ceremony");
   } catch (error) {
+    if (driver.view()) {
+      state = hydrate(driver.view());
+      render();
+    }
+    window.DrugstorySceneUI?.pause();
     notice(error.message, true);
   } finally {
     requestBusy = false;
@@ -75,6 +77,10 @@ function evidence(c) {
   return `<div class="evidence-grid">${c.evidence.map((x) => `<div><span>${esc(x.name)}</span><strong>${x.low}–${x.high}</strong><small>${x.observations} 次观察 · 估计范围</small></div>`).join("")}</div>`;
 }
 function render() {
+  if (window.DrugstorySceneUI) {
+    window.DrugstorySceneUI.render(state);
+    return;
+  }
   const s = state,
     f = s.facility;
   $("#app").innerHTML = `<main class="shell">
@@ -249,6 +255,7 @@ function formFrame(type, title, body, id = "") {
   return `<h2 id="modal-title">${esc(title)}</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><form data-form="${type}" data-id="${esc(id)}">${body}<div class="form-actions"><button type="button" data-close>返回</button><button class="primary" type="submit">确认</button></div><p class="form-error" role="alert"></p></form>`;
 }
 function showModal(type, id = "") {
+  window.DrugstorySceneUI?.pause();
   const originalProject = state.projects.find((p) => p.id === id);
   const p =
       originalProject?.next_stage && type === "phase"
@@ -260,8 +267,21 @@ function showModal(type, id = "") {
     html = formFrame(
       type,
       "新建研究计划",
-      `${catalogPicker()}<div id="catalog-note"></div><label>开发侧重<select name="work_focus">${Object.entries(state.work_focuses).map(([k,v])=>`<option value="${k}">${esc(v.name)} · ${esc(v.text)}</option>`).join("")}</select></label><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。组合适配程度在筛选后记录进手记。</p>${teamPicker(state.heroes.filter(h=>!h.busy && ["proc","chem"].includes(h.profession)).slice(0,2).map(h=>h.id))}`,
-
+      `${catalogPicker()}<div id="catalog-note"></div><label>开发侧重<select name="work_focus">${Object.entries(
+        state.work_focuses,
+      )
+        .map(
+          ([k, v]) =>
+            `<option value="${k}">${esc(v.name)} · ${esc(v.text)}</option>`,
+        )
+        .join(
+          "",
+        )}</select></label><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。组合适配程度在筛选后记录进手记。</p>${teamPicker(
+        state.heroes
+          .filter((h) => !h.busy && ["proc", "chem"].includes(h.profession))
+          .slice(0, 2)
+          .map((h) => h.id),
+      )}`,
     );
   if (type === "phase")
     html = formFrame(
@@ -387,7 +407,7 @@ function showModal(type, id = "") {
         )}</select></label><p>模式开局后固定。当前进度先备份到本地，新版使用独立存档。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
     );
   if (type === "help")
-    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。开发阶段由专业与成员共同改善候选；临床阶段只收集证据。人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>当前版本的时间、指标和经济数值为游戏规则，流程参考研发逻辑。8880 荣誉版保留独立运行。本版在 8883 使用独立存档；偏写实场景目前仅为视觉原型。</p>`;
+    html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。开发阶段由专业与成员共同改善候选；临床阶段只收集证据。人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>时间、指标和经济数值是游戏规则。场景与文字入口共用同一存档与真实引擎。场景遇到待决策、年度大会或后台切换会暂停；每次操作保存成功后才更新。</p>`;
   $("#modal-body").innerHTML = html;
   if (!$("#modal").open) $("#modal").showModal();
   if (type === "phase") updatePreview();
@@ -516,7 +536,8 @@ function updateNotes() {
       (c) => c.key === new FormData(cf).get("catalog"),
     );
     if (c) {
-      cf.querySelector('button[type="submit"]').disabled = !c.unlocked || c.occupied;
+      cf.querySelector('button[type="submit"]').disabled =
+        !c.unlocked || c.occupied;
       const design = cf.elements.design;
       design.disabled = !c.product_profile;
       if (!c.product_profile) design.value = "standard";
@@ -568,9 +589,10 @@ document.addEventListener("change", (event) => {
   if (event.target.name === "teacher") updateMentor();
   updateNotes();
 });
-fetch("/api/content").then(r=>r.json()).then(c=>{staticContent=c;return fetch("/api/state");})
-  .then((r) => r.json())
+driver
+  .connect()
   .then((data) => {
+    staticContent = driver.content;
     state = hydrate(data);
     render();
     $("#save-status").textContent = "本地进度已载入";
