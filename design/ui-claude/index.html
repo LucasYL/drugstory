@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>新药物语场景原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">药</span>
+      <div class="brand-text"><strong>新药物语</strong><small>星火研究社 · 场景原型（示例数据）</small></div>
+    </div>
+    <dl class="stats">
+      <div><dt>时间</dt><dd id="date">第 3 年 · 第 6 周</dd></div>
+      <div><dt>现金</dt><dd id="cash">¥2,600 万</dd></div>
+      <div><dt>本周</dt><dd id="flow">¥0 万/周</dd></div>
+    </dl>
+    <div class="controls">
+      <button class="pending" id="pending" type="button" hidden>1 件事待决定</button>
+      <div class="clock" role="group" aria-label="时间速度">
+        <button type="button" data-speed="0" aria-pressed="false" title="暂停（空格）"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2.5" width="3.4" height="11" rx="1"/><rect x="9.6" y="2.5" width="3.4" height="11" rx="1"/></svg><span class="sr">暂停</span></button>
+        <button type="button" data-speed="1" aria-pressed="true" title="1×（按 1）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg><span class="sr">一倍速</span></button>
+        <button type="button" data-speed="2" aria-pressed="false" title="2×（按 2）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3v10l6.5-5zM8.5 3v10l6.5-5z"/></svg><span class="sr">两倍速</span></button>
+        <button type="button" data-speed="4" aria-pressed="false" title="4×（按 3）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M0.5 4v8l4.8-4zM5.6 4v8l4.8-4zM10.7 4v8l4.8-4z"/></svg><span class="sr">四倍速</span></button>
+      </div>
+      <span class="clock-state" id="clock-state" data-state="running">运行中</span>
+      <div class="style-switch" role="group" aria-label="画风">
+        <button type="button" data-style="calm" aria-pressed="true">沉稳</button>
+        <button type="button" data-style="bright" aria-pressed="false">明快</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="scene" aria-label="研究所场景，可以点房间和人物">
+      <canvas id="canvas"></canvas>
+      <div class="scene-labels" id="labels"></div>
+      <p class="scene-legend"><span class="kind" data-kind="make">做</span>团队把药做好 <span class="kind" data-kind="test">测</span>数据揭晓真相</p>
+      <ol class="ticker" id="ticker" aria-label="最近发生的事"></ol>
+      <div class="notice" id="notice" role="status" hidden></div>
+      <div class="modal" id="modal" hidden></div>
+    </section>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </main>
+
+  <footer class="dock">
+    <div class="people" id="people" aria-label="伙伴"></div>
+    <div class="projects" id="projects" aria-label="项目"></div>
+  </footer>
+</div>
+<script src="scene.js"></script>
+<script src="sim.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
