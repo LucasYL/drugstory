@@ -1,5 +1,6 @@
 """The HTTPS mount protects the shared save and keeps requests inside its prefix."""
 
+import base64
 import json
 import threading
 from contextlib import closing
@@ -10,7 +11,9 @@ from drugstory.career.server import GameSession, create_server
 
 def test_hosted_game_assets_and_shared_save(tmp_path):
     save = tmp_path / "hosted.json"
-    server = create_server(GameSession(save), 0, public_url="https://example.test/game/", credentials="user:pass")
+    server = create_server(
+        GameSession(save), 0, public_url="https://example.test/game/", credentials="user:pass\npeer:example"
+    )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     auth = {"Host": "example.test", "Authorization": "Basic dXNlcjpwYXNz"}
@@ -43,6 +46,17 @@ def test_hosted_game_assets_and_shared_save(tmp_path):
         second = json.loads(request("GET", "/game/api/state", auth)[2])
         assert second["week"] == GameSession(save).state["week"] == first["week"] + 1
         assert request("POST", "/game/api/action", mutation, body)[0] == 409
+        peer_auth = auth | {"Authorization": "Basic " + base64.b64encode(b"peer:example").decode()}
+        peer = json.loads(request("GET", "/game/api/state", peer_auth)[2])
+        assert peer["week"] == first["week"] and peer["token"] != first["token"]
+        peer_mutation = mutation | peer_auth
+        assert request("POST", "/game/api/action", peer_mutation, body)[0] == 403
+        peer_mutation["X-Game-Token"] = peer["token"]
+        peer_body = json.dumps({"name": "advance", "args": {"weeks": 4}, "revision": peer["revision"]})
+        assert request("POST", "/game/api/action", peer_mutation, peer_body)[0] == 200
+        peer_save = GameSession(tmp_path / "hosted-accounts" / "peer.json").state
+        assert peer_save["week"] == 4 and GameSession(save).state["week"] == 1
+        assert json.loads(request("GET", "/game/api/save", peer_auth)[2])["week"] == 4
     finally:
         server.shutdown()
         server.server_close()

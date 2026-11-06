@@ -95,7 +95,7 @@ def create_server(
 ) -> ThreadingHTTPServer:
     public = urlsplit(public_url)
     prefix = public.path.rstrip("/")
-    authorization = b""
+    accounts: dict[bytes, GameSession] = {}
     if public_url:
         if (
             public.scheme != "https"
@@ -103,10 +103,33 @@ def create_server(
             or not re.fullmatch(r"(?:/[a-zA-Z0-9_-]+)+", prefix)
             or public.query
             or public.fragment
-            or not re.fullmatch(r"[!-9;-~]+:[!-~]+", credentials)
         ):
-            raise ValueError("线上模式需要 HTTPS 子路径与非空的账号密码")
-        authorization = base64.b64encode(credentials.encode("ascii"))
+            raise ValueError("线上模式需要 HTTPS 子路径")
+        lines = [line for line in credentials.splitlines() if line]
+        if not lines:
+            raise ValueError("线上模式需要至少一个账号")
+        usernames = set()
+        for i, line in enumerate(lines):
+            username, _, _ = line.partition(":")
+            if (
+                not re.fullmatch(r"[!-9;-~]+:[!-~]+", line)
+                or (i and not re.fullmatch(r"[a-zA-Z0-9_-]+", username))
+                or username.casefold() in usernames
+            ):
+                raise ValueError("账号格式错误或用户名重复")
+            usernames.add(username.casefold())
+        save_dir = session.path.with_name(f"{session.path.stem}-accounts")
+        for i, line in enumerate(lines):
+            username = line.split(":", 1)[0]
+            account = session
+            if i:
+                account = GameSession(
+                    save_dir / f"{username}.json",
+                    seed=session.state["seed"],
+                    scenario=session.state["scenario"],
+                    difficulty=session.state["difficulty"],
+                )
+            accounts[base64.b64encode(line.encode("ascii"))] = account
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -134,7 +157,7 @@ def create_server(
         def send_json(self, data, status=200):
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), "application/json; charset=utf-8", status)
 
-        def route(self) -> str | None:
+        def route(self) -> tuple[str, GameSession] | None:
             host = self.headers.get("Host", "")
             allowed = (
                 {public.netloc}
@@ -155,16 +178,19 @@ def create_server(
             if prefix and not path.startswith(f"{prefix}/"):
                 self.send_json({"error": "页面不存在"}, 404)
                 return None
-            if authorization:
+            account = session
+            if public_url:
                 scheme, _, value = self.headers.get("Authorization", "").partition(" ")
-                if scheme.lower() != "basic" or not hmac.compare_digest(value.encode("latin-1"), authorization):
+                key = value.encode("latin-1") if scheme.lower() == "basic" else b""
+                account = next((owner for auth, owner in accounts.items() if hmac.compare_digest(key, auth)), None)
+                if account is None:
                     self.send_response(401)
                     self.send_header("WWW-Authenticate", 'Basic realm="Drugstory", charset="UTF-8"')
                     self.send_header("Cache-Control", "no-store")
                     self.send_header("Content-Length", "0")
                     self.end_headers()
                     return None
-            return path[len(prefix) :]
+            return path[len(prefix) :], account
 
         def asset(self, name: str):
             path = ASSETS / name
@@ -175,9 +201,10 @@ def create_server(
             self.send_bytes(data, f"{kind}; charset=utf-8")
 
         def do_GET(self):
-            path = self.route()
-            if path is None:
+            route = self.route()
+            if route is None:
                 return
+            path, session = route
             if path == "/api/state":
                 self.send_json(api.state(session.view()))
             elif path == "/api/content":
@@ -211,9 +238,10 @@ def create_server(
                 self.send_json({"error": "页面不存在"}, 404)
 
         def do_POST(self):
-            path = self.route()
-            if path is None:
+            route = self.route()
+            if route is None:
                 return
+            path, session = route
             if self.headers.get("X-Game-Token") != session.token:
                 self.send_json({"error": "连接已更新，请刷新页面后继续"}, 403)
                 return
@@ -253,7 +281,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     parser.add_argument("--public-url", default="", help="HTTPS 反代入口，例如 https://example.com/game/")
-    parser.add_argument("--auth-file", type=Path, help="线上登录文件，内容为一行 用户名:密码")
+    parser.add_argument("--auth-file", type=Path, help="线上登录文件，每行一个 用户名:密码。首个账号使用指定存档。")
     args = parser.parse_args(argv)
     try:
         session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty)

@@ -41,9 +41,9 @@ uv run drugstory --scenario foundation --seed 42
 
 ## 跨设备试玩
 
-v0.10.1 支持挂在 HTTPS 子路径上。试玩入口为 [researchbuddy.cc/game/](https://researchbuddy.cc/game/)，从电脑和手机使用同一游戏账号登录时，共用服务端存档。多个设备同时操作会触发版本冲突提示，重新读取进度后再决定。
+v0.10.1 支持挂在 HTTPS 子路径上。试玩入口为 [researchbuddy.cc/game/](https://researchbuddy.cc/game/)，从电脑和手机使用同一游戏账号登录时，共用服务端存档。v0.10.2 支持多个账号，各有独立进度。多个设备同时操作会触发版本冲突提示，重新读取进度后再决定。
 
-自行部署时，先在仓库外准备权限为 600 的登录文件，写一行 `用户名:密码`。用反向代理终止 TLS，保留外部 Host 和原始路径，转发至本机端口：
+自行部署时，先在仓库外准备权限为 600 的登录文件，每行写一个 `用户名:密码`。首行账号使用 `--save-path` 指定的原存档，其余账号用旁边的 `<存档名>-accounts` 目录。切换账号时可以打开新的无痕窗口。用反向代理终止 TLS，保留外部 Host 和原始路径，转发至本机端口：
 
 ```bash
 uv run drugstory-web --port 8902 --public-url https://example.com/game/ \
