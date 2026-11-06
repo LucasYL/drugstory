@@ -39,6 +39,19 @@ uv run drugstory --scenario foundation --seed 42
 
 **v0.10 沿用 v8 存档格式，v0.8、v0.9 的存档都能读。** 如要续玩，先手动复制存档，再用独立路径加载；不要让两个服务同时写同一文件。不会自动迁移、覆盖或推进旧版玩家存档。服务只监听本机。
 
+## 跨设备试玩
+
+v0.10.1 支持挂在 HTTPS 子路径上。试玩入口为 [researchbuddy.cc/game/](https://researchbuddy.cc/game/)，从电脑和手机使用同一游戏账号登录时，共用服务端存档。多个设备同时操作会触发版本冲突提示，重新读取进度后再决定。
+
+自行部署时，先在仓库外准备权限为 600 的登录文件，写一行 `用户名:密码`。用反向代理终止 TLS，保留外部 Host 和原始路径，转发至本机端口：
+
+```bash
+uv run drugstory-web --port 8902 --public-url https://example.com/game/ \
+  --auth-file /path/to/private/login.txt --save-path saves/hosted-autosave.json
+```
+
+线上模式的子路径首页显示场景，`/game/text` 是文字版。游戏资源和 API 都在同一前缀下，游戏服务绑定回环地址。通过独立保存路径保留跨设备进度。
+
 ## 本版变化
 
 - **点得少：** 同一个仿制药从立项到上市，v0.9 要点 33 次，现在按「下一件事」14 次，开 4× 只要 10 次。立项、开工、继续、补正、上市都不用再开表单；表单仍在「调整方案」里。

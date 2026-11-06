@@ -163,7 +163,9 @@ def test_new_scene_assets_are_served_same_origin(tmp_path):
             result.read()
         client.request("GET", "/scene")
         page = client.getresponse().read().decode()
-        assert "/scene/figures.js" in page and "/scene/panels.js" in page and 'data-style="calm"' not in page
+        assert '<base href="/" />' in page
+        assert 'src="scene/figures.js"' in page and 'src="scene/panels.js"' in page
+        assert 'data-style="calm"' not in page
     finally:
         client.close()
         server.shutdown()

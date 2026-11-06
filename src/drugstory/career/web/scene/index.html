@@ -1,24 +1,25 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+    <base href="/" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>新药物语 · 一屏研究所</title>
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/scene/style.css" />
-    <script src="/api-driver.js" defer></script>
-    <script src="/honors.js" defer></script>
-    <script src="/projects.js" defer></script>
-    <script src="/scene/figures.js" defer></script>
-    <script src="/scene/renderer.js" defer></script>
-    <script src="/scene/world.js" defer></script>
-    <script src="/scene/panels.js" defer></script>
-    <script src="/scene/ui.js" defer></script>
-    <script src="/app.js" defer></script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="scene/style.css" />
+    <script src="api-driver.js" defer></script>
+    <script src="honors.js" defer></script>
+    <script src="projects.js" defer></script>
+    <script src="scene/figures.js" defer></script>
+    <script src="scene/renderer.js" defer></script>
+    <script src="scene/world.js" defer></script>
+    <script src="scene/panels.js" defer></script>
+    <script src="scene/ui.js" defer></script>
+    <script src="app.js" defer></script>
   </head>
   <body class="scene-page">
     <header class="topbar">
-      <a class="brand" href="/scene" title="新药物语 v0.10"
+      <a class="brand" href="scene" title="新药物语 v0.10"
         ><span class="brand-mark">药</span><span class="brand-name">新药物语</span></a
       >
       <div id="scene-metrics" class="metrics-bar">连接研究所…</div>
@@ -48,8 +49,8 @@
           <summary aria-label="更多操作">⋯</summary>
           <div>
             <span id="save-status">连接中…</span>
-            <a href="/" class="button quiet">文字版</a>
-            <a href="/api/save" download class="button quiet">导出存档</a>
+            <a href="text" class="button quiet">文字版</a>
+            <a href="api/save" download class="button quiet">导出存档</a>
             <button data-scene="reconnect">重新连接</button>
           </div>
         </details>
