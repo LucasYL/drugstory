@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from . import (
+    assist,
     challenge,
     competition,
     development,
@@ -39,8 +40,11 @@ from .content import (
     STATS,
     TERMS,
 )
-from .model import ACTIVE, DECISIONS, ability, busy, check, committed, date, payroll
+from .model import ACTIVE, DECISIONS, ability, busy, check, committed, date, make_hero, payroll
 from .units import pts, pts_map
+
+recommended_team = assist.recommended_team
+chance_range = assist.chance_range
 
 STATUS = {
     "screening": "筛选中",
@@ -74,30 +78,6 @@ def evidence(c, kind="innovative"):
         }
         for stat, name in names.items()
     ]
-
-
-def recommended_team(s, p):
-    stage = sc.stage_key(p)
-    occupied = busy(s)
-    available = [h for h in s["heroes"] if h["employed"] and h["id"] not in occupied]
-    result = []
-    for role in STAGES[stage]["roles"]:
-        options = [h for h in available if h["profession"] == role]
-        if options:
-            result.append(max(options, key=ability)["id"])
-    mode = "cro" if stage in CLINICAL and not any(h["profession"] == "clinical" for h in available) else "internal"
-    if (
-        stage in CLINICAL
-        and engine.internal_usage(s) >= FACILITIES[s["facility"]]["slots"]
-        and not (p["clinical_started"] and p["mode"] == "internal")
-    ):
-        mode = "cro"
-    return result, mode
-
-
-def chance_range(probability):
-    mid = round(probability * 100)
-    return f"约 {max(0, mid - 8)}–{min(99, mid + 8)}%"
 
 
 def shown_result(r):
@@ -148,7 +128,8 @@ def project_view(s, p):
     key = sc.stage_key(p)
     ids, mode = recommended_team(s, p)
     estimates = []
-    if p["chosen"] is not None:
+    # 方案估计只给等待开工的阶段算；结束和进行中的项目用不到，长局里能省下大部分快照时间
+    if p["chosen"] is not None and p["status"] == "ready":
         for plan in PLANS:
             if plan == "focused" and (key not in ("II", "III") or not sc.focused_available(s, p)):
                 continue
@@ -246,8 +227,12 @@ def project_view(s, p):
         "future_base_cost": sum(
             sc.plan_phase(s, p, [], key=k, mode="cro" if k in CLINICAL else "internal")["cost"]
             for k in PATHS[p["kind"]][p["index"] :]
-        ),
-        "outlook": chance_range(sc.outlook(p)) if p["chosen"] is not None else "尚未选定候选",
+        )
+        if p["status"] in ACTIVE
+        else 0,
+        "outlook": chance_range(sc.outlook(p))
+        if p["chosen"] is not None and p["status"] in ACTIVE
+        else ("尚未选定候选" if p["chosen"] is None else "已结束"),
         "can_focus": sc.focused_available(s, p),
     }
 
@@ -311,9 +296,13 @@ def snapshot(s):
         if any(h["id"] == key and h["employed"] for h in s["heroes"]):
             continue
         checks = e.recruit_requirements(s, key)
+        recruit = make_hero(key)
         roster.append(
             {
                 **c,
+                "weekly_salary": round(
+                    1.3 + recruit["rank"] * 0.65 + ability(recruit) * 0.018 + recruit["members"] * 0.42, 1
+                ),
                 "profession_name": PROFESSIONS[c["profession"]],
                 "rank_name": RANKS[c["tier"]],
                 "title": RANKS[c["tier"]] + "·" + c["name"],
@@ -348,7 +337,7 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.9",
+        "version": "0.10",
         "api_version": 2,
         "display_scale": 10,
         "event_cursor": s["event_seq"],
@@ -388,7 +377,7 @@ def snapshot(s):
         "heroes": heroes,
         "roster": roster,
         "catalog": catalogs,
-        "projects": [project_view(s, p) for p in s["projects"]],
+        "projects": [{**project_view(s, p), "quick": assist.quick(s, p)} for p in s["projects"]],
         "products": [
             {**d, "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None}
             for d in s["products"]
@@ -399,6 +388,7 @@ def snapshot(s):
         "honors": honors.view(s),
         "work_focuses": development.FOCUSES,
         "orders": e.orders(s),
+        "assist": assist.view(s),
         "jobs": s["jobs"],
         "journal": s["journal"][-30:],
         "income": s["income"],
@@ -408,6 +398,7 @@ def snapshot(s):
         "stats": STATS,
         "experiments": EXPERIMENTS,
         "game_over": s["game_over"],
+        "negative_months": s["negative_months"],
         "career_done": s["career_done"],
         "pending": sum(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]),
     }

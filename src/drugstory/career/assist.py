@@ -1,0 +1,190 @@
+"""Smart defaults so a player can act in one click.
+
+Everything here reads public state only: who is free, abilities, ranks and public beliefs.
+Nothing is mutated. A one-click plan is tried on a copy through ``engine.execute`` — the
+same entry the web page, CLI and simulations use — so a button is only offered when the
+command would really succeed, and its weeks, cost and chance are the ones the engine uses.
+"""
+
+from __future__ import annotations
+
+from . import economy as e
+from . import science as sc
+from .content import CLINICAL, FACILITIES, PROFESSIONS, STAGES
+from .model import ability, busy
+
+
+def chance_range(probability):
+    mid = round(probability * 100)
+    return f"约 {max(0, mid - 8)}–{min(99, mid + 8)}%"
+
+
+def free_heroes(s):
+    occupied = busy(s)
+    return [h for h in s["heroes"] if h["employed"] and h["id"] not in occupied]
+
+
+def recommended_team(s, p):
+    """Strongest free specialist for each role of the project's current stage, plus the execution mode."""
+    from . import engine
+
+    stage = sc.stage_key(p)
+    available = free_heroes(s)
+    result = []
+    for role in STAGES[stage]["roles"]:
+        options = [h for h in available if h["profession"] == role]
+        if options:
+            result.append(max(options, key=ability)["id"])
+    mode = "cro" if stage in CLINICAL and not any(h["profession"] == "clinical" for h in available) else "internal"
+    if (
+        stage in CLINICAL
+        and engine.internal_usage(s) >= FACILITIES[s["facility"]]["slots"]
+        and not (p["clinical_started"] and p["mode"] == "internal")
+    ):
+        mode = "cro"
+    return result, mode
+
+
+def screening_team(s, kind):
+    """Strongest free hero in each profession that matters for screening this kind of project."""
+    relevant = ("bio", "chem") if kind == "innovative" else ("chem", "proc")
+    available = free_heroes(s)
+    team = []
+    for profession in relevant:
+        options = [h for h in available if h["profession"] == profession]
+        if options:
+            team.append(max(options, key=ability)["id"])
+    return team
+
+
+def reserved(s):
+    """People the waiting decisions would use by default; services avoid them when they can."""
+    held = set()
+    for p in s["projects"]:
+        if p.get("deferred"):
+            continue
+        if p["status"] == "ready":
+            held.update(recommended_team(s, p)[0])
+        elif p["status"] == "result" and sc.stage_key(p) != "review":
+            held.update(recommended_team(s, {**p, "index": p["index"] + 1, "status": "ready"})[0])
+    return held
+
+
+def service_picks(s):
+    """One suggested person per open order: the weakest qualified free hero.
+
+    Service pay does not depend on ability, so the strongest people stay free for research.
+    Orders with the fewest qualified people pick first, so nobody is suggested twice, and
+    people the waiting decisions need are used only when nobody else qualifies.
+    """
+    available = free_heroes(s)
+    held = reserved(s)
+    orders = [o for o in e.orders(s) if not o["taken"]]
+
+    def qualified(order):
+        return [h for h in available if h["profession"] == order["profession"] and ability(h) >= order["requirement"]]
+
+    picks, used = {}, set()
+    for order in sorted(orders, key=lambda o: (len(qualified(o)), o["id"])):
+        options = [h for h in qualified(order) if h["id"] not in used]
+        if not options:
+            need = f"需要{PROFESSIONS[order['profession']]}能力 ≥ {order['requirement']} 的空闲伙伴"
+            picks[order["id"]] = {"hero": None, "note": need}
+            continue
+        spare = [h for h in options if h["id"] not in held]
+        choice = min(spare or options, key=lambda h: (ability(h), h["rank"], h["id"]))
+        used.add(choice["id"])
+        picks[order["id"]] = {
+            "hero": choice["id"],
+            "note": None if spare else "会占用待开工项目的推荐负责人",
+        }
+    return picks
+
+
+def _try(s, command, args):
+    from . import engine
+
+    try:
+        return engine.execute(s, command, args), None
+    except ValueError as error:
+        return None, str(error)
+
+
+def quick(s, p):
+    """The default next step for a project waiting on the player, already checked by the engine.
+
+    Deferred projects get one too, so the page can show "可以开工了" as soon as people are free.
+    """
+    if p["status"] not in ("ready", "result", "problem"):
+        return None
+    key = sc.stage_key(p)
+    if p["status"] == "problem":
+        if p["repairs"] >= 1:
+            return None
+        options = [h for h in free_heroes(s) if h["profession"] in ("proc", "chem")]
+        team = [max(options, key=ability)["id"]] if options else []
+        args = {"project": p["id"], "heroes": team}
+        _, error = _try(s, "rework", args)
+        return {
+            "command": "rework",
+            "args": args,
+            "label": "补正一次再验证",
+            "roles": ["proc", "chem"],
+            "stage": STAGES[key]["name"],
+            "weeks": 8,
+            "cost": 100,
+            "chance": None,
+            "ok": error is None,
+            "error": error,
+        }
+    if p["status"] == "result" and key == "review":
+        args = {"project": p["id"], "name": p["name"]}
+        _, error = _try(s, "launch", args)
+        return {
+            "command": "launch",
+            "args": args,
+            "label": "上市",
+            "roles": [],
+            "stage": "上市准备",
+            "weeks": 0,
+            "cost": 80 if p["kind"] == "generic" else 180,
+            "chance": None,
+            "ok": error is None,
+            "error": error,
+        }
+    if p["status"] == "result" and not p["results"][-1]["passed"]:
+        return None
+    target = {**p, "index": p["index"] + 1, "status": "ready"} if p["status"] == "result" else p
+    stage = sc.stage_key(target)
+    team, mode = recommended_team(s, target)
+    plan = "focused" if stage == "III" and p.get("population") == "focused" else "standard"
+    command = "continue_and_run" if p["status"] == "result" else "run_phase"
+    args = {"project": p["id"], "heroes": team, "plan": plan, "mode": mode}
+    simulated, error = _try(s, command, args)
+    plan_view = {"weeks": None, "cost": None, "chance": None}
+    if simulated is not None:
+        execution = next(q for q in simulated["projects"] if q["id"] == p["id"])["execution"]
+        plan_view = {
+            "weeks": execution["weeks"],
+            "cost": execution["cost"],
+            "chance": chance_range(execution["probability"]),
+        }
+    return {
+        "command": command,
+        "args": args,
+        "label": ("继续：" if p["status"] == "result" else "开工：") + STAGES[stage]["name"],
+        "roles": [] if mode == "cro" else list(STAGES[stage]["roles"]),
+        "stage": STAGES[stage]["name"],
+        **plan_view,
+        "ok": error is None,
+        "error": error,
+    }
+
+
+def view(s):
+    """Suggestions shown next to the buttons they prefill."""
+    return {
+        "services": service_picks(s),
+        "screen": {kind: screening_team(s, kind) for kind in ("generic", "improved", "innovative")},
+        "idle": [h["id"] for h in free_heroes(s)],
+    }

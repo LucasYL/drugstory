@@ -127,7 +127,7 @@ function v06Modal(type, h, p, id) {
     return formFrame(
       type,
       "一次安排本期服务",
-      `<p>可选 1–3 单，每位伙伴只能负责一单。先核对全部安排，再一起开工。</p>${orders.map((o) => `<label>${esc(o.name)} · ${money(o.cost)} 材料 / ${money(o.reward)} 回款<select name="order:${o.id}"><option value="">暂不安排</option>${heroOptions((h) => h.profession === o.profession && h.ability >= o.requirement)}</select></label>`).join("")}`,
+      `<p>可选 1–3 单，每位伙伴只能负责一单。先核对全部安排，再一起开工。</p>${orders.map((o) => `<label>${esc(o.name)} · ${money(o.cost)} 材料 / ${money(o.reward)} 回款<select name="order:${o.id}"><option value="">暂不安排</option>${heroOptions((h) => h.profession === o.profession && h.ability >= o.requirement).replace(`value="${state.assist.services[o.id]?.hero}"`, `value="${state.assist.services[o.id]?.hero}" selected`)}</select></label>`).join("")}<small>已按「能力最低的合格伙伴」预选，确认即可全部开工。</small>`,
     );
   }
   return "";

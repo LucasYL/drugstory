@@ -1,25 +1,22 @@
-/* Scene shell. All decisions use app.js's existing forms and ApiDriver commands. */
+/* 场景外壳：时间、面板路由、底部人物栏、提示。决定和表单都走 app.js 的命令与 ApiDriver。
+ * 时间：玩家选的速度一直保留；遇到待决定、打开弹窗、切到后台时停住，处理完自动接着走。 */
 (() => {
   let renderer,
     world,
-    speed = 0,
+    want = 0, // 玩家选的速度，0 是暂停
     accumulator = 0,
-    selected = null,
+    route = { type: "tab" },
     cursor = null,
-    lastRevision = null;
-  let lastIdentity = null,
-    lastPendingKey = null,
-    toastTimer;
+    lastRevision = null,
+    lastIdentity = null,
+    lastPendingKey = "",
+    panelHtml = "",
+    panelRoute = "",
+    panelDeferred = false,
+    forceNext = false,
+    lastCash = null;
   const q = (s) => document.querySelector(s);
-  const pending = (s) =>
-    s.projects.filter(
-      (p) =>
-        p.active &&
-        !p.deferred &&
-        ["selecting", "ready", "result", "problem", "checkpoint"].includes(
-          p.status,
-        ),
-    );
+  const P = () => window.DrugstoryPanels;
   const names = {
     lab: "化学与制剂实验室",
     qc: "质量与毒理室",
@@ -28,53 +25,72 @@
     academy: "共研教室",
     hall: "大会与荣誉室",
   };
-  function pause() {
-    speed = 0;
-    accumulator = 0;
-    clock();
-  }
-  function clock() {
-    for (const el of document.querySelectorAll("[data-speed]"))
-      el.setAttribute("aria-pressed", String(+el.dataset.speed === speed));
-    q("#clock-status").textContent =
-      typeof state === "undefined" || !state
-        ? "连接中"
-        : state.game_over
-          ? "公司已停止经营"
-          : state.pending
-            ? "等你决定"
-            : speed
-              ? `${speed}× · 每周保存`
-              : "已暂停";
-  }
-  function frame(dt) {
-    if (
-      !speed ||
-      document.hidden ||
+  const TABS = {
+    pipeline: () => P().desk(),
+    characters: () => P().team(),
+    services: () => P().services(),
+    market: () => market(),
+    competition: () => competitionView(),
+    honors: () => honorsView(),
+    journal: () => journal(),
+  };
+
+  /* ---------- 时间 ---------- */
+  function held() {
+    return (
       !state ||
+      document.hidden ||
       requestBusy ||
       driver.busy ||
       driver.uncertain ||
       q("#modal").open ||
       DrugstoryWorld.blocked(state)
-    ) {
+    );
+  }
+  function setWant(k) {
+    want = k;
+    accumulator = 0;
+    renderer?.setSpeed(k || 1);
+    clock();
+  }
+  function pause() {
+    setWant(0);
+  }
+  function clock() {
+    for (const el of document.querySelectorAll("[data-speed]"))
+      el.setAttribute("aria-pressed", String(+el.dataset.speed === want));
+    const status = q("#clock-status");
+    if (!status) return;
+    let text = "已暂停",
+      cls = "";
+    if (!state) text = "连接中";
+    else if (state.game_over) (text = "已停业"), (cls = "bad");
+    else if (driver.uncertain) (text = "请重新连接"), (cls = "bad");
+    else if (state.pending) (text = `等你决定 · ${state.pending}`), (cls = "wait");
+    else if (want) (text = `${want}× 进行中`), (cls = "run");
+    status.textContent = text;
+    status.className = cls;
+  }
+  function frame(dt) {
+    if (!want || held()) {
       accumulator = 0;
       return;
     }
     accumulator += dt;
-    if (accumulator >= 1.6 / speed) {
+    if (accumulator >= 1.6 / want) {
       accumulator = 0;
       send("advance", { weeks: 1 });
     }
   }
+
+  /* ---------- 渲染 ---------- */
   function select(hit) {
     if (!hit) return;
-    pause();
-    selected = hit;
-    renderer.select(hit);
+    route = hit;
+    renderer.select(hit.type === "tab" || hit.type === "new" ? null : hit);
     if (hit.type === "project") activeTab = "pipeline";
     if (hit.type === "hero") activeTab = "characters";
-    renderPanel();
+    renderPanel(true);
     updateDock();
   }
   function render(s) {
@@ -91,8 +107,8 @@
       s.event_cursor < (cursor || 0)
     ) {
       cursor = s.event_cursor;
-      selected = null;
-      lastPendingKey = null;
+      route = { type: "tab" };
+      lastPendingKey = "";
       pause();
       lastIdentity = identity;
     }
@@ -103,126 +119,140 @@
     );
     world = DrugstoryWorld.world(s, staticContent);
     renderer.setWorld(world);
-    for (const ev of recent)
+    for (const ev of merged(recent))
       renderer.event({ ...ev, data: { ...ev.data, labels: s.stats } });
     cursor = s.event_cursor;
-    const matters = recent.filter((e) =>
-      [
-        "product_launched",
-        "patent_granted",
-        "patent_expired",
-        "milestone_reached",
-        "character_promoted",
-        "personal_completed",
-        "service_completed",
-        "deal_signed",
-        "award_won",
-        "legacy_reached",
-        "facility_upgraded",
-      ].includes(e.type),
-    );
-    if (matters.length) {
-      pause();
-      q("#scene-toast").textContent = matters
-        .slice(-3)
-        .map((e) =>
-          e.type === "milestone_reached"
-            ? e.data.title
-            : e.type === "patent_granted"
-              ? `${e.data.name} · 专利授权`
-              : e.type === "patent_expired"
-                ? `${e.data.name} · 专利到期`
-                : e.type === "service_completed"
-                  ? `${e.data.service} · 回款 ${money(e.data.reward)}`
-                  : `${{ product_launched: "上市", deal_signed: "授权签约", character_promoted: "晋阶", personal_completed: "课题完成", facility_upgraded: "扩建落成", award_won: "年度获奖", legacy_reached: "终局荣誉" }[e.type] || "新成果"} · ${e.data.name || ""}`,
-        )
-        .join("\n");
-      q("#scene-toast").hidden = false;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => (q("#scene-toast").hidden = true), 8000);
-    }
-    const waiting = pending(s);
+    toasts(recent);
+    // 新的待决定出现：面板切到研发，决定卡在最上面
+    const waiting = P().waiting().filter((p) => !p.deferred);
     const waitingKey = waiting
       .map((p) => `${p.id}:${p.key}:${p.status}`)
       .join("|");
-    if (waiting.length) {
-      pause();
-      if (waitingKey !== lastPendingKey) {
-        selected = { type: "project", id: waiting[0].id };
+    let force = forceNext;
+    if (waitingKey && waitingKey !== lastPendingKey) {
+      const stillThere =
+        route.type === "project" && waiting.some((p) => p.id === route.id);
+      if (!stillThere) {
+        route = { type: "tab" };
         activeTab = "pipeline";
+        renderer.select(null);
       }
+      force = true;
     }
     lastPendingKey = waitingKey;
-    if (s.game_over) pause();
-    q("#scene-metrics").innerHTML =
-      `<span>${esc(s.date)}<b>第 ${s.week} 周</b></span><span>现金 / 已承诺<b>${money(s.cash)} / ${num(s.committed)}</b></span><span>团队 / 容量<b>${s.headcount} / ${s.facility.capacity}</b></span>`;
+    forceNext = false;
+    // 现金转负时自动暂停，给玩家三个月的应对时间
+    if (s.cash < 0 && lastCash !== null && lastCash >= 0 && want) {
+      pause();
+      notice("现金转负了，时间已暂停。连续三个月月底为负会停业。", true);
+    }
+    lastCash = s.cash;
+    metrics(s);
     q("#scene-goal").innerHTML = guide(s);
     q("#scene-journal").innerHTML = s.journal
-      .slice(-12)
+      .slice(-14)
       .reverse()
-      .map((e) => `<li>第 ${e.week} 周 · ${esc(e.text)}</li>`)
+      .map(
+        (e) =>
+          `<li><small>第 ${e.week} 周</small><span>${esc(e.text)}</span></li>`,
+      )
       .join("");
-    renderPanel();
+    renderPanel(force);
     lastRevision = s.revision;
     updateDock();
     labels();
     clock();
   }
-  function guide(s) {
-    const p = pending(s)[0];
-    let title,
-      text,
-      action = "";
-    if (s.game_over) {
-      title = "研究所暂时停业";
-      text = "经营记录已保存，可在经营复盘回看并备份重开。";
-    } else if (p) {
-      title = `${p.name} · ${p.status_name}`;
-      text = {
-        selecting:
-          "比较候选的证据区间；区间宽表示尚不确定。选定后安排团队开发。",
-        ready: "在右侧安排负责人、方案和执行方式，预览工期与费用后开工。",
-        result:
-          p.key === "review"
-            ? "审评已通过，命名并安排上市。"
-            : "本阶段已完成。看结果，再继续研发或比较可用的授权报价。",
-        problem:
-          "这一阶段未通过。可补正一次、早期换候选或止损；不保证能救回来。",
-        checkpoint:
-          "数据回来一半了。右侧有当前证据与剩余投入，决定继续还是提前止损。",
-      }[p.status];
-      action = `<button data-scene-project="${p.id}">查看这项决定${s.pending > 1 ? ` · 共 ${s.pending} 项` : ""}</button>`;
-    } else if (
-      s.projects.some((p) => ["running", "screening"].includes(p.status)) ||
-      s.jobs.length ||
-      s.deals.some((d) => d.status === "developing")
-    ) {
-      title = speed
-        ? "研究进行中 · 留意橙色开发和蓝色数据"
-        : "安排已就绪 · 可以推进时间";
-      text =
-        "点 1×、2×、4× 或下一件事。出现决定会停下；点人、打开操作窗口或切到后台也会暂停。";
-    } else if (s.projects.some((p) => p.deferred)) {
-      const deferred = s.projects.find((p) => p.deferred);
-      title = "有暂缓的项目 · 随时可以继续";
-      text =
-        "项目保留了已取得的证据。点项目卡恢复安排，或先培养伙伴、承接服务。";
-      action = `<button data-scene-project="${deferred.id}">查看 ${esc(deferred.name)}</button>`;
-    } else if (!s.projects.length) {
-      title = "第一步 · 建立自己的研究计划";
-      text =
-        "建议从稳压片开始。陈一鸣负责药化，苏小禾负责工艺；也可以先接技术服务。";
-      action = modalButton("新建研究计划", "project", "", "primary");
-    } else if (s.products.length) {
-      title = "第一粒药之后 · 培养你的研究社";
-      text =
-        "用收入支持新项目和个人课题。图鉴能查看人才解锁条件，大会与荣誉里有长期目标。";
-    } else {
-      title = "下一步 · 安排工作或换条路线";
-      text =
-        "可以重新立项、接服务赚周转金，或培养伙伴后再出发。历史项目和证据仍可查看。";
+  function metrics(s) {
+    const flow = s.weekly_profit + s.weekly_royalty - s.costs_per_week;
+    q("#scene-metrics").innerHTML =
+      `<span class="m-date"><small>${esc(s.date)}</small><b>第 ${s.week} 周</b></span><span title="现金；括号里是扣掉已承诺支出后的可用现金"><small>现金</small><b>${money(s.cash)}</b>${s.committed > 0 ? `<em>可用 ${num(s.available_cash)}</em>` : ""}</span><span title="产品利润与分成减去工资、租金和在研费用"><small>每周</small><b class="${flow >= 0 ? "pos" : "neg"}">${flow >= 0 ? "+" : "−"}${num(Math.abs(flow))} 万</b></span><span><small>团队</small><b>${s.headcount}/${s.facility.capacity}</b></span>`;
+  }
+  // 跳过几周时，同一个人的多批开发合成一条飘字，同一项目只显示最后一批数据
+  function merged(events) {
+    const out = [],
+      work = new Map(),
+      batch = new Map();
+    for (const e of events) {
+      if (e.type === "work_completed" && e.actors?.length === 1) {
+        const prior = work.get(e.actors[0]);
+        if (prior) {
+          for (const [k, v] of Object.entries(e.data.amounts || {}))
+            prior.data.amounts[k] = (prior.data.amounts[k] || 0) + v;
+          continue;
+        }
+        const copy = { ...e, data: { ...e.data, amounts: { ...(e.data.amounts || {}) } } };
+        work.set(e.actors[0], copy);
+        out.push(copy);
+        continue;
+      }
+      if (e.type === "evidence_received") {
+        const key = e.project ?? e.room;
+        if (batch.has(key)) out[batch.get(key)] = null;
+        batch.set(key, out.length);
+      }
+      out.push(e);
     }
-    return `<b>${esc(title)}</b><span>${esc(text)}</span>${action}`;
+    return out.filter(Boolean);
+  }
+  const TOAST_TYPES = {
+    product_launched: ["上市", "big"],
+    patent_granted: ["专利授权", ""],
+    patent_expired: ["专利到期", "warn"],
+    milestone_reached: ["大事记", "big"],
+    character_promoted: ["晋阶", ""],
+    personal_completed: ["课题完成", ""],
+    service_completed: ["服务回款", "money"],
+    deal_signed: ["授权签约", "big"],
+    award_won: ["年度获奖", "big"],
+    legacy_reached: ["终局荣誉", "big"],
+    facility_upgraded: ["扩建落成", ""],
+    phase_finished: ["阶段结果", ""],
+  };
+  function toasts(recent) {
+    const box = q("#scene-toasts");
+    for (const e of recent) {
+      const kind = TOAST_TYPES[e.type];
+      if (!kind) continue;
+      let text = e.data.name || "";
+      if (e.type === "milestone_reached") text = e.data.title;
+      if (e.type === "service_completed")
+        text = `${e.data.name} · +${money(e.data.reward)}`;
+      if (e.type === "character_promoted")
+        text = `${e.data.name} 晋升${e.data.rank}`;
+      if (e.type === "phase_finished")
+        text = `${e.data.name} · ${e.data.stage}${e.data.passed ? "通过" : "未通过"}`;
+      const el = document.createElement("div");
+      el.className = `toast ${kind[1]} ${e.type === "phase_finished" && !e.data.passed ? "warn" : ""}`;
+      el.innerHTML = `<small>${esc(kind[0])}</small><b>${esc(text)}</b>`;
+      box.prepend(el);
+      setTimeout(() => el.classList.add("out"), 4200);
+      setTimeout(() => el.remove(), 4800);
+    }
+    while (box.children.length > 4) box.lastChild.remove();
+  }
+  function guide(s) {
+    const w = P().waiting();
+    const live = w.filter((p) => !p.deferred);
+    if (s.game_over)
+      return '<span class="g-bad">研究所停业了。记录都在「复盘」里，可以备份后重开。</span>';
+    if (live.length)
+      return `<button data-scene-project="${live[0].id}" class="g-wait"><b>${live.length > 1 ? `${live.length} 件事等你决定` : esc(live[0].name)}</b><span>${live.length > 1 ? "在右侧依次处理" : esc(live[0].status_name)}</span></button>`;
+    if (s.cash < 0)
+      return `<button data-tab="services" class="g-bad-btn"><b>现金为负${s.negative_months ? ` · 已 ${s.negative_months} 个月` : ""}</b><span>连续三个月月底为负会停业：接服务、止损花钱的项目、减少成员</span></button>`;
+    if (s.runway !== null && s.runway < 16)
+      return `<button data-tab="services" class="g-bad-btn"><b>现金只够撑 ${s.runway} 周</b><span>接技术服务、暂缓花钱的阶段，或减少团队成员</span></button>`;
+    const resumable = w.find((p) => p.deferred && p.quick?.ok);
+    if (resumable)
+      return `<button data-scene-project="${resumable.id}" class="g-wait"><b>${esc(resumable.name)}</b><span>${resumable.quick.command === "launch" ? "可以上市了" : "人空出来了，可以开工"}</span></button>`;
+    if (!s.projects.length)
+      return '<button data-np-open class="g-go"><b>第一步</b><span>点这里，开始第一个项目（推荐「稳压片」）</span></button>';
+    const idle = s.heroes.filter((h) => !h.busy);
+    if (!want && !s.pending)
+      return `<button data-speed="1" class="g-go"><b>▶ 开始</b><span>按 1× 让时间走起来；有决定会自动停</span></button>`;
+    if (idle.length && Object.values(s.assist.services).some((v) => v.hero))
+      return `<button data-tab="services" class="g-tip"><b>${idle.length} 位伙伴空闲</b><span>可以接技术服务赚周转金</span></button>`;
+    return "";
   }
   function roomSummary(id) {
     const team = state.heroes.filter(
@@ -232,19 +262,28 @@
       id === "clinic"
         ? state.projects.filter((p) => p.scene.executor === "cro")
         : [];
-    if (!world.rooms[id]?.built) return "扩建后开放专用空间";
-    return [
-      team.length ? `${team.length} 位伙伴工作中` : "当前空闲",
-      remote.length ? `${remote.length} 项外包 CRO` : "",
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    if (!world.rooms[id]?.built) return "扩建后开放";
+    return (
+      [
+        team.length ? `${team.length} 人在忙` : "",
+        remote.length ? `CRO ${remote.length}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") || "空闲"
+    );
   }
   function labels() {
     if (!renderer || !world) return;
     const box = q("#room-labels"),
       live = new Set(renderer.rooms.map((r) => r.id));
-    for (const el of box.children) if (!live.has(el.dataset.room)) el.remove();
+    for (const el of [...box.children])
+      if (!live.has(el.dataset.room)) el.remove();
+    const pendingRooms = new Set(
+      P()
+        .waiting()
+        .filter((p) => !p.deferred)
+        .map((p) => world.locate(p.scene.room)),
+    );
     for (const r of renderer.rooms) {
       let el = box.querySelector(`[data-room="${r.id}"]`);
       if (!el) {
@@ -257,19 +296,19 @@
       }
       el.querySelector("b").textContent = names[r.id];
       el.querySelector("small").textContent = roomSummary(r.id);
-      el.classList.toggle(
-        "pending",
-        pending(state).some((p) => world.locate(p.scene.room) === r.id),
-      );
+      el.classList.toggle("pending", pendingRooms.has(r.id));
+      el.classList.toggle("locked", !world.rooms[r.id]?.built);
       const pt = renderer.anchor("room", r.id);
       if (!pt) continue;
       const rect = box.getBoundingClientRect(),
         w = el.offsetWidth,
         h = el.offsetHeight;
       el.style.left = `${Math.max(w / 2 + 6, Math.min(rect.width - w / 2 - 6, pt.x))}px`;
-      el.style.top = `${Math.max(115 + h / 2, Math.min(rect.height - 60 - h / 2, pt.y))}px`;
+      el.style.top = `${Math.max(56 + h / 2, Math.min(rect.height - 96 - h / 2, pt.y))}px`;
     }
   }
+
+  /* ---------- 底部人物栏与项目栏 ---------- */
   function updateDock() {
     const people = q("#scene-people");
     const ids = state.heroes.map((h) => h.id).join("|");
@@ -278,22 +317,30 @@
       people.innerHTML = state.heroes
         .map(
           (h) =>
-            `<button class="scene-chip" data-scene-hero="${h.id}"><canvas class="scene-portrait" data-portrait="${h.id}" aria-hidden="true"></canvas><span><b></b><small class="hero-rank"></small><small class="hero-task"></small></span></button>`,
+            `<button class="chip" data-scene-hero="${h.id}"><canvas class="scene-portrait" data-portrait="${h.id}" aria-hidden="true"></canvas><span><b></b><small></small></span><i class="badge" hidden>可晋阶</i></button>`,
         )
         .join("");
+      for (const h of state.heroes)
+        renderer.drawPortrait(
+          people.querySelector(`[data-portrait="${h.id}"]`),
+          h.look,
+        );
     }
     for (const h of state.heroes) {
       const el = people.querySelector(`[data-scene-hero="${h.id}"]`);
       el.querySelector("b").textContent = h.name;
-      el.querySelector(".hero-rank").textContent =
-        `${h.rank_name} · ${h.members} 名成员`;
-      el.querySelector(".hero-task").textContent =
-        h.busy || "空闲 · 可安排工作";
+      el.querySelector("small").textContent = h.busy
+        ? h.busy
+        : `空闲 · ${h.profession_name.slice(0, 2)} ${h.ability}`;
+      el.classList.toggle("idle", !h.busy);
+      el.classList.toggle("busy", !!h.busy);
+      el.querySelector(".badge").hidden = !(
+        h.rank < 4 && h.promotion.every((c) => c.ok)
+      );
       el.setAttribute(
         "aria-pressed",
-        String(selected?.type === "hero" && selected.id === h.id),
+        String(route.type === "hero" && route.id === h.id),
       );
-      renderer.drawPortrait(el.querySelector("canvas"), h.look);
     }
     const projects = q("#scene-projects");
     const active = state.projects.filter((p) => p.active);
@@ -303,85 +350,124 @@
       projects.innerHTML = active
         .map(
           (p) =>
-            `<button class="scene-chip scene-project" data-scene-project="${p.id}"><b></b><small></small><progress></progress></button>`,
+            `<button class="chip proj" data-scene-project="${p.id}"><b></b><small></small><span class="progress"><i></i></span></button>`,
         )
         .join("");
     }
+    // 场景按底部人物栏的实际高度留白，房间不被挡住
+    renderer.setInsets(54, q(".dock").offsetHeight + 16);
     for (const p of active) {
       const el = projects.querySelector(`[data-scene-project="${p.id}"]`);
+      const deciding = [
+        "selecting",
+        "ready",
+        "result",
+        "problem",
+        "checkpoint",
+      ].includes(p.status);
       el.querySelector("b").textContent = p.name;
-      el.querySelector("small").textContent =
-        `${p.status_name} · ${p.scene.total ? `剩 ${p.left} 周` : p.phase}${p.deferred ? " · 已暂缓" : ""}`;
-      el.querySelector("progress").max = p.scene.total || 1;
-      el.querySelector("progress").value = p.scene.elapsed;
+      el.querySelector("small").textContent = deciding
+        ? p.deferred
+          ? p.quick?.ok
+            ? "可以开工"
+            : "已暂缓"
+          : "等你决定"
+        : `${p.status === "screening" ? "筛选" : p.phase} · 剩 ${p.left} 周`;
+      el.classList.toggle("deciding", deciding && !p.deferred);
+      el.querySelector(".progress i").style.width =
+        `${Math.round((p.scene.elapsed / (p.scene.total || 1)) * 100)}%`;
+      el.setAttribute(
+        "aria-pressed",
+        String(route.type === "project" && route.id === p.id),
+      );
     }
   }
-  function heroPanel(h) {
-    return `<button data-scene="overview">← 研究社总览</button><div class="hero-detail"><canvas data-portrait="${h.id}" aria-hidden="true"></canvas><div><h2>${esc(h.name)}「${esc(h.nickname)}」</h2><p>${esc(h.rank_name)} · ${esc(h.profession_name)}</p></div></div><p>${esc(h.bio)}</p><p><b>${esc(h.trait.name)}</b> · ${esc(h.trait.description)}</p><p>能力 ${h.ability} · 经验 ${h.xp} · 成员 ${h.members} · 履历 ${h.cases.length}</p><p>${esc(h.busy || "空闲")} · 工资 ${money(h.weekly_salary)}/周</p>${personalCard(h)}<div class="actions">${button("专业培训", "train", { character: h.id }, "", !!h.busy)}${modalButton("配置团队", "team", h.id)}${modalButton("导师课题", "mentor", h.id)}</div>${h.rank < 4 ? `<h3>下次晋阶</h3><p>${checks(h.promotion)}</p><p>费用 ${money(h.promotion_cost)}</p>${button("晋阶突破", "promote", { character: h.id }, "primary", !!h.busy || !h.promotion.every((c) => c.ok))}` : "<p>已达传奇，可带教后辈。</p>"}`;
+
+  /* ---------- 右侧面板 ---------- */
+  function content() {
+    if (route.type === "project") {
+      const p = state.projects.find((p) => p.id === route.id);
+      if (p) return P().project(p);
+    }
+    if (route.type === "hero") {
+      const h = state.heroes.find((h) => h.id === route.id);
+      if (h) return P().hero(h);
+    }
+    if (route.type === "room")
+      return P().room(
+        route.id,
+        names,
+        roomSummary(route.id),
+        !!world.rooms[route.id]?.built,
+      );
+    if (route.type === "new") return P().newProject();
+    route = { type: "tab" };
+    return (TABS[activeTab] || TABS.pipeline)();
   }
-  function roomPanel(id) {
-    const equipment = state.equipment.filter(
-      (r) => DrugstoryWorld.ROOMS[r.id] === id,
-    );
-    return `<button data-scene="overview">← 研究所总览</button><h2>${esc(names[id])}</h2><p>${esc(roomSummary(id))}</p>${!world.rooms[id]?.built ? "<p>目前在共用工位开展相关工作；扩建增加专用空间，不额外提高已有研发门槛。</p>" : ""}${state.heroes
-      .filter((h) => h.activity !== "idle" && world.locate(h.room) === id)
-      .map(
-        (h) =>
-          `<p><button data-scene-hero="${h.id}">${esc(h.name)} · ${esc(h.busy || h.activity)}</button></p>`,
-      )
-      .join(
-        "",
-      )}${id === "academy" ? '<p>完成个人课题升级招牌能力；导师带教帮助新伙伴成长。</p><button data-tab="characters">安排培养与个人课题</button>' : ""}${id === "hall" || id === "clinic" ? '<button data-tab="honors">年度大会与终局荣誉</button>' : ""}${id === "clinic" ? '<button data-tab="market">查看授权与合作</button>' : ""}${equipment.map((r) => `<article class="project-card"><h3>${esc(r.name)} · ${r.level} 级</h3><p>${esc(r.text)}</p>${r.cost ? button("升级设备 · " + money(r.cost), "upgrade_equipment", { profession: r.profession }, "primary", !r.available || r.cost > state.available_cash) : "已达最高级"}</article>`).join("")}<h3>${esc(state.facility.name)}</h3><p>团队 ${state.headcount}/${state.facility.capacity} · 自营临床 ${state.clinical_used}/${state.facility.slots}</p>${state.next_facility ? `<p>下一站 ${esc(state.next_facility.name)} · ${money(state.next_facility.cost)}；租金 ${money(state.next_facility.rent)}/周。</p><p>专用生物室 → 共研教室 → 大会与荣誉室逐步开放。</p>${button("扩建研究场地", "upgrade", {}, "primary", state.available_cash < state.next_facility.cost)}` : "星火科学城已建成。"}`;
-  }
-  function renderPanel() {
+  function renderPanel(force = false) {
     if (!state) return;
-    let html;
-    if (selected?.type === "hero") {
-      const h = state.heroes.find((h) => h.id === selected.id);
-      if (h) html = heroPanel(h);
+    const box = q("#app");
+    const html = `${state.game_over ? '<p class="banner bad">公司已停业。可以查看记录，或在「复盘」里备份后开新公司。</p>' : ""}${content()}`;
+    const key = JSON.stringify(route) + activeTab;
+    if (!force && html === panelHtml) return;
+    // 玩家正在面板里操作（悬停、输入、下拉）时先不重画，离开后再补上
+    const busyHere =
+      box.matches(":hover") ||
+      (box.contains(document.activeElement) &&
+        document.activeElement.matches("input,select,textarea"));
+    if (!force && busyHere && key === panelRoute) {
+      panelDeferred = true;
+      return;
     }
-    if (selected?.type === "room") html = roomPanel(selected.id);
-    if (selected?.type === "project") {
-      const p = state.projects.find((p) => p.id === selected.id);
-      if (p)
-        html = `<button data-scene="overview">← 所有项目</button>${projectCard(p)}`;
-    }
-    if (!html)
-      html = (
-        {
-          pipeline,
-          characters,
-          services,
-          market,
-          competition: competitionView,
-          honors: honorsView,
-          journal,
-        }[activeTab] || pipeline
-      )();
-    q("#app").innerHTML =
-      `${state.game_over ? '<p class="warning">公司已停止经营；可以查看记录或备份后重开。</p>' : ""}<div id="view">${html}</div>`;
-    for (const el of q("#app").querySelectorAll("canvas[data-portrait]")) {
+    const keepScroll = key === panelRoute ? box.scrollTop : 0;
+    panelHtml = html;
+    panelRoute = key;
+    panelDeferred = false;
+    box.innerHTML = html;
+    box.scrollTop = keepScroll;
+    for (const el of box.querySelectorAll("canvas[data-portrait]")) {
       const h = state.heroes.find((h) => h.id === el.dataset.portrait);
       if (h) renderer.drawPortrait(el, h.look);
     }
-    for (const el of document.querySelectorAll(".scene-nav [data-tab]"))
-      el.classList.toggle("active", el.dataset.tab === activeTab);
+    for (const el of document.querySelectorAll(".tabs [data-tab]"))
+      el.setAttribute(
+        "aria-current",
+        String(route.type === "tab" && el.dataset.tab === activeTab),
+      );
+    const counts = {
+      pipeline: P()
+        .waiting()
+        .filter((p) => !p.deferred || p.quick?.ok).length,
+      services: Object.values(state.assist.services).filter((v) => v.hero)
+        .length,
+      characters: state.heroes.filter(
+        (h) => h.rank < 4 && h.promotion.every((c) => c.ok),
+      ).length,
+    };
+    for (const [tab, n] of Object.entries(counts)) {
+      const el = document.querySelector(`.tabs [data-tab="${tab}"] i`);
+      if (el) {
+        el.textContent = n || "";
+        el.hidden = !n;
+      }
+    }
   }
+
+  /* ---------- 弹窗：图鉴、帮助 ---------- */
   function gallery() {
-    pause();
     q("#modal-body").innerHTML =
-      `<h2 id="modal-title">伙伴图鉴 · 20 位研究者</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><p>从见习到传奇。点人物查看背景、招牌能力和加入条件。</p><div class="gallery-grid">${staticContent.roster.map((h) => `<button data-cast="${h.key}"><canvas data-cast-portrait="${h.key}" aria-hidden="true"></canvas><b>${esc(h.name)}</b><span>「${esc(h.nickname)}」</span><small>${state.heroes.some((p) => p.id === h.key) ? "已加入研究社" : ["", "见习", "精英", "大师", "传奇"][h.tier]}</small></button>`).join("")}</div>`;
+      `<h2 id="modal-title">伙伴图鉴 · 20 位研究者</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><p class="sub">从见习到传奇。点人物看背景、招牌能力和加入条件。</p><div class="gallery-grid">${staticContent.roster.map((h) => `<button data-cast="${h.key}"><canvas data-cast-portrait="${h.key}" aria-hidden="true"></canvas><b>${esc(h.name)}</b><span>「${esc(h.nickname)}」</span><small>${state.heroes.some((p) => p.id === h.key) ? "已加入" : ["", "见习", "精英", "大师", "传奇"][h.tier]}</small></button>`).join("")}</div>`;
     if (!q("#modal").open) q("#modal").showModal();
     for (const el of document.querySelectorAll("[data-cast-portrait]"))
       renderer.drawPortrait(
         el,
         staticContent.roster.find((h) => h.key === el.dataset.castPortrait)
           .look,
+        true,
       );
   }
   function cast(id) {
-    const h = state.heroes.find((h) => h.id === id);
-    if (h) {
+    if (state.heroes.some((h) => h.id === id)) {
       q("#modal").close();
       select({ type: "hero", id });
       return;
@@ -389,66 +475,90 @@
     const spec = staticContent.roster.find((h) => h.key === id),
       recruit = state.roster.find((h) => h.key === id);
     q("#modal-body").innerHTML =
-      `<h2 id="modal-title">${esc(spec.name)}「${esc(spec.nickname)}」</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><p>${esc(spec.bio)}</p><p>${esc(recruit?.trait?.name)} · ${esc(recruit?.trait?.description)}</p>${recruit ? `<p>${checks(recruit.requirements)}</p><p>邀请费用 ${money(recruit.cost)}</p>${button("邀请加入", "hire", { character: id }, "primary", !recruit.unlocked || recruit.cost > state.available_cash)}${modalButton("合作建立联系", "collaborate", id)}` : ""}<p><button data-scene="gallery">← 全部伙伴</button></p>`;
+      `<button data-close class="modal-close" aria-label="关闭弹窗">×</button><div class="cast-head"><canvas data-cast-portrait="${id}" aria-hidden="true"></canvas><div><h2 id="modal-title">${esc(spec.name)}<small>「${esc(spec.nickname)}」</small></h2><p class="sub">${esc(recruit?.rank_name || "")} · ${esc(recruit?.profession_name || "")} · 能力 ${recruit?.ability ?? ""}</p></div></div><p>${esc(spec.bio)}</p>${recruit ? `<p><b>${esc(recruit.trait.name)}</b> · ${esc(recruit.trait.description)}</p><p>${checks(recruit.requirements)}</p><p class="sub">加入后每周工资约 ${money(recruit.weekly_salary)}（含 2 名成员）。现在每周净${state.weekly_profit + state.weekly_royalty - state.costs_per_week >= 0 ? "收入" : "支出"} ${money(Math.abs(state.weekly_profit + state.weekly_royalty - state.costs_per_week))}。</p><div class="form-actions">${recruit.tier >= 3 && !recruit.connected ? `<button data-modal="collaborate" data-id="${id}" ${recruit.unlocked && !recruit.connecting ? "" : "disabled"}>${recruit.connecting ? "合作课题进行中" : "先做合作课题 · ¥120 万"}</button>` : button("邀请加入 · " + money(recruit.cost), "hire", { character: id }, "primary", !recruit.unlocked || recruit.cost > state.available_cash)}<button data-scene="gallery">← 全部伙伴</button></div>` : ""}`;
+    renderer.drawPortrait(
+      q(`[data-cast-portrait="${id}"]`),
+      spec.look,
+      true,
+    );
   }
   function help() {
-    pause();
     q("#modal-body").innerHTML =
-      '<h2 id="modal-title">从两个人，到一家研究所</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><ol><li><b>立项：</b>点「新建研究计划」，先用两位起步伙伴做一款仿制药。先看预算，再确认。</li><li><b>开时间：</b>1×、2×、4×会逐周推进并保存；遇到决定自动停。刷新、切到后台或打开操作窗口也会停。</li><li><b>看证据：</b>橙色数字是团队开发，蓝色读数是验证。选候选、安排阶段、期中止损都在右侧操作。</li><li><b>养成与经营：</b>点小人或底栏人物卡进行培养；点房间升级设备和扩建。下方菜单可接服务、谈授权、报名大会。</li></ol><p>文字手记与场景使用同一份存档。画面中的走动只是表现，不会改变研发结果。</p><button data-close class="primary">知道了，开始经营</button>';
+      '<h2 id="modal-title">怎么玩</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><ol class="help"><li><b>开项目：</b>右侧「＋ 新项目」，选一张卡点「开始筛选」。新手推荐「稳压片」。</li><li><b>让时间走：</b>点 ▶ 1×、2×、4×。有决定会自动停，决定完自动继续。⏭ 直接跳到下一件需要你的事。</li><li><b>做决定：</b>决定卡上的大按钮就是推荐方案，周数、费用和成功率都写在上面，点一下就开工。想换人、换方案点「调整方案」。</li><li><b>看画面：</b>橙色数字是开发（让药变好），蓝色是验证（看清药有多好）。</li><li><b>赚周转金：</b>「服务」里每单一键接下，默认派能力最低的合格伙伴。</li><li><b>养人和扩建：</b>点人物晋阶、培训；点房间升级设备、扩建研究所。</li></ol><p class="sub">快捷键：空格 暂停/继续 · 1 2 3 切换速度 · N 下一件事</p><button data-close class="primary">开始经营</button>';
     if (!q("#modal").open) q("#modal").showModal();
   }
+
+  /* ---------- 输入 ---------- */
   document.addEventListener("click", async (e) => {
     const b = e.target.closest("button");
     if (!b || (!state && b.dataset.scene !== "reconnect")) return;
+    if (b.dataset.command) forceNext = true;
     if (b.dataset.tab) {
-      pause();
-      selected = null;
+      route = { type: "tab" };
       renderer.select(null);
+      forceNext = true;
+      setTimeout(() => renderPanel(true));
     }
     if (b.dataset.speed !== undefined) {
       const k = +b.dataset.speed;
       if (k && (driver.uncertain || state.game_over)) {
-        pause();
         notice(
           driver.uncertain
             ? "请先重新连接，确认上次操作的保存结果。"
-            : "公司已停止经营，可在经营复盘查看记录。",
+            : "公司已停业，可在复盘查看记录。",
         );
         return;
       }
-      if (k && state.pending) {
-        notice("先处理右侧决定，或暂缓项目后再推进。");
-        return;
-      }
-      speed = k;
-      accumulator = 0;
-      renderer.setSpeed(k || 1);
-      clock();
-    }
-    if (b.dataset.style) {
-      renderer.setStyle(b.dataset.style);
-      for (const x of document.querySelectorAll("[data-style]"))
-        x.setAttribute("aria-pressed", String(x === b));
+      setWant(k);
+      if (k && state.pending) notice("先处理右侧的决定，时间会自动继续。");
+      q("#scene-goal").innerHTML = guide(state);
     }
     if (b.dataset.sceneHero) select({ type: "hero", id: b.dataset.sceneHero });
     if (b.dataset.sceneProject)
       select({ type: "project", id: b.dataset.sceneProject });
     if (b.dataset.cast) cast(b.dataset.cast);
+    if (b.dataset.npOpen !== undefined) select({ type: "new" });
+    if (b.dataset.npRoute) {
+      P().np.route = b.dataset.npRoute;
+      renderPanel(true);
+    }
+    if (b.dataset.npPick) {
+      P().np.pick = b.dataset.npPick;
+      renderPanel(true);
+    }
+    if (b.dataset.serviceTake) {
+      const pick = q(`[data-service-pick="${b.dataset.serviceTake}"]`);
+      forceNext = true;
+      await send("take_service", {
+        order: b.dataset.serviceTake,
+        character: pick.value,
+      });
+    }
+    if (b.dataset.servicesAll !== undefined) {
+      forceNext = true;
+      await send("take_services", { assignments: P().serviceAssignments() });
+    }
+    if (b.dataset.launch) {
+      const name = q(`[data-launch-name="${b.dataset.launch}"]`);
+      forceNext = true;
+      await send("launch", {
+        project: b.dataset.launch,
+        name: (name?.value || "").trim(),
+      });
+    }
     if (b.dataset.scene === "overview") {
-      selected = null;
-      renderPanel();
+      route = { type: "tab" };
+      renderer.select(null);
+      renderPanel(true);
+      updateDock();
     }
     if (b.dataset.scene === "gallery") gallery();
     if (b.dataset.scene === "help") help();
-    if (b.dataset.scene === "step" || b.dataset.scene === "next") {
-      pause();
-      await send(
-        b.dataset.scene === "step" ? "advance" : "next_event",
-        b.dataset.scene === "step" ? { weeks: 1 } : {},
-      );
+    if (b.dataset.scene === "next") {
+      forceNext = true;
+      await send("next_event", { batches: 0 });
     }
     if (b.dataset.scene === "reconnect") {
-      pause();
       if (requestBusy) return;
       requestBusy = true;
       try {
@@ -457,7 +567,7 @@
         state = hydrate(data);
         cursor = state.event_cursor;
         lastRevision = null;
-        selected = null;
+        route = { type: "tab" };
         q("#modal").close();
         render(state);
         notice("已重新载入存档，请确认进度后继续。");
@@ -468,32 +578,51 @@
       }
     }
   });
-  document.addEventListener(
-    "pointerdown",
-    (e) => {
-      if (e.target.closest("#app, #scene-people, #scene-projects")) pause();
-    },
-    true,
-  );
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) pause();
+  document.addEventListener("change", (e) => {
+    if (e.target.matches("[data-np-target]")) {
+      P().np.target = e.target.value;
+      P().np.pick = null;
+      renderPanel(true);
+    }
   });
-  window.addEventListener("pagehide", pause);
+  document.addEventListener("submit", (e) => {
+    const form = e.target.closest("form[data-np-form]");
+    if (!form) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    forceNext = true;
+    route = { type: "tab" };
+    activeTab = "pipeline";
+    send("start_project", P().newProjectArgs(form));
+  }, true);
+  q("#app").addEventListener("pointerleave", () => {
+    if (panelDeferred) renderPanel();
+  });
+  document.addEventListener("focusout", () => {
+    if (panelDeferred) setTimeout(() => renderPanel());
+  });
+  document.addEventListener("visibilitychange", clock);
+  q("#modal").addEventListener("close", clock);
   document.addEventListener("keydown", (e) => {
     if (
       !state ||
-      e.target.closest("input,select,textarea,button") ||
-      q("#modal").open
+      e.target.closest("input,select,textarea") ||
+      q("#modal").open ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey
     )
       return;
     if (e.code === "Space") {
       e.preventDefault();
-      if (speed) pause();
-      else if (!state.pending) {
-        speed = 1;
-        clock();
-      }
-    }
+      setWant(want ? 0 : 1);
+    } else if (["Digit1", "Digit2", "Digit3"].includes(e.code)) {
+      setWant({ Digit1: 1, Digit2: 2, Digit3: 4 }[e.code]);
+    } else if (e.code === "KeyN" && !state.pending && !state.game_over) {
+      forceNext = true;
+      send("next_event", { batches: 0 });
+    } else return;
+    q("#scene-goal").innerHTML = guide(state);
   });
   window.DrugstorySceneUI = { render, pause };
 })();

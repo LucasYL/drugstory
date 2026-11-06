@@ -195,6 +195,10 @@
     "game_over": {
       "type": "boolean"
     },
+    "negative_months": {
+      "type": "integer",
+      "description": "连续几个月月底现金为负；到 3 停业"
+    },
     "career_done": {
       "type": "boolean"
     },
@@ -294,6 +298,9 @@
       "items": {
         "$ref": "#/$defs/Patent"
       }
+    },
+    "assist": {
+      "$ref": "#/$defs/Assist"
     }
   },
   "required": [
@@ -348,7 +355,9 @@
     "token",
     "saved_at",
     "display_scale",
-    "patents"
+    "patents",
+    "assist",
+    "negative_months"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -774,6 +783,16 @@
         },
         "scene": {
           "$ref": "#/$defs/ProjectScene"
+        },
+        "quick": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuickAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -821,7 +840,8 @@
         "outlook",
         "can_focus",
         "patent",
-        "scene"
+        "scene",
+        "quick"
       ],
       "additionalProperties": false
     },
@@ -1112,6 +1132,171 @@
         "elapsed",
         "executor",
         "limits"
+      ],
+      "additionalProperties": false
+    },
+    "QuickAction": {
+      "type": "object",
+      "description": "One-click default for a waiting project, validated on a copy by the engine.",
+      "properties": {
+        "command": {
+          "enum": [
+            "run_phase",
+            "continue_and_run",
+            "launch",
+            "rework"
+          ]
+        },
+        "args": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "label": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stage": {
+          "type": "string"
+        },
+        "weeks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chance": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "command",
+        "args",
+        "label",
+        "roles",
+        "stage",
+        "weeks",
+        "cost",
+        "chance",
+        "ok",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "Assist": {
+      "type": "object",
+      "description": "Prefilled choices: the weakest qualified person per service order, the screening team per route, idle people.",
+      "properties": {
+        "services": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "hero": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "note": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "hero",
+              "note"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "screen": {
+          "type": "object",
+          "properties": {
+            "generic": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "improved": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "innovative": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "generic",
+            "improved",
+            "innovative"
+          ],
+          "additionalProperties": false
+        },
+        "idle": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "services",
+        "screen",
+        "idle"
       ],
       "additionalProperties": false
     }

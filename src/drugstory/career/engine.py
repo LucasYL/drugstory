@@ -496,7 +496,11 @@ def finish_phase(s, p):
         p["status"] = "result"
         s["milestones"] += 1
         patents.maybe_file(s, p, key)
-        p["feedback"] = f"{STAGES[key]['name']}完成，取得本阶段支持证据；后续阶段仍有新的未知项。"
+        p["feedback"] = (
+            "审评通过，可以命名并安排上市。"
+            if key == "review"
+            else f"{STAGES[key]['name']}完成，取得本阶段支持证据；后续阶段仍有新的未知项。"
+        )
         log(s, p["name"] + "：" + p["feedback"])
     else:
         failures = result["failures"]
@@ -618,6 +622,8 @@ def advance(s, weeks: int = 4):
         s["minimum_cash"] = min(s["minimum_cash"], s["cash"])
         if s["week"] % 4 == 0:
             s["negative_months"] = s["negative_months"] + 1 if s["cash"] < 0 else 0
+            if s["negative_months"] in (1, 2):
+                log(s, f"月底现金为负（第 {s['negative_months']} 个月）。连续三个月为负会停业。")
             if s["negative_months"] >= 3:
                 s["game_over"] = True
                 log(s, "连续三个月月底现金为负，公司停止经营。研究记录保留，可在新局调整路线。")
@@ -628,17 +634,34 @@ def advance(s, weeks: int = 4):
             break
 
 
-def next_event(s):
-    """Stop when someone becomes available, including non-blocking jobs and partner data."""
+def next_event(s, batches: int = 1):
+    """Stop when someone becomes available, including non-blocking jobs and partner data.
+
+    ``batches=1`` also stops at every development batch and readout (the original v0.7 pace);
+    ``batches=0`` skips them and stops only when a decision, a free person or a year end arrives.
+    """
+    check(batches in (0, 1), "batches 只能是 0 或 1")
     remaining = [48 - s["week"] % 48, *[j["left"] for j in s["jobs"]]]
     remaining += [p["left"] for p in s["projects"] if p["status"] in ("screening", "running")]
     remaining += [d["left"] for d in s["deals"] if d["status"] == "developing"]
+    if not batches and any(h["employed"] and h["id"] not in busy(s) for h in s["heroes"]):
+        # 有人空着时，新一批服务订单也算一件事
+        remaining.append(12 - s["week"] % 12)
+    solvent = s["cash"] >= 0
+    if not batches and not solvent:
+        # 现金已经为负：最多走到下一个月底，让玩家看到停业倒计时
+        remaining.append(4 - s["week"] % 4)
     for _ in range(min([48, *remaining])):
         prior_event = s["event_seq"]
         advance(s, 1)
-        if any(ev["id"] > prior_event and ev["type"] in ("work_completed", "evidence_received") for ev in s["events"]):
+        if batches and any(
+            ev["id"] > prior_event and ev["type"] in ("work_completed", "evidence_received") for ev in s["events"]
+        ):
             break
         if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
+            break
+        if not batches and solvent and s["cash"] < 0:
+            # 现金转负：停下来，让玩家在三个月期限内应对
             break
 
 

@@ -1,0 +1,513 @@
+/* 场景页右侧面板。常用操作压到一两次点击：
+ * 决定卡上的主按钮直接执行引擎验证过的默认方案（快照里的 quick），技术服务默认派能力最低的合格伙伴。
+ * 这里只读快照、发送已有命令，不推进时间、不做任何规则计算。 */
+(() => {
+  const RANK_CAP = [0, 48, 66, 83, 97];
+  const DECIDE = ["selecting", "ready", "result", "problem", "checkpoint"];
+  const heroOf = (id) => state.heroes.find((h) => h.id === id);
+  const nameOf = (id) => heroOf(id)?.name || id;
+  const args = (value) => esc(JSON.stringify(value));
+  const cmd = (text, name, a, cls = "", disabled = false, title = "") =>
+    `<button class="${cls}" data-command="${name}" data-args="${args(a)}" ${disabled ? "disabled" : ""} ${title ? `title="${esc(title)}"` : ""}>${text}</button>`;
+  const waiting = () =>
+    state.projects.filter((p) => p.active && DECIDE.includes(p.status));
+  const tone = (p) =>
+    ({
+      selecting: "wait",
+      ready: "wait",
+      result: "good",
+      problem: "bad",
+      checkpoint: "wait",
+      failed: "bad",
+      screening: "run",
+      running: "run",
+      approved: "good",
+      licensed: "good",
+      terminated: "mute",
+    })[p.status] || "mute";
+  const statusPill = (p) =>
+    `<span class="pill ${tone(p)}">${esc(p.status_name)}${p.deferred ? " · 暂缓" : ""}</span>`;
+
+  /* ---------- 小部件 ---------- */
+  function phaseTrack(p) {
+    if (p.status === "licensed") return "";
+    return `<ol class="track">${p.path
+      .map(
+        (name, i) =>
+          `<li class="${i < p.index || (i === p.index && ["result", "approved"].includes(p.status)) ? "done" : i === p.index ? "now" : ""}" title="${esc(name)}"><span>${esc(name)}</span></li>`,
+      )
+      .join("")}</ol>`;
+  }
+  // 区间条：灰底是可能范围，竖线是本阶段门槛
+  function rangeBar(low, high, limit, lo, hi) {
+    const x = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+    const ok = limit == null ? "" : low >= limit ? "ok" : high < limit ? "no" : "mid";
+    return `<span class="range ${ok}"><i style="left:${x(low)}%;width:${Math.max(2, x(high) - x(low))}%"></i>${limit == null ? "" : `<b style="left:${x(limit)}%"></b>`}</span>`;
+  }
+  function scaleOf(values) {
+    const lo = Math.min(...values),
+      hi = Math.max(...values);
+    const pad = Math.max(40, (hi - lo) * 0.12);
+    return [Math.floor((lo - pad) / 50) * 50, Math.ceil((hi + pad) / 50) * 50];
+  }
+  function resultBars(r) {
+    if (!r) return "";
+    const keys = Object.keys(r.values);
+    const [lo, hi] = scaleOf(keys.flatMap((k) => [r.values[k], r.limits[k]]));
+    return `<div class="result ${r.passed ? "pass" : "fail"}"><b>${r.passed ? "达到本阶段要求" : "未达到本阶段要求"}</b>${keys
+      .map((k) => {
+        const v = r.values[k],
+          lim = r.limits[k];
+        const x = (n) => Math.max(0, Math.min(100, ((n - lo) / (hi - lo)) * 100));
+        return `<div class="bar-row"><span>${esc(state.stats[k])}</span><span class="bar ${v >= lim ? "ok" : "no"}"><i style="width:${x(v)}%"></i><b style="left:${x(lim)}%"></b></span><small>${num(v)} / ${num(lim)}</small></div>`;
+      })
+      .join("")}</div>`;
+  }
+  function candidateTags(p) {
+    const score = p.candidates.map((c) => ({
+      id: c.id,
+      floor: Math.min(...c.evidence.map((e) => e.low)),
+      ceiling: c.evidence.reduce((a, e) => a + e.high, 0),
+    }));
+    const steady = score.reduce((a, b) => (b.floor > a.floor ? b : a)).id;
+    const upside = score.reduce((a, b) => (b.ceiling > a.ceiling ? b : a)).id;
+    return (id) =>
+      [id === steady ? "稳妥" : "", id === upside ? "潜力" : ""].filter(
+        Boolean,
+      );
+  }
+  function candidateTable(p) {
+    const tags = candidateTags(p);
+    const stats = p.candidates[0]?.evidence.map((e) => e.key) || [];
+    const limits = p.scene?.limits || {};
+    const [lo, hi] = scaleOf(
+      p.candidates.flatMap((c) =>
+        c.evidence.flatMap((e) => [e.low, e.high]),
+      ),
+    );
+    return `<div class="cands" style="--n:${p.candidates.length}"><div class="cands-head"><span></span>${p.candidates
+      .map(
+        (c) =>
+          `<span><b>候选 ${c.id + 1}</b><small>${esc(c.label)}</small>${tags(c.id)
+            .map((t) => `<em class="tag ${t === "稳妥" ? "steady" : "upside"}">${t}</em>`)
+            .join("")}</span>`,
+      )
+      .join("")}</div>${stats
+      .map(
+        (k) =>
+          `<div class="cands-row"><span class="stat">${esc(p.candidates[0].evidence.find((e) => e.key === k).name)}</span>${p.candidates
+            .map((c) => {
+              const e = c.evidence.find((x) => x.key === k);
+              return `<span>${rangeBar(e.low, e.high, limits[k], lo, hi)}<small>${e.low}–${e.high}</small></span>`;
+            })
+            .join("")}</div>`,
+      )
+      .join(
+        "",
+      )}<div class="cands-foot"><span></span>${p.candidates
+      .map((c) =>
+        cmd(
+          "选这个",
+          "choose_candidate",
+          { project: p.id, candidate: c.id },
+          tags(c.id).includes("稳妥") ? "primary small" : "small",
+        ),
+      )
+      .join("")}</div></div><p class="hint-line">灰条是证据给出的可能范围，竖线是下一阶段的门槛。范围宽说明还不确定，不代表更好。</p>`;
+  }
+  // 某人还要忙几周：服务、培养看 jobs，项目看 left
+  function busyFor(h) {
+    const job = state.jobs.find((j) => j.heroes.includes(h.id));
+    if (job) return job.left;
+    const p = state.projects.find(
+      (p) => p.team.includes(h.id) && ["screening", "running", "checkpoint"].includes(p.status),
+    );
+    return p ? p.left : null;
+  }
+  function busyNote(q) {
+    const people = state.heroes.filter(
+      (h) => h.busy && (q.roles || []).includes(h.profession),
+    );
+    if (!people.length) return q.error;
+    return (
+      "需要的人在忙：" +
+      people
+        .map((h) => {
+          const left = busyFor(h);
+          return `${h.name}（${h.busy}${left ? `，还剩 ${left} 周` : ""}）`;
+        })
+        .join("、")
+    );
+  }
+  function cashNote(q) {
+    if (!q.cost || q.command === "launch") return "";
+    const after = state.available_cash - q.cost;
+    const burn =
+      state.costs_per_week + q.cost / Math.max(1, q.weeks || 1) - state.weekly_profit - state.weekly_royalty;
+    if (after >= 300 && (burn <= 0 || after / burn >= 12)) return "";
+    const weeks = burn > 0 ? Math.max(0, Math.floor(after / burn)) : null;
+    return `<small class="warn cash">开工后可用现金 ${money(after)}${weeks != null ? `，按现在的开销约撑 ${weeks} 周` : ""}。可以先接服务或暂缓。</small>`;
+  }
+  function quickButton(p) {
+    const q = p.quick;
+    if (!q) return "";
+    if (q.command === "launch") {
+      return `<div class="launch"><label>药品名<input data-launch-name="${p.id}" value="${esc(p.name)}" maxlength="30"></label><button class="quick" data-launch="${p.id}" ${q.ok ? "" : "disabled"}><b>上市</b><small>准备费 ${money(q.cost)}</small></button>${q.ok ? "" : `<small class="warn">${esc(q.error)}</small>`}</div>`;
+    }
+    const team = q.args.heroes?.length
+      ? q.args.heroes.map(nameOf).join("、")
+      : q.args.mode === "cro"
+        ? "外包 CRO"
+        : "";
+    const meta = [
+      q.weeks ? `${q.weeks} 周` : "",
+      q.cost != null ? money(q.cost) : "",
+      q.chance ? `成功率${q.chance}` : "",
+      q.args.mode === "cro" && q.args.heroes?.length ? "CRO 执行" : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    if (!q.ok)
+      return `<div class="quick blocked"><b>${esc(q.label)}</b><small>${esc(busyNote(q))}</small></div>`;
+    return `<button class="quick" data-command="${q.command}" data-args="${args(q.args)}"><b>${esc(q.label)}</b><small>${esc(meta)}</small>${team ? `<small class="who">${esc(team)}</small>` : ""}</button>${cashNote(q)}`;
+  }
+  function deferButton(p) {
+    return cmd(
+      p.deferred ? "恢复提醒" : "暂缓",
+      "defer",
+      { project: p.id, waiting: p.deferred ? 0 : 1 },
+      "ghost small",
+      false,
+      p.deferred ? "" : "先去做别的，时间可以继续走；未开工阶段不收费",
+    );
+  }
+
+  /* ---------- 决定区：按项目状态给出主按钮和少量次要按钮 ---------- */
+  function decision(p) {
+    const result = p.results.at(-1);
+    if (p.deferred) {
+      if (p.quick?.ok && p.status !== "selecting")
+        return `<p class="lead">${p.quick.command === "launch" ? "随时可以上市。" : "人和钱都够了，可以开工。"}</p>${quickButton(p)}<div class="act-row">${cmd("恢复提醒", "defer", { project: p.id, waiting: 0 }, "ghost small")}${modalButton("终止研究", "terminate", p.id, "ghost small danger")}</div>`;
+      return `${p.quick && !p.quick.ok ? `<p class="hint-line">${esc(busyNote(p.quick))}</p>` : ""}<div class="act-row">${cmd("恢复，现在决定", "defer", { project: p.id, waiting: 0 }, "small")}${modalButton("终止研究", "terminate", p.id, "ghost small danger")}</div>`;
+    }
+    if (p.status === "selecting")
+      return `${candidateTable(p)}<div class="act-row">${deferButton(p)}${modalButton("终止", "terminate", p.id, "ghost small danger")}</div>`;
+    if (p.status === "checkpoint") {
+      const v = p.trial_decision;
+      // 只在已公开的期中估计很明确时提示一边；中间地带由玩家自己判断
+      const lean =
+        v.chance == null ? null : v.chance >= 35 ? "keep" : v.chance <= 15 ? "stop" : null;
+      return `<div class="interim"><b>${esc(v.title)}</b><p>${esc(v.text)}</p>${p.interim_chance ? `<p class="hint-line">按已回数据，本阶段预计 ${esc(p.interim_chance)}${lean ? (lean === "keep" ? "，形势不错" : "，希望不大") : "，难说"}</p>` : ""}<div class="choice-grid">${v.choices
+        .map((c) =>
+          cmd(
+            `<b>${esc(c.name)}</b><small>${esc(c.text)}</small>`,
+            "trial_decision",
+            { project: p.id, choice: c.key },
+            c.key === lean ? "choice primary" : "choice",
+          ),
+        )
+        .join("")}</div></div>`;
+    }
+    if (p.status === "ready")
+      return `${quickButton(p)}<div class="act-row">${p.quick && !p.quick.ok ? cmd("暂缓，等人空出来", "defer", { project: p.id, waiting: 1 }, "primary small") : ""}${modalButton("调整方案", "phase", p.id, "small")}${modalButton("专项研究", "experiment", p.id, "small")}${p.index < 2 ? modalButton("换候选", "switch", p.id, "small") : ""}${deferButton(p)}</div>`;
+    if (p.status === "result") {
+      const review = p.key === "review";
+      return `${resultBars(result)}${quickButton(p)}<div class="act-row">${review ? "" : modalButton("调整方案", "phase", p.id, "small")}${p.quotes.length ? modalButton(`授权报价 · ${p.quotes.length}`, "license", p.id, "small accent") : ""}${review ? "" : cmd("先放着", "continue_project", { project: p.id }, "ghost small", false, "进入下一阶段的准备状态，稍后再开工")}${deferButton(p)}</div>${p.kind === "innovative" && ["preclinical", "II"].includes(p.key) && !p.quotes.length ? '<p class="hint-line">证据还不够形成授权报价。</p>' : ""}`;
+    }
+    if (p.status === "problem")
+      return `${resultBars(result)}${quickButton(p)}<div class="act-row">${p.index < 2 ? modalButton("换候选重做", "switch", p.id, "small") : ""}${modalButton("止损", "terminate", p.id, "ghost small danger")}</div>`;
+    if (p.status === "failed")
+      return `${resultBars(result)}<p class="hint-line">研究记录和伙伴经验都保留。可以从新项目再出发。</p>`;
+    return "";
+  }
+
+  function decisionCard(p) {
+    return `<article class="card decide ${p.deferred ? "deferred" : ""}" data-project-card="${p.id}"><header><button class="title" data-scene-project="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.kind_name)} · ${esc(p.phase)}</small></button>${statusPill(p)}</header>${p.deferred ? "" : `<p class="lead">${esc(leadText(p))}</p>`}${decision(p)}</article>`;
+  }
+  function leadText(p) {
+    return (
+      {
+        selecting: "候选资料到了。比较三张卡，选一个开始开发。",
+        ready: p.question,
+        result: p.key === "review" ? "审评通过。起个名字就能上市。" : "本阶段过关。下一步：" + (p.next_stage?.phase || "继续"),
+        problem: "差一点。可以补正一次再验证，不保证救回来。",
+        checkpoint: "临床数据回来一半，决定后半程怎么走。",
+      }[p.status] || p.feedback
+    );
+  }
+  function runRow(p) {
+    const total = p.scene.total || 1;
+    return `<button class="run-row" data-scene-project="${p.id}"><span class="dot ${p.scene.activity}"></span><span class="grow"><b>${esc(p.name)}</b><small>${esc(p.running_experiment ? "专项研究" : p.status === "screening" ? "候选筛选" : p.phase)}${p.scene.executor === "cro" ? " · CRO" : ""}</small><span class="progress"><i style="width:${Math.round((p.scene.elapsed / total) * 100)}%"></i></span></span><span class="left">${p.left} 周</span></button>`;
+  }
+  function pastRow(p) {
+    return `<button class="past-row" data-scene-project="${p.id}"><b>${esc(p.name)}</b>${statusPill(p)}</button>`;
+  }
+
+  /* ---------- 研发：决定卡在最上面，然后是进行中的项目 ---------- */
+  function desk() {
+    const w = waiting(),
+      running = state.projects.filter((p) => p.active && !w.includes(p)),
+      past = state.projects.filter((p) => !p.active);
+    const deals = state.deals.filter((d) => d.status === "developing");
+    return `${w.map(decisionCard).join("")}<div class="sec-head"><h3>进行中</h3><button class="primary small" data-np-open>＋ 新项目</button></div>${
+      running.map(runRow).join("") ||
+      (w.length
+        ? ""
+        : `<div class="empty"><p>研究台空着。</p><button class="primary" data-np-open>${state.projects.length ? "开始下一个项目" : "开始第一个项目"}</button><small>${state.products.length ? "产品在卖，可以挑一条更难的路线，或者先培养伙伴。" : "也可以先接技术服务赚周转金。"}</small></div>`)
+    }${deals.length ? `<div class="sec-head"><h3>合作方开发中</h3></div>${deals.map((d) => `<div class="run-row static"><span class="dot test"></span><span class="grow"><b>${esc(state.projects.find((p) => p.id === d.project)?.name || "")}</b><small>${esc(d.partner)} · 还需 ${d.left} 周</small></span></div>`).join("")}` : ""}${past.length ? `<details class="past"><summary>已结束 · ${past.length}</summary>${past.slice().reverse().map(pastRow).join("")}</details>` : ""}${money_line()}`;
+  }
+  function money_line() {
+    const s = state;
+    return `<div class="cashflow"><span>每周支出 <b>${money(s.costs_per_week)}</b></span><span>产品利润 <b>${money(s.weekly_profit)}</b></span>${s.weekly_royalty ? `<span>分成 <b>${money(s.weekly_royalty)}</b></span>` : ""}<span>${s.runway === null ? "收支为正" : `约可撑 <b>${s.runway}</b> 周`}</span></div>`;
+  }
+
+  /* ---------- 项目详情 ---------- */
+  function project(p) {
+    const current = p.candidates[p.chosen];
+    const limits = p.scene?.limits || {};
+    let evidenceBlock = "";
+    if (current && p.active) {
+      const ev = current.evidence;
+      const [lo, hi] = scaleOf(
+        ev.flatMap((e) => [e.low, e.high, ...(limits[e.key] ? [limits[e.key]] : [])]),
+      );
+      evidenceBlock = `<section class="block"><h4>候选 ${current.id + 1} · ${esc(current.label)}<small>已优化 ${current.optimized}/2</small></h4>${ev
+        .map(
+          (e) =>
+            `<div class="bar-row"><span>${esc(e.name)}</span>${rangeBar(e.low, e.high, limits[e.key], lo, hi)}<small>${e.low}–${e.high}</small></div>`,
+        )
+        .join(
+          "",
+        )}<p class="hint-line">竖线是「${esc(p.phase)}」的门槛。开发让灰条右移，验证让它变窄。</p></section>`;
+    }
+    const running = ["screening", "running"].includes(p.status);
+    return `<button class="back" data-scene="overview">← 研发</button><article class="card detail"><header><div class="title"><b>${esc(p.name)}</b><small>${esc(p.kind_name)} · 已投入 ${money(p.spent)}</small></div>${statusPill(p)}</header>${phaseTrack(p)}${
+      running
+        ? `<div class="running-box"><span class="dot ${p.scene.activity}"></span><span class="grow"><b>${esc(p.running_experiment ? "专项研究" : p.status === "screening" ? "候选筛选" : p.phase)}</b><small>${p.team.map(nameOf).join("、") || "外包 CRO"} · 还需 ${p.left} 周</small><span class="progress"><i style="width:${Math.round((p.scene.elapsed / (p.scene.total || 1)) * 100)}%"></i></span></span></div>${p.interim_chance ? `<p class="hint-line">按已回数据，本阶段预计 ${esc(p.interim_chance)}</p>` : ""}`
+        : ""
+    }${DECIDE.includes(p.status) || p.status === "failed" ? decision(p) : ""}${
+      p.status === "licensed"
+        ? '<p class="hint-line">已授权给合作方，后续里程碑和分成在「产品」里看。</p>'
+        : ""
+    }${evidenceBlock}${p.readings.length || p.work.length ? `<details class="block"><summary>分批数据与开发量</summary>${workList(p.work)}${p.readings
+      .slice(-8)
+      .reverse()
+      .map(
+        (r) =>
+          `<p class="reading">第 ${r.week} 周 · ${esc(r.stage_name)} 第 ${r.index}/4 批：${Object.entries(
+            r.values,
+          )
+            .map(([k, v]) => esc(state.stats[k]) + " " + v)
+            .join(" / ")}</p>`,
+      )
+      .join("")}</details>` : ""}${productNote(p)}${p.active && !DECIDE.includes(p.status) ? "" : ""}${p.active ? `<div class="act-row end">${modalButton("终止研究", "terminate", p.id, "ghost small danger")}</div>` : ""}</article>`;
+  }
+
+  /* ---------- 新项目：选路线 → 点一张卡 → 开始 ---------- */
+  const np = { route: "generic", target: "", pick: null };
+  function catalogStatus(c) {
+    if (c.occupied) return ["在研或在售", "mute"];
+    if (!c.unlocked) return ["待解锁", "mute"];
+    return ["可开始", "good"];
+  }
+  function stars(tier) {
+    return tier == null
+      ? ""
+      : `<em class="fit fit${tier}">${{ "-2": "不适配", "-1": "较差", 0: "一般", 1: "适配", 2: "很适配" }[tier]}</em>`;
+  }
+  function newProject() {
+    const targets = [
+      ...new Set(
+        state.catalog.filter((c) => c.kind === "innovative").map((c) => c.target),
+      ),
+    ];
+    if (np.route === "innovative" && !targets.includes(np.target))
+      np.target =
+        targets.find((t) =>
+          state.catalog.some(
+            (c) => c.target === t && c.unlocked && !c.occupied,
+          ),
+        ) || targets[0];
+    const items = state.catalog.filter(
+      (c) =>
+        c.kind === np.route &&
+        (np.route !== "innovative" || c.target === np.target),
+    );
+    if (!items.some((c) => c.key === np.pick))
+      np.pick = (items.find((c) => c.unlocked && !c.occupied) || items[0])?.key;
+    const c = state.catalog.find((x) => x.key === np.pick);
+    const team = state.assist.screen[np.route] || [];
+    const free = state.heroes.filter((h) => !h.busy);
+    const canStart = c && c.unlocked && !c.occupied && team.length;
+    return `<button class="back" data-scene="overview">← 研发</button><h2 class="panel-title">新项目</h2><div class="seg">${[
+      ["generic", "仿制药", "稳，回本快"],
+      ["improved", "改良药", "中等风险"],
+      ["innovative", "创新药", "高风险高回报"],
+    ]
+      .map(
+        ([k, n, sub]) =>
+          `<button data-np-route="${k}" aria-pressed="${np.route === k}"><b>${n}</b><small>${sub}</small></button>`,
+      )
+      .join("")}</div>${
+      np.route === "innovative"
+        ? `<label class="field">靶点<select data-np-target>${targets.map((t) => `<option ${t === np.target ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label><p class="hint-line">组合手记 ${Object.keys(state.notebook).length} / 288 · 筛选后会记下这个组合是否适配。</p>`
+        : ""
+    }<div class="cat-grid">${items
+      .map((x) => {
+        const [label, cls] = catalogStatus(x);
+        return `<button class="cat ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(np.route === "innovative" ? x.modality : x.name)}</b><small>${esc(x.indication)}</small><span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
+      })
+      .join("")}</div>${
+      c
+        ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p><div class="checks">${c.requirements.map((r) => `<span class="${r.ok ? "ok" : "no"}">${r.ok ? "✓" : "○"} ${esc(r.text)}</span>`).join("")}</div><p class="meta-line">竞争压力 ${c.competition.toFixed(1)} / 3${c.announced_rivals.length ? " · 对手：" + c.announced_rivals.map(esc).join("、") : ""}${c.discovery ? " · " + esc(c.discovery.reason) : ""}</p><p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
+            state.work_focuses,
+          )
+            .map(
+              ([k, v]) =>
+                `<option value="${k}">${esc(v.name)} · ${esc(v.text)}</option>`,
+            )
+            .join(
+              "",
+            )}</select></label>${c.product_profile ? `<label class="field">产品验证<select name="design"><option value="standard">标准开发</option><option value="validated">强化：${esc(c.product_profile.enhanced)}（关键阶段 +2 周、费用 +25%）</option></select></label><p class="hint-line">${esc(c.product_profile.title)}：${esc(c.product_profile.text)}</p>` : ""}<fieldset class="pick-team"><legend>筛选团队（最多 3 位）</legend>${free
+            .map(
+              (h) =>
+                `<label><input type="checkbox" name="heroes" value="${h.id}" ${team.includes(h.id) ? "checked" : ""}><span>${esc(h.name)}<small>${esc(h.profession_name)} ${h.ability}</small></span></label>`,
+            )
+            .join(
+              "",
+            )}</fieldset></details><button class="quick" type="submit" ${canStart ? "" : "disabled"}><b>开始筛选</b><small>8 周 · ¥70 万 · 先找三个候选</small></button></form>`
+        : ""
+    }`;
+  }
+  function newProjectArgs(form) {
+    const data = new FormData(form);
+    return {
+      catalog: np.pick,
+      heroes: data.getAll("heroes"),
+      design: data.get("design") || "standard",
+      work_focus: data.get("work_focus") || "balanced",
+    };
+  }
+
+  /* ---------- 技术服务：每单一键，默认派能力最低的合格伙伴 ---------- */
+  function services() {
+    const picks = state.assist.services;
+    const ready = state.orders.filter((o) => !o.taken && picks[o.id]?.hero);
+    const quarterEnd = 12 - (state.week % 12);
+    return `<div class="sec-head"><h3>技术服务</h3>${ready.length > 1 ? `<button class="primary small" data-services-all>全部接下 · ${ready.length} 单</button>` : ""}</div><p class="sub">本批订单还剩 ${quarterEnd} 周。默认派能力最低的合格伙伴，强的人留给研发；回款不看能力。</p>${state.orders
+      .map((o) => orderCard(o, picks[o.id]))
+      .join(
+        "",
+      )}<div class="sec-head"><h3>进行中的服务与培养</h3></div>${
+      state.jobs.length
+        ? state.jobs
+            .map(
+              (j) =>
+                `<div class="run-row static"><span class="dot ${j.kind === "service" ? "service" : "study"}"></span><span class="grow"><b>${esc(j.name)}</b><small>${j.heroes.map(nameOf).join("、")}</small></span><span class="left">${j.left} 周</span></div>`,
+            )
+            .join("")
+        : '<p class="sub">暂时没有。</p>'
+    }`;
+  }
+  function orderCard(o, pick) {
+    const head = `<div class="order-head"><b>${esc(o.name)}</b><span class="gain">+${money(o.reward)}</span></div><small class="meta-line">${o.weeks} 周 · 材料 ${money(o.cost)} · ${esc(state.professions[o.profession])}能力 ≥ ${o.requirement}</small>`;
+    if (o.taken)
+      return `<article class="order done">${head}<span class="pill good">已接单</span></article>`;
+    const qualified = state.heroes
+      .filter(
+        (h) =>
+          !h.busy &&
+          h.profession === o.profession &&
+          h.ability >= o.requirement,
+      )
+      .sort((a, b) => a.ability - b.ability);
+    if (!qualified.length)
+      return `<article class="order off">${head}<p class="note">${esc(pick?.note || "暂无合格的空闲伙伴")}</p></article>`;
+    const note = pick?.hero
+      ? pick.note
+      : `${qualified.map((h) => h.name).join("、")}已推荐去接另一单；也可以改派到这单。`;
+    return `<article class="order ${pick?.hero ? "" : "spare"}">${head}<div class="order-act"><select data-service-pick="${o.id}" aria-label="交付负责人">${qualified
+      .map(
+        (h) =>
+          `<option value="${h.id}" ${h.id === pick?.hero ? "selected" : ""}>${esc(h.name)} · 能力 ${h.ability}</option>`,
+      )
+      .join(
+        "",
+      )}</select><button class="${pick?.hero ? "primary" : ""}" data-service-take="${o.id}">接单</button></div>${note ? `<small class="warn">${esc(note)}</small>` : ""}</article>`;
+  }
+  function serviceAssignments() {
+    const picks = state.assist.services;
+    return state.orders
+      .filter((o) => !o.taken && picks[o.id]?.hero)
+      .map((o) => ({ order: o.id, character: picks[o.id].hero }));
+  }
+
+  /* ---------- 伙伴 ---------- */
+  function promotable(h) {
+    return h.rank < 4 && h.promotion.every((c) => c.ok);
+  }
+  function trainButton(h, cls = "small") {
+    const capped = h.ability >= RANK_CAP[h.rank];
+    return cmd(
+      `培训 · ${money(40 + h.rank * 20)}`,
+      "train",
+      { character: h.id },
+      cls,
+      !!h.busy || capped,
+      capped ? "当前阶位能力已到上限，需要真实项目履历和晋阶" : "6 周，能力 +3",
+    );
+  }
+  function team() {
+    const f = state.facility;
+    return `<div class="sec-head"><h3>伙伴 · ${state.heroes.length} 位</h3><button class="small" data-modal="roster">邀请新伙伴</button></div><p class="sub">团队 ${state.headcount}/${f.capacity} 人（含成员）。点头像看详情；能晋阶的人会亮起来。</p><div class="hero-list">${state.heroes
+      .map(
+        (h) =>
+          `<article class="hero-row ${promotable(h) ? "glow" : ""}"><button class="who" data-scene-hero="${h.id}"><canvas data-portrait="${h.id}" aria-hidden="true"></canvas><span><b>${esc(h.name)}</b><small>${esc(h.rank_name)} · ${esc(h.profession_name)} ${h.ability}</small><small class="${h.busy ? "" : "free"}">${esc(h.busy || "空闲")}</small></span></button><span class="row-act">${promotable(h) ? cmd(`晋阶 · ${money(h.promotion_cost)}`, "promote", { character: h.id }, "primary small", !!h.busy) : ""}${h.busy ? "" : trainButton(h)}</span></article>`,
+      )
+      .join("")}</div>${facility()}`;
+  }
+  function facility() {
+    const f = state.facility,
+      n = state.next_facility;
+    return `<div class="sec-head"><h3>研究所 · ${esc(f.name)}</h3></div><p class="sub">容纳 ${f.capacity} 人 · 自营临床席位 ${state.clinical_used}/${f.slots} · 租金 ${money(f.rent)}/周</p>${
+      n
+        ? `<div class="upgrade"><span><b>扩建为 ${esc(n.name)}</b><small>容纳 ${n.capacity} 人 · 租金 ${money(n.rent)}/周${n.upkeep ? ` · 平台维护 ${money(n.upkeep)}/周` : ""}</small></span>${cmd(`扩建 · ${money(n.cost)}`, "upgrade", {}, "primary small", state.available_cash < n.cost, state.available_cash < n.cost ? "可用现金不足" : "")}</div>`
+        : '<p class="sub">已经是最高级的研究所。</p>'
+    }<div class="equip">${state.equipment
+      .map(
+        (r) =>
+          `<div class="upgrade"><span><b>${esc(r.name)} · ${r.level} 级</b><small>${esc(r.text)}</small></span>${r.cost ? cmd(`升级 · ${money(r.cost)}`, "upgrade_equipment", { profession: r.profession }, "small", !r.available || r.cost > state.available_cash) : '<span class="pill mute">满级</span>'}</div>`,
+      )
+      .join("")}</div>`;
+  }
+  function hero(h) {
+    const ready = promotable(h);
+    const okCount = h.promotion.filter((c) => c.ok).length;
+    return `<button class="back" data-scene="overview">← 伙伴</button><article class="card detail hero-card2"><header class="hero-head"><canvas data-portrait="${h.id}" class="big" aria-hidden="true"></canvas><div><h2>${esc(h.name)}<small>「${esc(h.nickname)}」</small></h2><p>${esc(h.rank_name)} · ${esc(h.profession_name)}</p><span class="meter"><i style="width:${Math.min(100, h.ability)}%"></i></span><small>能力 ${h.ability} / 阶位上限 ${RANK_CAP[h.rank]} · 经验 ${h.xp} · 成员 ${h.members} · 履历 ${h.cases.length}</small></div></header><p class="status-line">${h.busy ? `<span class="dot make"></span>正在：${esc(h.busy)}` : '<span class="dot idle"></span>空闲，可以安排工作'} · 工资 ${money(h.weekly_salary)}/周</p><div class="act-row">${h.rank < 4 ? cmd(`晋阶${["", "", "精英", "大师", "传奇"][h.rank + 1]} · ${money(h.promotion_cost)}`, "promote", { character: h.id }, ready ? "primary small" : "small", !!h.busy || !ready) : ""}${trainButton(h)}${modalButton("团队成员", "team", h.id, "small")}${modalButton("带教", "mentor", h.id, "small")}</div><section class="block"><h4>招牌能力 · ${esc(h.trait.name)}<small>当前 ${h.signature_value}</small></h4><p>${esc(h.trait.description)}</p></section>${personalCard(h)}${h.rank < 4 ? `<details class="block" ${ready ? "open" : ""}><summary>晋阶条件 ${okCount}/${h.promotion.length}</summary><p>${checks(h.promotion)}</p></details>` : '<p class="hint-line">已达传奇，可以带教后辈。</p>'}<details class="block"><summary>背景</summary><p>${esc(h.story)}</p><p>${esc(h.bio)}</p></details></article>`;
+  }
+
+  /* ---------- 房间 ---------- */
+  function room(id, names, summary, built) {
+    const equipment = state.equipment.filter(
+      (r) => DrugstoryWorld.ROOMS[r.id] === id,
+    );
+    const people = state.heroes.filter(
+      (h) => h.activity !== "idle" && h.room && DrugstoryWorld.ROOMS[h.room] === id,
+    );
+    return `<button class="back" data-scene="overview">← 返回</button><h2 class="panel-title">${esc(names[id])}</h2><p class="sub">${esc(summary)}</p>${!built ? '<p class="hint-line">扩建后开放专用空间。之前相关工作在共用工位进行，研发门槛不变。</p>' : ""}${people.map((h) => `<button class="run-row" data-scene-hero="${h.id}"><canvas data-portrait="${h.id}" class="mini" aria-hidden="true"></canvas><span class="grow"><b>${esc(h.name)}</b><small>${esc(h.busy || "")}</small></span></button>`).join("")}${equipment.map((r) => `<div class="upgrade"><span><b>${esc(r.name)} · ${r.level} 级</b><small>${esc(r.text)}</small></span>${r.cost ? cmd(`升级 · ${money(r.cost)}`, "upgrade_equipment", { profession: r.profession }, "primary small", !r.available || r.cost > state.available_cash) : '<span class="pill mute">满级</span>'}</div>`).join("")}${id === "academy" ? '<p class="hint-line">个人课题和带教在这里进行。去「伙伴」安排。</p>' : ""}${id === "hall" ? '<button class="small" data-tab="honors">年度大会与荣誉</button>' : ""}${facility()}`;
+  }
+
+  window.DrugstoryPanels = {
+    desk,
+    project,
+    newProject,
+    newProjectArgs,
+    services,
+    serviceAssignments,
+    team,
+    hero,
+    room,
+    np,
+    waiting,
+  };
+})();

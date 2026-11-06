@@ -136,3 +136,46 @@ test("pending decisions and bankruptcy block automatic time", () => {
   assert.equal(World.blocked({ ...s(), pending: 1 }), true);
   assert.equal(World.blocked({ ...s(), game_over: true }), true);
 });
+const Figures = require("../src/drugstory/career/web/scene/figures.js");
+const rules = require("../src/drugstory/career/data/rules.json");
+// 记录调用的假画布：只检查画法对每个角色、每种姿势都不出错、不画出 NaN
+function fakeContext() {
+  const calls = { nan: 0, n: 0 };
+  const ctx = new Proxy(
+    { globalAlpha: 1 },
+    {
+      get(target, key) {
+        if (key === "calls") return calls;
+        if (key in target) return target[key];
+        return (...args) => {
+          calls.n++;
+          if (args.some((a) => typeof a === "number" && Number.isNaN(a))) calls.nan++;
+        };
+      },
+      set(target, key, value) {
+        target[key] = value;
+        return true;
+      },
+    },
+  );
+  return ctx;
+}
+test("every cast look draws in every pose without NaN", () => {
+  const poses = [
+    {},
+    { walking: true, phase: 1.3 },
+    { working: true, phase: 2.1 },
+    { away: true, walking: true, phase: 0.4 },
+    { still: true },
+    { jump: 3, ring: "#000", flip: true, phase: 9 },
+  ];
+  for (const [key, spec] of Object.entries(rules.ROSTER)) {
+    for (const o of poses) {
+      const ctx = fakeContext();
+      Figures.drawPerson(ctx, spec.look, { x: 0, y: 0, ...o });
+      assert.ok(ctx.calls.n > 40, `${key} draws something`);
+      assert.equal(ctx.calls.nan, 0, `${key} has no NaN coordinates`);
+    }
+  }
+  assert.ok(Figures.height({}) > 30 && Figures.height({}) < 45);
+});

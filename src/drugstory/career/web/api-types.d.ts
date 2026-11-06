@@ -99,6 +99,7 @@ export type Project = {
   "can_focus": JsonValue;
   "patent": JsonValue;
   "scene": ProjectScene;
+  "quick": QuickAction | null;
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -162,6 +163,32 @@ export type ProjectScene = {
   "limits": { [key: string]: number };
 };
 
+export type QuickAction = {
+  "command": "run_phase" | "continue_and_run" | "launch" | "rework";
+  "args": JsonValue;
+  "label": string;
+  "roles": (string)[];
+  "stage": string;
+  "weeks": number | null;
+  "cost": number | null;
+  "chance": string | null;
+  "ok": boolean;
+  "error": string | null;
+};
+
+export type Assist = {
+  "services": { [key: string]: {
+  "hero": string | null;
+  "note": string | null;
+} };
+  "screen": {
+  "generic": (string)[];
+  "improved": (string)[];
+  "innovative": (string)[];
+};
+  "idle": (string)[];
+};
+
 export type GameState = {
   "version": string;
   "api_version": 2;
@@ -216,6 +243,7 @@ export type GameState = {
   "expense": JsonValue;
   "report": JsonValue;
   "game_over": boolean;
+  "negative_months": number;
   "career_done": boolean;
   "pending": number;
   "catalog": ({
@@ -236,4 +264,5 @@ export type GameState = {
   "saved_at": string | null;
   "display_scale": 10;
   "patents": (Patent)[];
+  "assist": Assist;
 };

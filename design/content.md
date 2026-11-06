@@ -1,4 +1,4 @@
-# 当前内容结构 · v0.9
+# 当前内容结构 · v0.10
 
 唯一在用内容位于 `src/drugstory/career/data/`，由 `career/content.py` 加载并校验。旧 TOML 组合来源在 v0.3.0 tag 中可追溯，288 个组合的档位与理由已提取，运行时不再依赖旧引擎。
 
