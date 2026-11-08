@@ -254,7 +254,10 @@ def advice(s, p):
         tips.append(
             {
                 "kind": "marker",
-                "text": "可以先做人群分层研究：如果找到获益更好的人群，III 期能分层入组，获益门槛更容易过。结果也可能不支持分层。",
+                "text": (
+                    "可以先做人群分层研究：如果找到获益更好的人群，III 期能分层入组，获益门槛更容易过。"
+                    "结果也可能不支持分层。"
+                ),
                 "command": "experiment",
                 "args": args,
                 "ok": error is None,
@@ -267,7 +270,9 @@ def advice(s, p):
         tips.append(
             {
                 "kind": "stop",
-                "text": f"按公开证据，后续全部通过的机会约 {round(now * 100)}%。可以考虑授权或止损，把钱留给下一个项目。",
+                "text": (
+                    f"按公开证据，后续全部通过的机会约 {round(now * 100)}%。可以考虑授权或止损，把钱留给下一个项目。"
+                ),
                 "command": None,
                 "args": None,
                 "ok": False,
