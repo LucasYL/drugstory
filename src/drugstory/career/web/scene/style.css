@@ -1973,3 +1973,8 @@ canvas.mini {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.rating-card h2,
+.rating-card h3,
+.rating-card p {
+  margin: 0;
+}
