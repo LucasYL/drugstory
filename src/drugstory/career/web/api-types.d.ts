@@ -5,7 +5,7 @@ export type Event = {
   "version": 1;
   "id": number;
   "week": number;
-  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "cash_changed" | "notice";
+  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "cash_changed" | "notice";
   "actors": (string)[];
   "project": string | null;
   "room": RoomId | null;
@@ -202,6 +202,30 @@ export type Advice = {
   "after": number | null;
 };
 
+export type RatingSummary = {
+  "total": number;
+  "grade": "S" | "A" | "B" | "C" | "D";
+  "title": string;
+  "dimensions": ({
+  "key": "patients" | "science" | "legacy" | "finance" | "reputation";
+  "name": string;
+  "weight": number;
+  "score": number;
+})[];
+  "ending": string;
+  "ending_text": string;
+};
+
+export type Rating = {
+  "term": 10 | 20;
+  "term_weeks": number;
+  "weeks_left": number;
+  "current": RatingSummary;
+  "projected": RatingSummary;
+  "final": RatingSummary | null;
+  "patients": number;
+};
+
 export type GameState = {
   "version": string;
   "api_version": 2;
@@ -278,4 +302,5 @@ export type GameState = {
   "display_scale": 10;
   "patents": (Patent)[];
   "assist": Assist;
+  "rating": Rating;
 };

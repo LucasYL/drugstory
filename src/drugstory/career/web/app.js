@@ -60,13 +60,15 @@ async function send(name, args = {}) {
   if (requestBusy) return;
   requestBusy = true;
   const priorFestivalYear = state?.honors?.festivals.at(-1)?.year || 0;
+  const priorFinal = Boolean(state?.rating?.final);
   try {
     const data = await driver.act(name, args);
     state = hydrate(data);
     $("#modal").close();
     render();
     $("#save-status").textContent = "✓ 进度已保存";
-    if ((data.honors.festivals.at(-1)?.year || 0) > priorFestivalYear)
+    if (!priorFinal && data.rating?.final) showModal("rating");
+    else if ((data.honors.festivals.at(-1)?.year || 0) > priorFestivalYear)
       showModal("ceremony");
   } catch (error) {
     if (driver.view()) {
@@ -409,7 +411,7 @@ function showModal(type, id = "") {
         )
         .join(
           "",
-        )}</select></label><p>模式开局后固定。当前进度先备份到本地，新版使用独立存档。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
+        )}</select></label><label>任期<select name="term"><option value="20">二十年 · 标准局</option><option value="10">十年 · 短局</option></select></label><p>模式和任期开局后固定。任期结束时按五项打分评级，之后可以继续经营。当前进度先备份到本地。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
     );
   if (type === "help")
     html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。开发阶段由专业与成员共同改善候选；临床阶段只收集证据。人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>时间、指标和经济数值是游戏规则。场景与文字入口共用同一存档与真实引擎。场景遇到待决策、年度大会或后台切换会暂停；每次操作保存成功后才更新。</p>`;
@@ -485,6 +487,7 @@ function formArgs(form) {
         scenario: data.get("scenario"),
         seed: Number(data.get("seed")),
         difficulty: data.get("difficulty"),
+        term: Number(data.get("term") || 20),
       },
     ],
   };

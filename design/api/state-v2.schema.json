@@ -301,6 +301,9 @@
     },
     "assist": {
       "$ref": "#/$defs/Assist"
+    },
+    "rating": {
+      "$ref": "#/$defs/Rating"
     }
   },
   "required": [
@@ -357,7 +360,8 @@
     "display_scale",
     "patents",
     "assist",
-    "negative_months"
+    "negative_months",
+    "rating"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -420,6 +424,7 @@
             "milestone_reached",
             "award_won",
             "legacy_reached",
+            "term_ended",
             "cash_changed",
             "notice"
           ]
@@ -1384,6 +1389,121 @@
         "args",
         "ok",
         "after"
+      ],
+      "additionalProperties": false
+    },
+    "RatingSummary": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "number"
+        },
+        "grade": {
+          "enum": [
+            "S",
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "enum": [
+                  "patients",
+                  "science",
+                  "legacy",
+                  "finance",
+                  "reputation"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "integer"
+              },
+              "score": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "weight",
+              "score"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "ending": {
+          "type": "string"
+        },
+        "ending_text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "total",
+        "grade",
+        "title",
+        "dimensions",
+        "ending",
+        "ending_text"
+      ],
+      "additionalProperties": true
+    },
+    "Rating": {
+      "type": "object",
+      "description": "任期与研究所评级：当前、按进度预计、任期结束定格。",
+      "properties": {
+        "term": {
+          "enum": [
+            10,
+            20
+          ]
+        },
+        "term_weeks": {
+          "type": "integer"
+        },
+        "weeks_left": {
+          "type": "integer"
+        },
+        "current": {
+          "$ref": "#/$defs/RatingSummary"
+        },
+        "projected": {
+          "$ref": "#/$defs/RatingSummary"
+        },
+        "final": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RatingSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "patients": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "term",
+        "term_weeks",
+        "weeks_left",
+        "current",
+        "projected",
+        "final",
+        "patients"
       ],
       "additionalProperties": false
     }

@@ -18,6 +18,7 @@ TEMPLATES = {
     "milestone_reached": "公司大事记：{title}。",
     "award_won": "年度颁奖：研究社获得{name}！奖金 ¥{prize} 万，作品和培养记录已刻入奖杯室。",
     "legacy_reached": "终局荣誉达成：{name}！研究社的成果与培养传承被正式认可。",
+    "term_ended": "任期结束：研究所评级 {grade}「{title}」，结局「{ending}」。",
     "cash_changed": "本次安排资金变化 ¥{amount:,.1f} 万。",
     "notice": "{text}",
 }

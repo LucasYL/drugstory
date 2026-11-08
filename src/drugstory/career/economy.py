@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from . import challenge, competition, development, events, honors, patents, product_design, stories, talents
+from . import challenge, competition, development, events, honors, patents, product_design, rating, stories, talents
 from .content import (
     CATALOG,
     COMMERCIAL,
@@ -247,6 +247,7 @@ def market_step(s):
         d["last_revenue"], d["last_profit"] = revenue, profit
         d["total_revenue"] += revenue
         d["total_profit"] += profit
+        d["patients"] = d.get("patients", 0) + rating.weekly_patients(d, revenue)
         if d["partner"]:
             deal = next(x for x in s["deals"] if x["project"] == d["project"])
             royalty = revenue * deal["royalty"]

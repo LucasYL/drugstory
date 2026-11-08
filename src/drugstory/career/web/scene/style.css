@@ -1903,3 +1903,73 @@ canvas.mini {
 .advisor button {
   justify-self: start;
 }
+
+/* 研究所评级：顶栏徽章与评级卡 */
+.m-grade {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  padding: 2px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+}
+.m-grade small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.m-grade b {
+  font-size: 18px;
+  line-height: 1.1;
+}
+.grade-S { color: #b8860b; }
+.grade-A { color: var(--accent-ink); }
+.grade-B { color: var(--test); }
+.grade-C { color: var(--wait); }
+.grade-D { color: var(--bad); }
+.rating-card {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+.rating-card .grade-big {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent-ink);
+}
+.rating-card.final .grade-big {
+  color: #b8860b;
+}
+.rating-dims {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.rating-dim {
+  display: grid;
+  grid-template-columns: 96px 1fr 36px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.rating-dim small {
+  color: var(--muted);
+}
+.rating-dim .track {
+  height: 10px;
+  background: var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.rating-dim .track i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 5px;
+}
+.rating-dim b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

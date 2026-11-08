@@ -10,7 +10,8 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 8
+VERSION = 9
+READABLE = (8, 9)
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
@@ -149,8 +150,11 @@ def date(week):
     return f"第 {week // 48 + 1} 年 {(week % 48) // 4 + 1} 月"
 
 
-def new_game(seed=42, scenario="foundation", difficulty="standard"):
+def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
     from .challenge import MODES
+    from .rating import TERMS
+
+    check(type(term) is int and term in TERMS, "任期只能是 10 年或 20 年")
 
     check(isinstance(difficulty, str) and difficulty in MODES, "请选择经营难度")
     check(type(seed) is int and 0 <= seed <= 999999999, "种子应为 0 至 999999999 的整数")
@@ -190,6 +194,9 @@ def new_game(seed=42, scenario="foundation", difficulty="standard"):
         "career_done": False,
         "negative_months": 0,
         "game_over": False,
+        "term": term,
+        "final": None,
+        "nominations": [],
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -218,9 +225,11 @@ def loads(text):
     try:
         s = json.loads(text)
         check(
-            isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") == VERSION,
-            "研究所版只读取独立 v8 存档；v7 请在 8883、v6 请在 8881 继续游玩",
+            isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") in READABLE,
+            "研究所版读取 v8、v9 存档；v7 请在 8883、v6 请在 8881 继续游玩",
         )
+        if s["version"] == 8:
+            migrate_v8(s)
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")
         check(type(s["facility"]) is int and 0 <= s["facility"] < len(FACILITIES), "场地数据不正确")
@@ -231,6 +240,21 @@ def loads(text):
         return s
     except (KeyError, TypeError, json.JSONDecodeError) as e:
         raise ValueError("无法读取养成版存档") from e
+
+
+def migrate_v8(s):
+    """在内存副本里补齐 v9 字段；不写回原文件（服务端会另存到新路径）。"""
+    from .rating import PATIENTS_PER_WAN
+
+    s["version"] = VERSION
+    s["migrated_from"] = 8
+    s.setdefault("term", 20)
+    s.setdefault("final", None)
+    s.setdefault("nominations", [])
+    for d in s["products"]:
+        d.setdefault("patients", round(d.get("total_revenue", 0) * PATIENTS_PER_WAN[d["kind"]]))
+    for festival in s.get("festivals", []):
+        festival.pop("entry", None)
 
 
 def load(path: Path):

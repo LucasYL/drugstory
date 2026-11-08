@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 
-from . import challenge, development, events, honors, patents, product_design, readouts, stories, trial_choices
+from . import challenge, development, events, honors, patents, product_design, rating, readouts, stories, trial_choices
 from . import economy as e
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
@@ -629,7 +629,7 @@ def advance(s, weeks: int = 4):
                 log(s, "连续三个月月底现金为负，公司停止经营。研究记录保留，可在新局调整路线。")
         if not s["career_done"] and s["week"] >= 960:
             s["career_done"] = True
-            log(s, f"二十年经营回顾：当前总分 {e.company_score(s)}，可以继续经营。")
+        rating.finish_term(s)
         if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
             break
 

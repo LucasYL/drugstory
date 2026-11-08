@@ -19,7 +19,7 @@ from drugstory.career.model import load, new_game
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/scene-autosave.json")
+DEFAULT_SAVE = Path("saves/scene-autosave-v11.json")
 
 
 class Conflict(ValueError):
@@ -43,14 +43,17 @@ def atomic_write(path: Path, text: str) -> None:
 
 
 class GameSession:
-    def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation", difficulty="standard"):
+    def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation", difficulty="standard", term=20):
         self.path = save_path
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
         self.requests = {}
         source = load_path or (save_path if save_path.exists() else None)
-        self.state = load(source) if source else new_game(seed, scenario, difficulty)
+        self.state = load(source) if source else new_game(seed, scenario, difficulty, term)
+        if self.state.get("migrated_from") == 8 and Path(source).resolve() == save_path.resolve():
+            # 不把 v8 存档覆盖成 v9：旧版本还要能读它。新进度写到旁边的新文件。
+            self.path = save_path.with_name(f"{save_path.stem}-v11.json")
         snapshot(self.state)
         self.saved_at = None
 
@@ -188,21 +191,24 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.10")
+    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.11")
     parser.add_argument("--port", type=int, default=8885)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
+    parser.add_argument("--term", type=int, choices=[10, 20], default=20, help="新局的任期（年）")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     args = parser.parse_args(argv)
     try:
-        session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty)
+        session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty, args.term)
         server = create_server(session, args.port)
     except (OSError, ValueError) as e:
         parser.exit(1, f"启动失败：{e}\n")
     print(f"新药物语：http://127.0.0.1:{server.server_port}", flush=True)
-    print(f"每次操作自动保存到 {args.save_path.resolve()}；按 Ctrl+C 关闭服务。", flush=True)
+    print(f"每次操作自动保存到 {session.path.resolve()}；按 Ctrl+C 关闭服务。", flush=True)
+    if session.state.get("migrated_from") == 8:
+        print("已读入 v0.10 的 v8 存档；原文件不会被改写，新进度保存在上面这个文件。", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
