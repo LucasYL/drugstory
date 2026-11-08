@@ -20,7 +20,7 @@ def launched_generic():
 def test_first_chapter_completes_when_the_first_generic_launches():
     s = launched_generic()
     view = snapshot(s)["chapters"]
-    assert view["current"]["index"] == 1 and view["current"]["goal"] == "第一款仿制药上市"
+    assert view["current"]["index"] == 1 and view["current"]["goal"].startswith("第一款药上市")
     cash = s["cash"]
     s = g.execute(s, "launch", {"project": "1"})
     assert s["chapter"] == 1 and s["chapter_log"][0]["stars"] >= 1

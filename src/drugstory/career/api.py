@@ -25,7 +25,7 @@ def content():
     opening = new_game()
     return {
         "api_version": 2,
-        "content_version": "0.10.0",
+        "content_version": "0.11.0",
         "display_scale": SCALE,
         "rooms": [
             {**room, "stages": [k for k, st in STAGES.items() if st["room"] == room["id"]]} for room in ROOMS.values()

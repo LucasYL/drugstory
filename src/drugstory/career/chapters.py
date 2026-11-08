@@ -38,20 +38,20 @@ CHAPTERS = [
     {
         "name": "街角药坊",
         "when": "第 1–2 年",
-        "goal": ("第一款仿制药上市", lambda s: bool(_own(s, "generic"))),
+        "goal": ("第一款药上市（仿制药最快）", lambda s: bool(_approved(s))),
         "stars": [
             ("交付 6 单技术服务", lambda s: s["services_done"] >= 6),
             ("现金从没转负", lambda s: s["minimum_cash"] >= 0),
         ],
         "reward": 300,
-        "text": "街坊的第一笔信任：起步基金到账。改良药和更多伙伴在等你。",
+        "text": "街坊的第一笔信任：起步基金到账。更多伙伴和更难的药在等你。",
     },
     {
         "name": "第一位专家",
         "when": "第 2–4 年",
         "goal": (
-            "一位伙伴晋升精英，并有一款改良药上市",
-            lambda s: any(h["employed"] and h["rank"] >= 2 for h in s["heroes"]) and bool(_own(s, "improved")),
+            "一位伙伴晋升精英，并有两款药上市",
+            lambda s: any(h["employed"] and h["rank"] >= 2 for h in s["heroes"]) and len(_approved(s)) >= 2,
         ),
         "stars": [
             ("搬进联合研发所", lambda s: s["facility"] >= 1),
@@ -156,8 +156,8 @@ def _bounty_candidates(s):
         disease = c.get("indication")
         if not disease or disease in cured or disease in taken or c.get("target_id") == "abeta":
             continue
-        if c["kind"] == "generic":
-            continue
+        if c["kind"] != "innovative":
+            continue  # 改良药的「适应证」是改良方向，不是疾病；仿制药的病早就有药
         pool.append((disease, c))
     return sorted({d: c for d, c in pool}.items())
 
@@ -169,9 +169,9 @@ def offer_bounty(s):
     if not pool:
         return
     disease, c = rand(s, "bounty", s["week"]).choice(pool)
-    hard = c["kind"] == "innovative"
-    years = 6 if hard else 4
-    reward = 1500 + (1000 if c.get("difficulty") else 0) if hard else 600
+    hard = tier(c) == "hard"
+    years = 8 if hard else 6
+    reward = 2500 if hard else 1500
     bounty = {
         "id": f"bounty-{s['week']}",
         "disease": disease,
