@@ -377,7 +377,9 @@ def snapshot(s):
         "heroes": heroes,
         "roster": roster,
         "catalog": catalogs,
-        "projects": [{**project_view(s, p), "quick": assist.quick(s, p)} for p in s["projects"]],
+        "projects": [
+            {**project_view(s, p), "quick": assist.quick(s, p), "advice": assist.advice(s, p)} for p in s["projects"]
+        ],
         "products": [
             {**d, "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None}
             for d in s["products"]

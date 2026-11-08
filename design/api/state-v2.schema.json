@@ -793,6 +793,12 @@
               "type": "null"
             }
           ]
+        },
+        "advice": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Advice"
+          }
         }
       },
       "required": [
@@ -841,7 +847,8 @@
         "can_focus",
         "patent",
         "scene",
-        "quick"
+        "quick",
+        "advice"
       ],
       "additionalProperties": false
     },
@@ -1204,6 +1211,21 @@
               "type": "null"
             }
           ]
+        },
+        "level": {
+          "anyOf": [
+            {
+              "enum": [
+                "高",
+                "中",
+                "低"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "成功机会先说高中低"
         }
       },
       "required": [
@@ -1216,7 +1238,8 @@
         "cost",
         "chance",
         "ok",
-        "error"
+        "error",
+        "level"
       ],
       "additionalProperties": false
     },
@@ -1297,6 +1320,70 @@
         "services",
         "screen",
         "idle"
+      ],
+      "additionalProperties": false
+    },
+    "Advice": {
+      "type": "object",
+      "description": "研究顾问：只读公开证据给出的关键打法提示。",
+      "properties": {
+        "kind": {
+          "enum": [
+            "refine",
+            "marker",
+            "stop"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "const": "experiment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "args": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "after": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "text",
+        "command",
+        "args",
+        "ok",
+        "after"
       ],
       "additionalProperties": false
     }

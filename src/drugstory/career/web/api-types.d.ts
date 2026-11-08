@@ -100,6 +100,7 @@ export type Project = {
   "patent": JsonValue;
   "scene": ProjectScene;
   "quick": QuickAction | null;
+  "advice": (Advice)[];
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -174,6 +175,7 @@ export type QuickAction = {
   "chance": string | null;
   "ok": boolean;
   "error": string | null;
+  "level": "\u9ad8" | "\u4e2d" | "\u4f4e" | null;
 };
 
 export type Assist = {
@@ -187,6 +189,17 @@ export type Assist = {
   "innovative": (string)[];
 };
   "idle": (string)[];
+};
+
+export type Advice = {
+  "kind": "refine" | "marker" | "stop";
+  "text": string;
+  "command": "experiment" | null;
+  "args": JsonValue;
+  "ok": boolean;
+  "error"?: string | null;
+  "label"?: string;
+  "after": number | null;
 };
 
 export type GameState = {

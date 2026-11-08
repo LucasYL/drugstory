@@ -10,13 +10,23 @@ from __future__ import annotations
 
 from . import economy as e
 from . import science as sc
-from .content import CLINICAL, FACILITIES, PROFESSIONS, STAGES
-from .model import ability, busy
+import copy
+
+from .content import CLINICAL, EXPERIMENTS, FACILITIES, PATHS, PROFESSIONS, STAGES
+from .model import ability, busy, power
+from .units import pts
 
 
 def chance_range(probability):
     mid = round(probability * 100)
     return f"约 {max(0, mid - 8)}–{min(99, mid + 8)}%"
+
+
+def level(probability):
+    """先说高中低，精确数字放在后面。"""
+    if probability is None:
+        return None
+    return "高" if probability >= 0.65 else "中" if probability >= 0.35 else "低"
 
 
 def free_heroes(s):
@@ -161,13 +171,14 @@ def quick(s, p):
     command = "continue_and_run" if p["status"] == "result" else "run_phase"
     args = {"project": p["id"], "heroes": team, "plan": plan, "mode": mode}
     simulated, error = _try(s, command, args)
-    plan_view = {"weeks": None, "cost": None, "chance": None}
+    plan_view = {"weeks": None, "cost": None, "chance": None, "level": None}
     if simulated is not None:
         execution = next(q for q in simulated["projects"] if q["id"] == p["id"])["execution"]
         plan_view = {
             "weeks": execution["weeks"],
             "cost": execution["cost"],
             "chance": chance_range(execution["probability"]),
+            "level": level(execution["probability"]),
         }
     return {
         "command": command,
@@ -179,6 +190,97 @@ def quick(s, p):
         "ok": error is None,
         "error": error,
     }
+
+
+def _strongest_free(s, profession, minimum=0):
+    options = [h for h in free_heroes(s) if h["profession"] == profession and ability(h) >= minimum]
+    return max(options, key=ability) if options else None
+
+
+def advice(s, p):
+    """研究顾问：在关键时刻提示真正有用的打法。
+
+    只读公开证据（候选的证据范围和门槛），不读隐藏真值，也不抽新的随机数。
+    边界测试里，按证据挑候选并对获益做定向优化，阿尔茨海默获批从 2/40 变成 23/40；
+    游戏以前没有告诉玩家这一点。
+    """
+    if p["kind"] != "innovative" or p["status"] != "ready" or p.get("experiment") or p.get("chosen") is None:
+        return []
+    tips = []
+    c = sc.selected(p)
+    remaining = PATHS["innovative"][p["index"] :]
+    effect_gate = max((sc.limits(p, k).get("effect", 0) for k in remaining), default=0)
+    margin = c["belief"]["effect"]["mean"] - effect_gate
+    now = sc.outlook(p)
+    lead = _strongest_free(s, "bio")
+    if (
+        effect_gate
+        and p["index"] < 2
+        and margin < 9
+        and c["optimized"] < 2
+        and c["checks"].get("refineeffect", 0) == 0
+    ):
+        gap = f"还差 {pts(-margin)}" if margin < 0 else f"只高出 {pts(margin)}"
+        text = f"获益离后期门槛{gap}。临床前先做一次定向优化·获益，后面每一期都更有把握。"
+        tip = {"kind": "refine", "text": text, "command": None, "args": None, "ok": False, "after": None}
+        if lead:
+            delta = 3 + power(s, [lead["id"]], "bio") / 20
+            probe = copy.deepcopy(p)
+            pc = sc.selected(probe)
+            pc["belief"]["effect"]["mean"] = min(98, pc["belief"]["effect"]["mean"] + delta)
+            pc["belief"]["safety"]["mean"] = max(10, pc["belief"]["safety"]["mean"] - delta / 2)
+            after = sc.outlook(probe)
+            args = {"project": p["id"], "method": "refine", "stat": "effect", "heroes": [lead["id"]]}
+            _, error = _try(s, "experiment", args)
+            spec = EXPERIMENTS["refine"]
+            tip.update(
+                command="experiment",
+                args=args,
+                ok=error is None,
+                error=error,
+                text=text + f"按公开证据，后续全部通过的机会约从 {round(now * 100)}% 到 {round(after * 100)}%。",
+                label=f"定向优化·获益 · {spec['weeks']} 周 · ¥{spec['cost']} 万 · {lead['name']}",
+                after=round(after * 100),
+            )
+        else:
+            tip["text"] = text + "需要一位空闲的生物伙伴。"
+        tips.append(tip)
+    clinical = max((ability(h) for h in s["heroes"] if h["employed"] and h["profession"] == "clinical"), default=0)
+    marker_lead = _strongest_free(s, "bio", 55)
+    if (
+        p["index"] <= PATHS["innovative"].index("II")
+        and c["marker"]["observations"] == 0
+        and margin < 15
+        and marker_lead
+        and clinical >= 55
+    ):
+        args = {"project": p["id"], "method": "marker", "stat": "effect", "heroes": [marker_lead["id"]]}
+        _, error = _try(s, "experiment", args)
+        spec = EXPERIMENTS["marker"]
+        tips.append(
+            {
+                "kind": "marker",
+                "text": "可以先做人群分层研究：如果找到获益更好的人群，III 期能分层入组，获益门槛更容易过。结果也可能不支持分层。",
+                "command": "experiment",
+                "args": args,
+                "ok": error is None,
+                "error": error,
+                "label": f"人群分层研究 · {spec['weeks']} 周 · ¥{spec['cost']} 万 · {marker_lead['name']}",
+                "after": None,
+            }
+        )
+    if p["index"] >= 2 and now < 0.15:
+        tips.append(
+            {
+                "kind": "stop",
+                "text": f"按公开证据，后续全部通过的机会约 {round(now * 100)}%。可以考虑授权或止损，把钱留给下一个项目。",
+                "command": None,
+                "args": None,
+                "ok": False,
+                "after": None,
+            }
+        )
+    return tips
 
 
 def view(s):

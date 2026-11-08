@@ -1872,3 +1872,34 @@ canvas.mini {
   padding-top: 9px;
   margin-top: -9px;
 }
+
+/* 研究顾问：关键时刻的一句话提示 */
+.advisor {
+  border: 1px solid var(--wait);
+  background: var(--wait-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 0 0 8px;
+  display: grid;
+  gap: 4px;
+}
+.advisor > b {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #9a6214;
+}
+.advisor p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.advisor.stop {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+.advisor.stop > b {
+  color: var(--bad);
+}
+.advisor button {
+  justify-self: start;
+}

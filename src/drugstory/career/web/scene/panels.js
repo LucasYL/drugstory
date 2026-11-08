@@ -162,7 +162,7 @@
     const meta = [
       q.weeks ? `${q.weeks} 周` : "",
       q.cost != null ? money(q.cost) : "",
-      q.chance ? `成功率${q.chance}` : "",
+      q.level ? `成功机会${q.level}（${q.chance.replace("约 ", "")}）` : q.chance ? `成功率${q.chance}` : "",
       q.args.mode === "cro" && q.args.heroes?.length ? "CRO 执行" : "",
     ]
       .filter(Boolean)
@@ -170,6 +170,16 @@
     if (!q.ok)
       return `<div class="quick blocked"><b>${esc(q.label)}</b><small>${esc(busyNote(q))}</small></div>`;
     return `<button class="quick" data-command="${q.command}" data-args="${args(q.args)}"><b>${esc(q.label)}</b><small>${esc(meta)}</small>${team ? `<small class="who">${esc(team)}</small>` : ""}</button>${cashNote(q)}`;
+  }
+  // 研究顾问：只在关键时刻出现，按钮直接安排对应的专项研究
+  function advisor(p) {
+    if (!p.advice?.length) return "";
+    return p.advice
+      .map(
+        (t) =>
+          `<div class="advisor ${t.kind}"><b>研究顾问</b><p>${esc(t.text)}</p>${t.command ? cmd(esc(t.label || "安排"), t.command, t.args, t.kind === "refine" ? "primary small" : "small", !t.ok, t.ok ? "" : t.error || "") : ""}${t.command && !t.ok && t.error ? `<small class="warn">${esc(t.error)}</small>` : ""}</div>`,
+      )
+      .join("");
   }
   function deferButton(p) {
     return cmd(
@@ -209,7 +219,7 @@
         .join("")}</div></div>`;
     }
     if (p.status === "ready")
-      return `${quickButton(p)}<div class="act-row">${p.quick && !p.quick.ok ? cmd("暂缓，等人空出来", "defer", { project: p.id, waiting: 1 }, "primary small") : ""}${modalButton("调整方案", "phase", p.id, "small")}${modalButton("专项研究", "experiment", p.id, "small")}${p.index < 2 ? modalButton("换候选", "switch", p.id, "small") : ""}${deferButton(p)}</div>`;
+      return `${advisor(p)}${quickButton(p)}<div class="act-row">${p.quick && !p.quick.ok ? cmd("暂缓，等人空出来", "defer", { project: p.id, waiting: 1 }, "primary small") : ""}${modalButton("调整方案", "phase", p.id, "small")}${modalButton("专项研究", "experiment", p.id, "small")}${p.index < 2 ? modalButton("换候选", "switch", p.id, "small") : ""}${deferButton(p)}</div>`;
     if (p.status === "result") {
       const review = p.key === "review";
       return `${resultBars(result)}${quickButton(p)}<div class="act-row">${review ? "" : modalButton("调整方案", "phase", p.id, "small")}${p.quotes.length ? modalButton(`授权报价 · ${p.quotes.length}`, "license", p.id, "small accent") : ""}${review ? "" : cmd("先放着", "continue_project", { project: p.id }, "ghost small", false, "进入下一阶段的准备状态，稍后再开工")}${deferButton(p)}</div>${p.kind === "innovative" && ["preclinical", "II"].includes(p.key) && !p.quotes.length ? '<p class="hint-line">证据还不够形成授权报价。</p>' : ""}`;

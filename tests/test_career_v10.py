@@ -169,3 +169,43 @@ def test_new_scene_assets_are_served_same_origin(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+# ---- v0.11 研究顾问：只读公开证据，在关键时刻提示打法 ----
+
+
+def innovative_ready_with_thin_effect():
+    s = ready("innovative", seed=4)
+    c = s["projects"][0]["candidates"][s["projects"][0]["chosen"]]
+    c["belief"]["effect"].update(mean=72.0, variance=30.0)  # 边界单测：构造获益离门槛很近的公开证据
+    return s
+
+
+def test_advisor_suggests_refining_effect_before_clinic_and_the_button_works():
+    s = innovative_ready_with_thin_effect()
+    before = dumps(s)
+    tips = snapshot(s)["projects"][0]["advice"]
+    assert dumps(s) == before, "顾问只读快照"
+    refine = next(t for t in tips if t["kind"] == "refine")
+    assert refine["ok"] and refine["command"] == "experiment" and refine["args"]["stat"] == "effect"
+    assert refine["after"] is not None and "定向优化" in refine["text"]
+    s = g.execute(s, refine["command"], refine["args"])
+    assert s["projects"][0]["experiment"]["kind"] == "refine"
+    assert snapshot(s)["projects"][0]["advice"] == [], "研究进行中不再提示"
+    while s["projects"][0]["experiment"]:
+        s = g.execute(s, "advance", {"weeks": 4})
+    assert not any(t["kind"] == "refine" for t in snapshot(s)["projects"][0]["advice"]), "同一项优化不重复提示"
+
+
+def test_advisor_ignores_hidden_truth_and_generic_projects():
+    s = innovative_ready_with_thin_effect()
+    tips = snapshot(s)["projects"][0]["advice"]
+    for c in s["projects"][0]["candidates"]:
+        c["truth"]["effect"] = 98.0
+    assert snapshot(s)["projects"][0]["advice"] == tips
+    assert snapshot(ready())["projects"][0]["advice"] == []
+
+
+def test_quick_plan_says_high_medium_or_low_first():
+    quick = snapshot(ready())["projects"][0]["quick"]
+    assert quick["level"] in ("高", "中", "低") and quick["chance"]
