@@ -8,10 +8,10 @@ command would really succeed, and its weeks, cost and chance are the ones the en
 
 from __future__ import annotations
 
-from . import economy as e
-from . import science as sc
 import copy
 
+from . import economy as e
+from . import science as sc
 from .content import CLINICAL, EXPERIMENTS, FACILITIES, PATHS, PROFESSIONS, STAGES
 from .model import ability, busy, power
 from .units import pts
@@ -213,13 +213,7 @@ def advice(s, p):
     margin = c["belief"]["effect"]["mean"] - effect_gate
     now = sc.outlook(p)
     lead = _strongest_free(s, "bio")
-    if (
-        effect_gate
-        and p["index"] < 2
-        and margin < 9
-        and c["optimized"] < 2
-        and c["checks"].get("refineeffect", 0) == 0
-    ):
+    if effect_gate and p["index"] < 2 and margin < 9 and c["optimized"] < 2 and c["checks"].get("refineeffect", 0) == 0:
         gap = f"还差 {pts(-margin)}" if margin < 0 else f"只高出 {pts(margin)}"
         text = f"获益离后期门槛{gap}。临床前先做一次定向优化·获益，后面每一期都更有把握。"
         tip = {"kind": "refine", "text": text, "command": None, "args": None, "ok": False, "after": None}
