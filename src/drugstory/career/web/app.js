@@ -1,5 +1,11 @@
 const driver = new window.DrugstoryApiDriver();
 let staticContent;
+function festivalHint(h) {
+  if (h.year < 2) return "第 2 年起自动参评";
+  const open = h.categories.filter((c) => c.eligible).sort((a, b) => a.gap - b.gap)[0];
+  if (!open) return "自动参评 · 还没有可参评的成果";
+  return open.gap <= 0 ? `自动参评 · ${open.name}目前领先` : `自动参评 · 最接近的是${open.name}，还差 ${open.gap} 分`;
+}
 function hydrate(data) {
   const library = new Map(staticContent.catalog.map((c) => [c.key, c]));
   return {
@@ -92,7 +98,7 @@ function render() {
       <div><span>研究成果</span><strong>${Object.values(s.report.approvals).reduce((a, b) => a + b, 0)} <small>款自主产品</small></strong><small>创新 ${s.report.approvals.innovative} 款 · 授权 ${s.deals.length} 项</small></div>
       <div><span>专业积累</span><strong>${num(Object.values(s.knowledge).reduce((a, b) => a + b, 0))}</strong><small>最高阶位：${["", "见习", "精英", "大师", "传奇"][s.report.highest_rank]}</small></div>
     </section>
-    <div class="festival-strip"><span>第 ${s.honors.year} 届研究大会 · 距年末 ${s.honors.deadline - s.week} 周 · ${s.honors.entry ? "已报名 " + s.honors.categories.find((c) => c.key === s.honors.entry).name : "尚未报名"}</span><button data-tab="honors">荣誉与终局 →</button></div>
+    <div class="festival-strip"><span>第 ${s.honors.year} 届研究大会 · 距年末 ${s.honors.deadline - s.week} 周 · ${festivalHint(s.honors)}</span><button data-tab="honors">荣誉与终局 →</button></div>
     <section class="goal-strip"><div><b>${esc(s.opening.name)} · ${s.objective_done ? "目标已达成" : "公司目标"}</b><p>${esc(s.opening.goal)}</p></div>${modalButton("选择开局路线", "new")}</section>
     ${s.game_over ? `<div class="warning"><b>公司已停止经营</b><p>连续三个月月底资金为负。研究履历仍可查看，新开局会先备份当前记录。</p>${modalButton("备份并开始新公司", "new")}</div>` : ""}
     ${s.career_done ? `<div class="hint">二十年回顾已开启 · 当前 ${s.report.score} 分。可以继续经营，或在「经营复盘」查看这段研究旅程。</div>` : ""}

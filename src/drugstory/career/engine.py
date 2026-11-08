@@ -665,15 +665,6 @@ def next_event(s, batches: int = 1):
             break
 
 
-def nominate(s, category: str):
-    check(category in honors.AWARDS, "请选择年度奖项")
-    option = next(c for c in honors.categories(s) if c["key"] == category)
-    check(option["eligible"], option["requirement"])
-    check(s["week"] % 48 < 46, "本届报名已截止，请准备下一年")
-    s["season"]["entry"] = category
-    log(s, f"已报名{option['name']}。本年只选一个方向；第 46 周起锁定，年末按实际成果评选。")
-
-
 def independent_study(s, product: str, heroes: list):
     option = next((v for v in honors.proof_options(s) if v["product"] == product), None)
     check(option is not None and option["available"], "这款产品尚未满足独立验证条件，或已有不能重复的验证结果")
@@ -752,7 +743,6 @@ COMMANDS = {
         upgrade_equipment,
         advance,
         next_event,
-        nominate,
         independent_study,
         personal_project,
         trial_decision,

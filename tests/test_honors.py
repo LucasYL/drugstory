@@ -39,46 +39,59 @@ def advance_until(s, week):
 def test_empty_company_cannot_buy_recognition_or_get_first_year_award():
     s = new_game()
     s["cash"] = 1e8
-    with pytest.raises(ValueError):
-        g.execute(s, "nominate", {"category": "quality"})
+    assert "nominate" not in g.COMMANDS, "年度评选自动参评，不再需要报名"
     s = g.execute(s, "next_event")
     assert s["week"] == 48 and len(s["festivals"]) == 1 and not s["awards"]
     assert all(r["winner"] == "本届空缺" for r in s["festivals"][0]["results"])
     assert not any(c["eligible"] for c in h.categories(s))
 
 
-def test_annual_nomination_result_accounting_and_no_duplicate_reward():
+def test_automatic_entry_gives_at_most_one_award_and_records_nominations():
     s = breakthrough()
-    s = g.execute(s, "nominate", {"category": "innovation"})
-    deadline = s["season"]["year"] * 48
-    s = advance_until(s, deadline)
+    entries = h.categories(s)
+    winners = [c for c in entries if c["eligible"] and c["score"] >= c["benchmark"]]
+    assert winners, "a breakthrough year should beat at least one benchmark"
+    s = advance_until(s, s["season"]["year"] * 48)
+    results = s["festivals"][-1]["results"]
+    assert sum(r["won"] for r in results) == 1 and len(s["awards"]) == 1
     award = s["awards"][-1]
-    assert award["category"] == "innovation" and award["prize"] == 300
-    assert s["income"]["awards"] == 300
-    assert any(r["won"] for r in s["festivals"][-1]["results"])
+    best = max(r["your_score"] for r in results if r["won"] or r["nominated"])
+    assert award["score"] == best
+    assert s["income"]["awards"] == award["prize"] == h.AWARDS[award["category"]]["prize"]
+    assert {n["category"] for n in s["nominations"]} == {r["category"] for r in results if r["nominated"]}
     before = dumps(s)
     h.annual(s)
     assert dumps(s) == before
-    assert not s["season"]["entry"]
-    with pytest.raises(ValueError):
-        g.execute(s, "nominate", {"category": "innovation"})
 
 
-def test_nomination_deadline_is_enforced_and_readonly_scores_use_public_evidence():
+def test_repeat_award_pays_half_and_bar_rises_each_year():
+    s = breakthrough()
+    s["awards"].append({"year": 0, "category": "innovation", "name": "x", "score": 1, "prize": 300})
+    s["awards"].append({"year": 0, "category": "progress", "name": "x", "score": 1, "prize": 200})
+    s["awards"].append({"year": 0, "category": "mentorship", "name": "x", "score": 1, "prize": 160})
+    s["awards"].append({"year": 0, "category": "quality", "name": "x", "score": 1, "prize": 180})
+    s = advance_until(s, s["season"]["year"] * 48)
+    new = s["awards"][4:]
+    assert len(new) <= 1 and all(a["prize"] == h.AWARDS[a["category"]]["prize"] // 2 for a in new)
+
+
+def test_rival_bar_rises_with_the_years():
+    def average(year):
+        total = []
+        for seed in range(1, 21):
+            s = new_game(seed)
+            s["season"]["year"] = year
+            total += [h.rival_score(s, r, key) for r in s["rivals"] for key in h.AWARDS]
+        return sum(total) / len(total)
+
+    assert average(12) - average(2) > 10
+
+
+def test_readonly_scores_use_public_evidence():
     s = breakthrough()
     a = h.categories(s)
     sc.selected(s["projects"][0])["truth"]["effect"] = 5
     assert h.categories(s) == a
-    s = advance_until(s, s["season"]["year"] * 48 - 1)
-    with pytest.raises(ValueError, match="截止"):
-        g.execute(s, "nominate", {"category": "innovation"})
-
-
-def test_declining_awards_do_not_mint_cash_without_an_entry():
-    s = breakthrough()
-    s = advance_until(s, s["season"]["year"] * 48)
-    assert not s["awards"] and not s["income"].get("awards")
-    assert all(r["reason"] == "未报名" for r in s["festivals"][-1]["results"])
 
 
 def test_independent_validation_requires_relevant_team_and_locks_duplicate_work():

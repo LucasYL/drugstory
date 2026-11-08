@@ -121,6 +121,46 @@ def step(s, appetite, waiting):
             out = act(s, "upgrade_equipment", {"profession": r["profession"]})
             if out:
                 return out, "equipment"
+    # v0.11 起年度评选自动参评，不再报名；旧版本里这里会报名得分差距最小的一类。
+    if "nominate" in g.COMMANDS and not v["honors"].get("entry") and 30 <= s["week"] % 48 < 46:
+        choices = [c for c in v["honors"]["categories"] if c["eligible"]]
+        if choices:
+            best = max(choices, key=lambda c: c["score"] - c["benchmark"])
+            out = act(s, "nominate", {"category": best["key"]})
+            if out:
+                return out, "nominate"
+    return advance(s, waiting), "next"
+    active = [p for p in v["projects"] if p["active"]]
+    if len(active) < (1 if s["week"] < 96 else 2):
+        kinds = ["improved", "generic"]
+        if appetite == "bold" and cash > 2500:
+            kinds = ["innovative", *kinds]
+        for kind in kinds:
+            team = v["assist"]["screen"][kind]
+            if not team:
+                continue
+            for c in v["catalog"]:
+                if c["kind"] == kind and c["unlocked"] and not c["occupied"]:
+                    out = act(s, "start_project", {"catalog": c["key"], "heroes": team})
+                    if out:
+                        return out, "start"
+    if cash > 2000:
+        for c in sorted(v["roster"], key=lambda c: c["cost"]):
+            flow = v["weekly_profit"] + v["weekly_royalty"] - v["costs_per_week"] - c["weekly_salary"]
+            if c["unlocked"] and (c["tier"] < 3 or c["connected"]) and cash - c["cost"] > 1500 and cash + flow * 52 > 0:
+                out = act(s, "hire", {"character": c["key"]})
+                if out:
+                    return out, "hire"
+    nf = v["next_facility"]
+    if nf and cash > nf["cost"] * 2:
+        out = act(s, "upgrade", {})
+        if out:
+            return out, "upgrade"
+    for r in v["equipment"]:
+        if r["cost"] and r["available"] and cash > r["cost"] * 3:
+            out = act(s, "upgrade_equipment", {"profession": r["profession"]})
+            if out:
+                return out, "equipment"
     h = v["honors"]
     if not h["entry"] and 30 <= s["week"] % 48 < 46:
         choices = [c for c in h["categories"] if c["eligible"]]

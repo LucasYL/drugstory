@@ -7,6 +7,12 @@ from .science import observe, selected
 from .units import pts, pts_map
 
 AWARDS = {
+    "progress": {
+        "name": "年度研发进展奖",
+        "prize": 200,
+        "floor": 34,
+        "description": "看本年实际通过的研发阶段，越往后的阶段分越高；合作项目的进展也算。不需要当年有药上市。",
+    },
     "quality": {
         "name": "年度品质与供应奖",
         "prize": 180,
@@ -19,12 +25,6 @@ AWARDS = {
         "floor": 30,
         "description": "奖励本年的晋阶、项目成长和同专业带教。",
     },
-    "partnership": {
-        "name": "年度转化合作奖",
-        "prize": 220,
-        "floor": 32,
-        "description": "看合作项目获得的新临床证据与实际里程碑，不按合同总额评奖。",
-    },
     "innovation": {
         "name": "年度突破药物奖",
         "prize": 300,
@@ -32,6 +32,23 @@ AWARDS = {
         "description": "本年创新药获批，比较临床获益证据与研究难度。",
     },
 }
+# 本年通过一个阶段计多少研发进展分；越靠后的阶段越难，分越高。
+PROGRESS = {
+    "formulation": 4,
+    "quality": 4,
+    "be": 6,
+    "design": 6,
+    "bridge": 9,
+    "confirm": 12,
+    "optimize": 8,
+    "preclinical": 9,
+    "I": 12,
+    "II": 18,
+    "III": 26,
+    "review": 12,
+}
+# 对手的领先线每年抬高，让后期的奖更难拿。
+YEARLY_RISE = 2.5
 LEGACIES = {"science": "星火生命科学大奖", "access": "普惠药业桂冠", "academy": "薪火研究院"}
 
 
@@ -46,7 +63,7 @@ def counters(s):
 
 
 def initialize(s):
-    s.update(awards=[], festivals=[], achievements=[], proofs=[], legacies=[])
+    s.update(awards=[], nominations=[], festivals=[], achievements=[], proofs=[], legacies=[])
     s["season"] = {"year": s["week"] // 48 + 1, "entry": None, "baseline": counters(s)}
 
 
@@ -56,14 +73,16 @@ def phase_value(p, key, stat):
 
 def rival_score(s, r, category):
     affinity = {
-        "scale": {"quality": 1.15, "mentorship": 0.8, "partnership": 0.8, "innovation": 0.65},
-        "pioneer": {"quality": 0.8, "mentorship": 1, "partnership": 0.95, "innovation": 1.2},
-        "partner": {"quality": 0.9, "mentorship": 0.95, "partnership": 1.2, "innovation": 1},
+        "scale": {"quality": 1.15, "mentorship": 0.8, "progress": 0.85, "innovation": 0.65},
+        "pioneer": {"quality": 0.8, "mentorship": 1, "progress": 1.1, "innovation": 1.2},
+        "partner": {"quality": 0.9, "mentorship": 0.95, "progress": 1.15, "innovation": 1},
     }[r["style"]][category]
     # Seeded variation is visible as each year's field; never reads the player's hidden candidate.
-    base = rand(s, "annual-field", s["season"]["year"], r["id"], category).uniform(24, 44)
+    year = s["season"]["year"]
+    base = rand(s, "annual-field", year, r["id"], category).uniform(24, 44)
     base += 6 if challenge.enabled(s) else 0
-    return round(min(80, (base + min(20, r["year_points"] * 0.4)) * affinity), 1)
+    rise = YEARLY_RISE * max(0, year - 2)
+    return round(min(88, (base + min(20, r["year_points"] * 0.4)) * affinity + rise), 1)
 
 
 def categories(s):
@@ -73,13 +92,9 @@ def categories(s):
     start = (year - 1) * 48
     new = [d for d in s["products"] if not d["partner"] and d["launched"] >= start]
     novel = [d for d in s["products"] if d["kind"] == "innovative" and d["launched"] >= start]
-    phase_reports = [
-        r
-        for p in s["projects"]
-        if p["status"] == "licensed"
-        for r in p["results"]
-        if r["week"] >= start and r["passed"] and r["key"] in ("I", "II", "III", "review")
-    ]
+    # 本年通过的阶段：自有项目和授权出去的项目都算（公开的阶段结果，不读真值）。
+    passed = [r for p in s["projects"] for r in p["results"] if r["week"] >= start and r["passed"]]
+    progress = sum(PROGRESS.get(r["key"], 6) for r in passed)
     quality = max((phase_value(find(s["projects"], d["project"]), "review", "quality") for d in new), default=0)
     innovation = max(
         (
@@ -92,7 +107,7 @@ def categories(s):
     )
     scores = {
         "quality": min(
-            90, 15 + len(new) * 7 + max(0, quality - 60) * 0.6 + min(25, (now["sales"] - base["sales"]) / 160)
+            90, 10 + len(new) * 6 + max(0, quality - 60) * 0.5 + min(20, (now["sales"] - base["sales"]) / 200)
         ),
         "mentorship": min(
             90,
@@ -100,33 +115,39 @@ def categories(s):
             + (now["mentors"] - base["mentors"]) * 18
             + min(20, (now["cases"] - base["cases"]) * 1.2),
         ),
-        "partnership": min(90, len(phase_reports) * 9 + min(40, (now["milestones"] - base["milestones"]) / 55)),
+        "progress": min(90, 10 + progress + min(15, (now["milestones"] - base["milestones"]) / 80)) if passed else 0,
         "innovation": min(95, innovation),
     }
     gates = {
         "quality": bool(new) and now["sales"] - base["sales"] >= 250,
         "mentorship": now["mentors"] > base["mentors"] or now["ranks"] - base["ranks"] >= 2,
-        "partnership": bool(phase_reports),
+        "progress": bool(passed),
         "innovation": bool(novel),
     }
     hints = {
         "quality": "本年有自主新品，且产品销售回款至少 250 万",
         "mentorship": "本年完成一次带教，或累计晋升至少两个阶位",
-        "partnership": "本年取得合作项目 I 期以后支持证据",
+        "progress": "本年至少通过一个研发阶段（自有或合作项目）",
         "innovation": "本年有自主或合作创新药获批",
     }
-    return [
-        {
-            "key": key,
-            **spec,
-            "score": round(scores[key], 1),
-            "eligible": year >= 2 and gates[key],
-            "requirement": hints[key] + "；第 2 年起接受参评",
-            "benchmark": max([spec["floor"], *[rival_score(s, r, key) for r in s["rivals"]]]),
-            "field": [{"name": r["name"], "score": rival_score(s, r, key)} for r in s["rivals"]],
-        }
-        for key, spec in AWARDS.items()
-    ]
+    rows = []
+    for key, spec in AWARDS.items():
+        benchmark = max([spec["floor"], *[rival_score(s, r, key) for r in s["rivals"]]])
+        score = round(scores[key], 1)
+        rows.append(
+            {
+                "key": key,
+                **spec,
+                "score": score,
+                "eligible": year >= 2 and gates[key],
+                "requirement": hints[key] + "；第 2 年起自动参评",
+                "benchmark": benchmark,
+                "gap": round(max(0.0, benchmark - score), 1),
+                "repeat": any(a["category"] == key for a in s["awards"]),
+                "field": [{"name": r["name"], "score": rival_score(s, r, key)} for r in s["rivals"]],
+            }
+        )
+    return rows
 
 
 def proof_options(s):
@@ -324,32 +345,38 @@ def update(s):
 
 
 def annual(s):
+    """年末自动评选：所有符合条件的成果都参评，每年最多颁一个大奖，其余胜出的类别记为提名。"""
     if s["week"] % 48 or s["season"]["year"] != s["week"] // 48:
         return
+    from .events import emit
+
     year = s["season"]["year"]
     entries = categories(s)
-    entry = s["season"]["entry"]
+    winners = [c for c in entries if c["eligible"] and c["score"] >= c["benchmark"]]
+    # 得分最高的一类拿奖；同分时奖金高的优先，保证结果确定。
+    grand = max(winners, key=lambda c: (c["score"], c["prize"], c["key"])) if winners else None
     results = []
     for c in entries:
         rival = max(c["field"], key=lambda r: r["score"])
-        won = entry == c["key"] and c["eligible"] and c["score"] >= c["benchmark"]
+        won = grand is not None and c["key"] == grand["key"]
+        nominated = c in winners and not won
         reason = (
             "尚未开放评选"
             if year < 2
-            else "未报名"
-            if entry != c["key"]
             else "未满足年度成果要求"
             if not c["eligible"]
-            else "本届胜出"
+            else "本届获奖"
             if won
-            else "本届成果分低于领先对手或入围线"
+            else "胜出，记为提名（每年只颁一个大奖）"
+            if nominated
+            else "本届成果分低于领先线"
         )
         results.append(
             {
                 "category": c["key"],
                 "name": c["name"],
                 "winner": "你的研究社"
-                if won
+                if won or nominated
                 else rival["name"]
                 if year >= 2 and rival["score"] >= c["floor"]
                 else "本届空缺",
@@ -357,24 +384,27 @@ def annual(s):
                 "leading_score": c["benchmark"],
                 "reason": reason,
                 "won": won,
+                "nominated": nominated,
             }
         )
-        if won:
-            repeated = any(a["category"] == c["key"] for a in s["awards"])
-            prize = 50 if repeated else c["prize"]
-            earn(s, prize, "awards")
-            s["reputation"] += 3
-            s["awards"].append(
-                {"year": year, "category": c["key"], "name": c["name"], "score": c["score"], "prize": prize}
+        if nominated:
+            s.setdefault("nominations", []).append(
+                {"year": year, "category": c["key"], "name": c["name"], "score": c["score"]}
             )
-            from .events import emit
-
-            emit(
-                s,
-                "award_won",
-                actors=[h["id"] for h in s["heroes"] if h["employed"]],
-                data={"name": c["name"], "year": year, "prize": prize},
-            )
+            s["reputation"] += 1
+    if grand:
+        prize = grand["prize"] // 2 if grand["repeat"] else grand["prize"]
+        earn(s, prize, "awards")
+        s["reputation"] += 3
+        s["awards"].append(
+            {"year": year, "category": grand["key"], "name": grand["name"], "score": grand["score"], "prize": prize}
+        )
+        emit(
+            s,
+            "award_won",
+            actors=[h["id"] for h in s["heroes"] if h["employed"]],
+            data={"name": grand["name"], "year": year, "prize": prize},
+        )
     for goal in legacy_progress(s):
         if not goal["won"] and all(c["ok"] for c in goal["checks"]):
             s["legacies"].append(
@@ -395,7 +425,7 @@ def annual(s):
                 actors=[h["id"] for h in s["heroes"] if h["employed"]],
                 data={"name": goal["name"], "year": year},
             )
-    s["festivals"].append({"year": year, "entry": entry, "results": results})
+    s["festivals"].append({"year": year, "results": results})
     log(s, f"第 {year} 年研究大会结束。前往荣誉室查看入围、获奖与差距。")
     s["season"] = {"year": year + 1, "entry": None, "baseline": counters(s)}
     for r in s["rivals"]:
@@ -406,10 +436,10 @@ def annual(s):
 def view(s):
     return {
         "year": s["season"]["year"],
-        "entry": s["season"]["entry"],
         "deadline": s["season"]["year"] * 48,
         "categories": categories(s),
         "awards": s["awards"],
+        "nominations": s.get("nominations", []),
         "legacy_awards": s["legacies"],
         "festivals": s["festivals"][-5:],
         "achievements": s["achievements"],
