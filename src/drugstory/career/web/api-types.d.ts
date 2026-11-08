@@ -121,6 +121,7 @@ export type Look = {
   "accent": string;
   "prop": string;
   "idle": string;
+  "art"?: JsonValue;
 };
 
 export type Hero = {

@@ -104,7 +104,7 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header(
                 "Content-Security-Policy",
-                "default-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; "
+                "default-src 'self'; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; "
                 "object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
             )
             if download:
@@ -141,6 +141,7 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
                 "/scene/",
                 "/scene/index.html",
                 "/scene/renderer.js",
+                "/scene/art.js",
                 "/scene/figures.js",
                 "/scene/world.js",
                 "/scene/ui.js",

@@ -156,14 +156,14 @@ def test_new_scene_assets_are_served_same_origin(tmp_path):
     thread.start()
     client = HTTPConnection("127.0.0.1", server.server_port)
     try:
-        for path in ("/scene/panels.js", "/scene/figures.js"):
+        for path in ("/scene/panels.js", "/scene/figures.js", "/scene/art.js"):
             client.request("GET", path)
             result = client.getresponse()
             assert result.status == 200 and "javascript" in result.getheader("Content-Type")
             result.read()
         client.request("GET", "/scene")
         page = client.getresponse().read().decode()
-        assert "/scene/figures.js" in page and "/scene/panels.js" in page and 'data-style="calm"' not in page
+        assert "/scene/figures.js" in page and "/scene/art.js" in page and 'data-style="calm"' not in page
     finally:
         client.close()
         server.shutdown()

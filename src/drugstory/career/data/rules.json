@@ -94,7 +94,26 @@
         ],
         "accent": "#2f3a44",
         "prop": "flask",
-        "idle": "bounce"
+        "idle": "bounce",
+        "art": {
+          "profession": "chem",
+          "tier": 1,
+          "skin": "#efc29a",
+          "age": "young",
+          "hair": "spiky",
+          "hair_color": "#232026",
+          "brow_shape": "firm",
+          "mouth": "grin",
+          "outfit": "hoodie",
+          "outfit_color": "#e57b2e",
+          "pants": "#38404e",
+          "accessories": [
+            "goggles",
+            "headphones_neck"
+          ],
+          "prop": "flask",
+          "name": "陈一鸣"
+        }
       }
     },
     "pill": {
@@ -122,7 +141,27 @@
         ],
         "accent": "#e9a0a0",
         "prop": "tray",
-        "idle": "weigh"
+        "idle": "weigh",
+        "art": {
+          "profession": "proc",
+          "tier": 1,
+          "skin": "#f5d0b0",
+          "age": "young",
+          "hair": "bun",
+          "hair_color": "#5a3a28",
+          "brow_shape": "soft",
+          "eyes": "smile",
+          "mouth": "open",
+          "outfit": "apron",
+          "outfit_color": "#3a78d0",
+          "inner": "#f6efe2",
+          "pants": "#4a4f5c",
+          "accessories": [
+            "bandana"
+          ],
+          "prop": "tray",
+          "name": "苏小禾"
+        }
       }
     },
     "sprout": {
@@ -150,7 +189,25 @@
         ],
         "accent": "#2b2b2b",
         "prop": "notebook",
-        "idle": "write"
+        "idle": "write",
+        "art": {
+          "profession": "bio",
+          "tier": 1,
+          "skin": "#f3d1b4",
+          "age": "young",
+          "hair": "bob_bangs",
+          "hair_color": "#1f1a18",
+          "brow_shape": "soft",
+          "mouth": "smile",
+          "outfit": "coat",
+          "inner": "#6aa36f",
+          "glasses": "round",
+          "glasses_color": "#2b2b2b",
+          "accessories": [],
+          "prop": "notebook",
+          "book_color": "#4f8a52",
+          "name": "许知夏"
+        }
       }
     },
     "prodigy": {
@@ -177,7 +234,31 @@
         "accessories": [],
         "accent": "#4fc3b0",
         "prop": "tablet",
-        "idle": "bounce"
+        "idle": "bounce",
+        "art": {
+          "profession": "bio",
+          "tier": 5,
+          "skin": "#f3d2b4",
+          "age": "young",
+          "hair": "fluffy",
+          "hair_color": "#3a2a24",
+          "hair_inner": "#4fc3b0",
+          "eyes": "sparkle",
+          "eye": "#2f6f6a",
+          "brow_shape": "raised",
+          "mouth": "grin",
+          "blush": 0.4,
+          "outfit": "coat_hoodie",
+          "inner": "#3f9e66",
+          "pants": "#2f3a48",
+          "shoes": "#4fc3b0",
+          "accessories": [
+            "star_pin"
+          ],
+          "prop": "holo",
+          "prop_side": true,
+          "name": "李天天"
+        }
       }
     },
     "bubble": {
@@ -205,7 +286,33 @@
         ],
         "accent": "#ef8fb0",
         "prop": "clipboard",
-        "idle": "check"
+        "idle": "check",
+        "art": {
+          "profession": "tox",
+          "tier": 1,
+          "skin": "#b5815a",
+          "age": "young",
+          "hair": "braid",
+          "hair_color": "#1d1517",
+          "tie_color": "#e98a8a",
+          "eye_shape": "almond",
+          "eye": "#3a2418",
+          "thick_brows": true,
+          "brow_shape": "arch",
+          "nose": "bridge",
+          "mouth": "smile",
+          "lip": "#8a3e3e",
+          "lashes": true,
+          "outfit": "work",
+          "outfit_color": "#8462c4",
+          "inner": "#f4f1ea",
+          "accessories": [
+            "nose_stud",
+            "pens"
+          ],
+          "prop": "clipboard",
+          "name": "娜迪亚·拉赫曼"
+        }
       }
     },
     "ruler": {
@@ -233,7 +340,26 @@
         ],
         "accent": "#f2a6c4",
         "prop": "tablet",
-        "idle": "tap"
+        "idle": "tap",
+        "art": {
+          "profession": "clinical",
+          "tier": 1,
+          "skin": "#cf9a70",
+          "age": "young",
+          "hair": "long",
+          "hair_color": "#17151a",
+          "brow_shape": "soft",
+          "mouth": "smirk",
+          "eye": "#4a2a2a",
+          "outfit": "turtleneck",
+          "outfit_color": "#df5868",
+          "pants": "#36404e",
+          "accessories": [
+            "catear_headphones"
+          ],
+          "prop": "tablet",
+          "name": "米可"
+        }
       }
     },
     "catalyst": {
@@ -261,7 +387,23 @@
         ],
         "accent": "#8a63c9",
         "prop": "pipette",
-        "idle": "pipette"
+        "idle": "pipette",
+        "art": {
+          "profession": "chem",
+          "tier": 2,
+          "skin": "#e9bf9b",
+          "age": "young",
+          "hair": "ponytail_high",
+          "hair_color": "#3a2519",
+          "brow_shape": "arch",
+          "mouth": "grin",
+          "outfit": "work",
+          "outfit_color": "#e57b2e",
+          "inner": "#fff4e8",
+          "accessories": [],
+          "prop": "pipette",
+          "name": "林巧"
+        }
       }
     },
     "shield": {
@@ -289,7 +431,25 @@
         ],
         "accent": "#56606a",
         "prop": "thermos",
-        "idle": "sip"
+        "idle": "sip",
+        "art": {
+          "profession": "tox",
+          "tier": 2,
+          "skin": "#d9a77e",
+          "face": "square",
+          "age": "mid",
+          "hair": "buzz",
+          "hair_color": "#1b1817",
+          "thick_brows": true,
+          "brow_shape": "firm",
+          "mouth": "flat",
+          "outfit": "polo",
+          "outfit_color": "#6a4fa8",
+          "pants": "#2c323a",
+          "accessories": [],
+          "prop": "thermos",
+          "name": "雷振东"
+        }
       }
     },
     "crystal": {
@@ -317,7 +477,25 @@
         ],
         "accent": "#3b3b3b",
         "prop": "camera",
-        "idle": "photo"
+        "idle": "photo",
+        "art": {
+          "profession": "proc",
+          "tier": 2,
+          "skin": "#efc8a6",
+          "age": "young",
+          "hair": "manbun",
+          "hair_tuft": true,
+          "hair_color": "#161314",
+          "eye_shape": "almond",
+          "brow_shape": "firm",
+          "mouth": "flat",
+          "outfit": "turtleneck",
+          "outfit_color": "#2f5fa8",
+          "pants": "#26272b",
+          "accessories": [],
+          "prop": "camera",
+          "name": "江屿"
+        }
       }
     },
     "scout": {
@@ -345,7 +523,31 @@
         ],
         "accent": "#f0b23a",
         "prop": "tablet",
-        "idle": "stretch"
+        "idle": "stretch",
+        "art": {
+          "profession": "bio",
+          "tier": 2,
+          "skin": "#7a4a2e",
+          "age": "young",
+          "hair": "coily",
+          "hair_color": "#1a1210",
+          "beard": "short",
+          "beard_color": "#1a1210",
+          "brow_shape": "firm",
+          "nose": "broad",
+          "mouth": "full",
+          "lip": "#6e3a2e",
+          "eye": "#2a1a12",
+          "blush": 0.12,
+          "outfit": "polo",
+          "outfit_color": "#3f9e66",
+          "pants": "#3b4250",
+          "accessories": [
+            "chalk_bag"
+          ],
+          "prop": "tablet",
+          "name": "丹尼尔·奥孔"
+        }
       }
     },
     "curve": {
@@ -373,7 +575,29 @@
         ],
         "accent": "#2c3e66",
         "prop": "laptop",
-        "idle": "type"
+        "idle": "type",
+        "art": {
+          "profession": "clinical",
+          "tier": 2,
+          "skin": "#c8946a",
+          "age": "mid",
+          "hair": "wavy_short",
+          "hair_color": "#231a16",
+          "beard": "full",
+          "beard_color": "#231a16",
+          "thick_brows": true,
+          "brow_shape": "firm",
+          "nose": "bridge",
+          "mouth": "smile",
+          "eye": "#3a2418",
+          "blush": 0.18,
+          "outfit": "shirt_tie",
+          "outfit_color": "#df5868",
+          "inner": "#e3eefa",
+          "accessories": [],
+          "prop": "laptop",
+          "name": "奥马尔·哈达德"
+        }
       }
     },
     "wizard": {
@@ -402,7 +626,27 @@
         ],
         "accent": "#c0392b",
         "prop": "model",
-        "idle": "twirl"
+        "idle": "twirl",
+        "art": {
+          "profession": "chem",
+          "tier": 3,
+          "skin": "#e7bd99",
+          "face": "long",
+          "age": "mid",
+          "hair": "slick_back",
+          "hair_color": "#3c3633",
+          "temples": "#b9b4ae",
+          "beard": "goatee",
+          "brow_shape": "raised",
+          "mouth": "smirk",
+          "outfit": "coat",
+          "inner": "#e57b2e",
+          "accessories": [
+            "bow_tie"
+          ],
+          "prop": "model",
+          "name": "司马衡"
+        }
       }
     },
     "judge": {
@@ -432,7 +676,29 @@
         ],
         "accent": "#f4f1ea",
         "prop": "red_pen",
-        "idle": "glasses"
+        "idle": "glasses",
+        "art": {
+          "profession": "tox",
+          "tier": 3,
+          "skin": "#f2cfb2",
+          "age": "mid",
+          "hair": "bob_sleek",
+          "hair_color": "#262224",
+          "streak": "#bdb7b2",
+          "brow_shape": "sharp",
+          "mouth": "flat",
+          "outfit": "blazer",
+          "outfit_color": "#6a4fa8",
+          "inner": "#f6f2ea",
+          "glasses": "half",
+          "glasses_color": "#4a3a5a",
+          "accessories": [
+            "earrings",
+            "pearls"
+          ],
+          "prop": "red_pen",
+          "name": "白若霜"
+        }
       }
     },
     "forge": {
@@ -461,7 +727,28 @@
         ],
         "accent": "#1f8a8a",
         "prop": "sample_box",
-        "idle": "shake"
+        "idle": "shake",
+        "art": {
+          "profession": "proc",
+          "tier": 3,
+          "skin": "#f0c7a4",
+          "age": "mid",
+          "hair": "wavy",
+          "hair_color": "#3e2c25",
+          "streak": "#e9e4dc",
+          "brow_shape": "arch",
+          "mouth": "smile",
+          "outfit": "work",
+          "outfit_color": "#3a78d0",
+          "inner": "#f1e6d6",
+          "pants": "#4b4540",
+          "scarf": "#1f8a8a",
+          "accessories": [
+            "scarf"
+          ],
+          "prop": "sample_box",
+          "name": "傅以宁"
+        }
       }
     },
     "bridge": {
@@ -490,7 +777,28 @@
         ],
         "accent": "#3d566e",
         "prop": "clipboard",
-        "idle": "check"
+        "idle": "check",
+        "art": {
+          "profession": "bio",
+          "tier": 3,
+          "skin": "#e6b893",
+          "face": "long",
+          "age": "mid",
+          "hair": "short_side",
+          "hair_color": "#6e6863",
+          "brow_shape": "firm",
+          "mouth": "smile",
+          "outfit": "coat",
+          "inner": "#3f9e66",
+          "pants": "#3a3f47",
+          "glasses": "square",
+          "glasses_color": "#3d566e",
+          "accessories": [
+            "stethoscope"
+          ],
+          "prop": "clipboard",
+          "name": "沈墨言"
+        }
       }
     },
     "strategist": {
@@ -519,7 +827,28 @@
         ],
         "accent": "#f2c14e",
         "prop": "tablet",
-        "idle": "watch"
+        "idle": "watch",
+        "art": {
+          "profession": "clinical",
+          "tier": 3,
+          "skin": "#ebc19c",
+          "face": "long",
+          "age": "mid",
+          "hair": "pixie",
+          "hair_color": "#1b181a",
+          "brow_shape": "arch",
+          "mouth": "smirk",
+          "outfit": "blazer",
+          "outfit_color": "#c9485a",
+          "inner": "#fbf3e6",
+          "lanyard": "#f2c14e",
+          "accessories": [
+            "lanyard",
+            "earrings"
+          ],
+          "prop": null,
+          "name": "欧阳岚"
+        }
       }
     },
     "star": {
@@ -548,7 +877,31 @@
         ],
         "accent": "#4caf7a",
         "prop": "teacup",
-        "idle": "sip"
+        "idle": "sip",
+        "art": {
+          "profession": "bio",
+          "tier": 4,
+          "skin": "#f1ccab",
+          "face": "heart",
+          "age": "mid",
+          "hair": "low_bun",
+          "hair_color": "#2a2426",
+          "streak": "#d9d6d2",
+          "brow_shape": "raised",
+          "mouth": "smile",
+          "outfit": "blazer",
+          "outfit_color": "#2f7d52",
+          "inner": "#f6f2ea",
+          "inner_style": "turtle",
+          "glasses": "round",
+          "glasses_color": "#b08a3e",
+          "accessories": [
+            "laurel_pin",
+            "earrings"
+          ],
+          "prop": "teacup",
+          "name": "叶清和"
+        }
       }
     },
     "alchemist": {
@@ -576,7 +929,31 @@
         ],
         "accent": "#2b2b2b",
         "prop": "pen",
-        "idle": "nod"
+        "idle": "nod",
+        "art": {
+          "profession": "chem",
+          "tier": 4,
+          "skin": "#f4dccb",
+          "age": "mid",
+          "hair": "updo",
+          "hair_color": "#e6d3a0",
+          "eye": "#5f86ad",
+          "freckles": true,
+          "nose": "bridge",
+          "brow_shape": "raised",
+          "brow": "#b59a62",
+          "mouth": "smirk",
+          "lip": "#b5545a",
+          "outfit": "blazer",
+          "outfit_color": "#d9682a",
+          "inner": "#26272b",
+          "inner_style": "turtle",
+          "accessories": [
+            "laurel_pin"
+          ],
+          "prop": "model",
+          "name": "伊莲娜·沃尔科娃"
+        }
       }
     },
     "guardian": {
@@ -604,7 +981,32 @@
         ],
         "accent": "#2b2b2b",
         "prop": "notebook",
-        "idle": "nod"
+        "idle": "nod",
+        "art": {
+          "profession": "tox",
+          "tier": 4,
+          "skin": "#e9c09d",
+          "face": "square",
+          "age": "mid",
+          "hair": "slick_back",
+          "hair_color": "#2a2628",
+          "temples": "#cfcac4",
+          "brow_shape": "firm",
+          "mouth": "flat",
+          "outfit": "blazer",
+          "outfit_color": "#5b4596",
+          "inner": "#f2efe8",
+          "glasses": "browline",
+          "glasses_color": "#3a3030",
+          "tie_color": "#8462c4",
+          "accessories": [
+            "tie",
+            "laurel_pin"
+          ],
+          "prop": "journal",
+          "book_color": "#4f6b52",
+          "name": "孟长青"
+        }
       }
     },
     "architect": {
@@ -633,7 +1035,30 @@
         ],
         "accent": "#f4f4f2",
         "prop": "walkie",
-        "idle": "radio"
+        "idle": "radio",
+        "art": {
+          "profession": "proc",
+          "tier": 4,
+          "skin": "#d8a47a",
+          "face": "square",
+          "age": "mid",
+          "hair": "buzz",
+          "hair_color": "#1d1b1a",
+          "temples": "#bdbab5",
+          "beard": "mustache",
+          "thick_brows": true,
+          "brow_shape": "firm",
+          "mouth": "smile",
+          "outfit": "safety_vest",
+          "outfit_color": "#3a78d0",
+          "inner": "#e9eef4",
+          "accessories": [
+            "hard_hat",
+            "laurel_pin"
+          ],
+          "prop": "walkie",
+          "name": "高铁峰"
+        }
       }
     },
     "oracle": {
@@ -662,7 +1087,32 @@
         ],
         "accent": "#5f7f9a",
         "prop": "pencil",
-        "idle": "write"
+        "idle": "write",
+        "art": {
+          "profession": "clinical",
+          "tier": 4,
+          "skin": "#c98f63",
+          "face": "heart",
+          "age": "mid",
+          "hair": "curly",
+          "hair_color": "#2a1a14",
+          "eye": "#5a3a22",
+          "brow_shape": "arch",
+          "mouth": "smile",
+          "lip": "#a84a4a",
+          "lashes": true,
+          "blush": 0.22,
+          "outfit": "blazer",
+          "outfit_color": "#b23a52",
+          "inner": "#26272b",
+          "inner_style": "turtle",
+          "accessories": [
+            "hoops",
+            "laurel_pin"
+          ],
+          "prop": "survival",
+          "name": "伊莎贝尔·罗哈斯"
+        }
       }
     }
   },

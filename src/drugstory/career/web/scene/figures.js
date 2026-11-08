@@ -156,8 +156,41 @@
     return base;
   }
 
+  /* ---------- v0.11 新画法：用 art.js 生成的 Q 版全身图 ---------- */
+  const ART = () => root.DrugstoryArt;
+  // 新画法的人物比旧画法高一些、头更大，场景里更好认
+  const SPRITE = { w: 120, h: 176, feet: 170, body: 155, grow: 1.25 };
+  function drawSprite(ctx, look, o, img) {
+    const ps = pose(o, look);
+    const H = height(look) * SPRITE.grow;
+    const k = H / SPRITE.body;
+    ctx.save();
+    ctx.translate(o.x || 0, o.y || 0);
+    ctx.globalAlpha = (o.alpha ?? 1) * (o.away ? 0.92 : 1);
+    if (!o.noShadow) {
+      ctx.fillStyle = "rgba(40, 50, 45, 0.16)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 9, 3.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (o.ring) {
+      ctx.strokeStyle = o.ring;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 13, 5.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.translate(0, -(o.jump || 0) - ps.bob * 1.2);
+    if (o.walking) ctx.rotate(Math.sin((o.phase || 0) * 2) * 0.05);
+    if (o.flip) ctx.scale(-1, 1);
+    ctx.drawImage(img, -SPRITE.w * k * 0.5, -SPRITE.feet * k, SPRITE.w * k, SPRITE.h * k);
+    ctx.restore();
+  }
+
   /* ---------- 主函数 ---------- */
   function drawPerson(ctx, look, o) {
+    const sprite = look.art && ART()?.image(look.art, "chibi");
+    if (sprite) return drawSprite(ctx, look, o, sprite);
     const D = dims(look);
     const { L, T, R, SW, HW, LW } = D;
     const ps = pose(o, look);
@@ -1192,6 +1225,7 @@
   }
 
   /* ---------- 头像 ---------- */
+  const waitingPortraits = new WeakSet();
   function portrait(target, look, opts = {}) {
     if (!target || !look) return;
     const c2 = target.getContext("2d");
@@ -1202,6 +1236,26 @@
     target.height = Math.round(hgt * dpr);
     c2.setTransform(dpr, 0, 0, dpr, 0, 0);
     c2.clearRect(0, 0, w, hgt);
+    const art = look.art && ART();
+    const img = art && art.image(look.art, "portrait");
+    if (img) {
+      // 半身立绘 200×232：小头像取头和肩，竖长或「全身」取景多给身体
+      const tall = opts.full || hgt > w * 1.15;
+      const sw = tall ? 184 : 144;
+      const sh = Math.min(232 - 8, (sw * hgt) / w);
+      const sx = (200 - sw) / 2;
+      const sy = tall ? 8 : 14;
+      const r = art.RES || 1;
+      c2.drawImage(img, sx * r, sy * r, sw * r, sh * r, 0, 0, w, hgt);
+      return;
+    }
+    if (art && !waitingPortraits.has(target)) {
+      waitingPortraits.add(target);
+      art.whenReady(look.art, "portrait", () => {
+        waitingPortraits.delete(target);
+        portrait(target, look, opts);
+      });
+    }
     const D = dims(look);
     // 取景：从头顶（留出发髻、帽子、猫耳）到胸口或腰
     const top = -D.L - D.T - D.R * 2.95;

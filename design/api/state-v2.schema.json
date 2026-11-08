@@ -1049,6 +1049,10 @@
         },
         "idle": {
           "type": "string"
+        },
+        "art": {
+          "$ref": "#/$defs/JsonValue",
+          "description": "v0.11 画法参数（scene/art.js）"
         }
       },
       "required": [
