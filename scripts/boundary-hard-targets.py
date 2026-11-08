@@ -13,27 +13,34 @@ import collections
 
 from drugstory.career import bot
 from drugstory.career import engine as g
+from drugstory.career import science as sc
+from drugstory.career.assist import advice, recommended_team
 from drugstory.career.content import CATALOG
 from drugstory.career.model import DECISIONS, ability, make_hero, new_game
 
 LEGENDS = ["star", "alchemist", "guardian", "architect", "oracle"]
 JUNIORS = ["sprout", "beaker", "bubble", "pill", "ruler"]
-# name: (people, rank, training, equipment level, members per lead, novice decisions)
+MASTERS = ["bridge", "wizard", "judge", "forge", "strategist"]
+GATE_FULL = ["bridge", "wizard", "guardian", "forge", "oracle"]
+# name: (people, rank, training, equipment level, members per lead, novice decisions, awakened people)
 TEAMS = {
-    "五位传奇": (LEGENDS, 4, 40, 3, 6, False),
-    "五位见习练到传奇": (JUNIORS, 4, 40, 3, 6, False),
-    "五位见习练到大师": (JUNIORS, 3, 20, 3, 6, False),
-    "大师·设备1级·小组3人": (JUNIORS, 3, 20, 1, 3, False),
-    "大师·设备0级·小组2人": (JUNIORS, 3, 20, 0, 2, False),
-    "大师·没有临床交CRO": (JUNIORS[:4], 3, 20, 3, 6, False),
-    "大师·直接选候选不做专项研究": (JUNIORS, 3, 20, 3, 6, True),
-    "五位见习练到精英": (JUNIORS, 2, 10, 3, 6, False),
+    "五位传奇": (LEGENDS, 4, 40, 3, 6, False, []),
+    "五位见习练到传奇": (JUNIORS, 4, 40, 3, 6, False, []),
+    "五位见习练到大师": (JUNIORS, 3, 20, 3, 6, False, []),
+    "大师·设备1级·小组3人": (JUNIORS, 3, 20, 1, 3, False, []),
+    "大师·没有临床交CRO": (JUNIORS[:4], 3, 20, 3, 6, False, []),
+    "大师·直接选候选不做专项研究": (JUNIORS, 3, 20, 3, 6, True, []),
+    "四道关全靠大师（傅以宁觉醒）": (MASTERS, 3, 20, 3, 6, False, ["forge"]),
+    "四道关完全解决（傅以宁觉醒）": (GATE_FULL, 3, 20, 3, 6, False, ["forge"]),
+    "四道关全靠大师 + 分层打法": (MASTERS, 3, 20, 3, 6, "smart", ["forge"]),
+    "四道关完全解决 + 分层打法": (GATE_FULL, 3, 20, 3, 6, "smart", ["forge"]),
+    "五位见习练到精英": (JUNIORS, 2, 10, 3, 6, False, []),
 }
 FINAL = ("approved", "failed", "terminated", "licensed")
 
 
 def build(seed, spec):
-    people, rank, training, equipment, members, _ = spec
+    people, rank, training, equipment, members, _, awake = spec
     s = new_game(seed)
     s.update(facility=3, cash=1e6)
     s["equipment"] = dict.fromkeys(s["equipment"], equipment)
@@ -41,7 +48,9 @@ def build(seed, spec):
     s["heroes"] = []
     for key in people:
         h = make_hero(key)
-        h.update(rank=rank, training=training, xp=200, members=members)
+        h.update(rank=max(rank, h["tier"]), training=training, xp=200, members=members)
+        if key in awake:
+            h["personal"] = {"choice": "practice"}
         s["heroes"].append(h)
     return s
 
@@ -60,8 +69,27 @@ def run(seed, spec, catalog):
             return p["status"], p
         if p.get("deferred"):
             return "搁置", p
-        s = bot.choose(s, novice) if p["status"] in DECISIONS else g.execute(s, "next_event", {"batches": 0})
+        if novice == "smart" and p["status"] == "ready":
+            s = smart(s, p) or bot.choose(s, False)
+        elif p["status"] in DECISIONS:
+            s = bot.choose(s, novice is True)
+        else:
+            s = g.execute(s, "next_event", {"batches": 0})
     return "超时", s["projects"][0]
+
+
+def smart(s, p):
+    """研究顾问提示的打法：照顾问做人群分层研究，II 期起分层入组。只看公开证据。"""
+    tip = next((t for t in advice(s, p) if t["kind"] == "marker" and t["ok"]), None)
+    if tip:
+        return g.execute(s, tip["command"], tip["args"])
+    if sc.stage_key(p) == "II" and sc.focused_available(s, p):
+        ids, mode = recommended_team(s, p)
+        try:
+            return g.execute(s, "run_phase", {"project": p["id"], "heroes": ids, "plan": "focused", "mode": mode})
+        except ValueError:
+            return None
+    return None
 
 
 def main():

@@ -80,7 +80,7 @@ def test_inheritance_passes_a_skill_once_and_prodigy_can_take_two_professions():
     s = g.execute(s, "inherit", {"teacher": "oracle", "pupil": "prodigy"})
     for _ in range(3):
         s = g.execute(s, "advance", {"weeks": 4})
-    assert next(h for h in s["heroes"] if h["id"] == "prodigy")["inherited"] == ["ruler"]
+    assert next(h for h in s["heroes"] if h["id"] == "prodigy")["inherited"] == ["oracle"], "学传奇本人的专长"
 
 
 def test_sprint_shortens_optimization_and_multicentre_adds_a_slot():
@@ -147,3 +147,50 @@ def test_recheck_halves_validation_cost_and_allows_a_third_check():
     sc.selected(p)["checks"]["validatesafety"] = 3
     with pytest.raises(ValueError):
         sc.experiment_plan(s, p, "validate", "safety", ["bubble"])
+
+
+# ---- 阿尔茨海默四道关（边界单测：直接构造在职人物） ----
+
+
+def test_alzheimer_card_lists_four_gates_and_who_can_solve_them():
+    from drugstory.career import gates
+
+    s = new_game(10)
+    card = next(c for c in snapshot(s)["catalog"] if c["key"] == "n_abeta__mab")["gates"]
+    assert [g["name"] for g in card] == ["入脑", "选对人", "脑水肿", "长终点"]
+    assert all(g["state"] == "none" and g["full"] and g["partial"] for g in card)
+    assert next(c for c in snapshot(s)["catalog"] if c["key"] == "n_lung")["gates"] is None
+    forge = make_hero("forge")
+    forge.update(rank=3, personal={"choice": "practice"})
+    s["heroes"] += [forge, make_hero("guardian"), make_hero("strategist")]
+    rows = gates.status(s, "n_abeta__mab")
+    assert rows["bbb"]["state"] == "full" and rows["aria"]["state"] == "full"
+    assert rows["endpoint"]["state"] == "partial" and rows["endpoint"]["people"] == ["欧阳岚"]
+    assert gates.status(s, "n_abeta__aso")["bbb"]["state"] == "partial"
+
+
+def test_gate_penalties_reach_thresholds_noise_and_weeks():
+    from drugstory.career import gates
+
+    s = new_game(11)
+    p = {"catalog": "n_abeta__mab", "population": "standard", "gates": {"bbb": "none"}}
+    ii = gates.effects(s, p, "II")
+    assert ii["limits"]["effect"] == 15 + 12
+    iii = gates.effects(s, p, "III")
+    assert iii["limits"]["safety"] == 18 and iii["noise"] == 2.4 and iii["weeks"] == 1.4
+    assert gates.effects(s, {**p, "catalog": "n_lung"}, "III") == {"limits": {}, "noise": 1.0, "weeks": 1.0}
+    s["heroes"].append(make_hero("bridge"))
+    focused = gates.effects(s, {**p, "population": "focused"}, "II")["limits"]["effect"]
+    assert focused == 15, "沈墨言 + 分层入组：选对人完全解决"
+
+
+def test_impossible_combinations_cannot_pass_phase_two_on_luck():
+    s = new_game(12)
+    s["knowledge"] = dict.fromkeys(s["knowledge"], 100)
+    s.update(facility=3, cash=1e6)
+    s["heroes"] = [make_hero("bridge"), make_hero("wizard")]
+    for h in s["heroes"]:
+        h["rank"] = 3
+    s = g.execute(s, "start_project", {"catalog": "n_abeta__small_molecule", "heroes": ["bridge", "wizard"]})
+    gate = sc.STAGES["II"]["limits"]["effect"]
+    assert all(c["truth"]["effect"] <= gate - 8 for c in s["projects"][0]["candidates"])

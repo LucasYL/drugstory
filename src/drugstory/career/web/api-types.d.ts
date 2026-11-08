@@ -101,6 +101,7 @@ export type Project = {
   "scene": ProjectScene;
   "quick": QuickAction | null;
   "advice": (Advice)[];
+  "gates": (Gate)[] | null;
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -226,6 +227,17 @@ export type Rating = {
   "patients": number;
 };
 
+export type Gate = {
+  "key": "bbb" | "population" | "aria" | "endpoint";
+  "name": string;
+  "problem": string;
+  "missing": string;
+  "full": string;
+  "partial": string;
+  "state": "full" | "partial" | "none";
+  "people": (string)[];
+};
+
 export type GameState = {
   "version": string;
   "api_version": 2;
@@ -297,6 +309,7 @@ export type GameState = {
   "scouted"?: boolean;
   "mechanism"?: number;
 } | null;
+  "gates": (Gate)[] | null;
 })[];
   "revision": number;
   "token": string;

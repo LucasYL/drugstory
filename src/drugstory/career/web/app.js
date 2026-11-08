@@ -555,7 +555,7 @@ function updateNotes() {
       design.disabled = !c.product_profile;
       if (!c.product_profile) design.value = "standard";
       $("#catalog-note").innerHTML =
-        `<p>${checks(c.requirements)}</p><p>${c.discovery ? "组合发现：" + esc(c.discovery.reason) + "（档位 " + c.discovery.tier + "）" : c.kind === "innovative" ? "组合尚未研究，筛选后留下适配记录。" : ""}</p><p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>${productNote(c)}`;
+        `<p>${checks(c.requirements)}</p><p>${c.discovery?.reason ? "组合发现：" + esc(c.discovery.reason) + "（档位 " + c.discovery.tier + "）" : c.kind === "innovative" ? "组合尚未研究，筛选后留下适配记录。" : ""}${c.discovery?.mechanism != null ? ` 叶清和：这条通路的机制偏移 ${c.discovery.mechanism}。` : ""}</p>${c.gates ? `<div class="hint"><b>最后的难题 · 四道关</b>${c.gates.map((g) => `<p>${{ full: "✓", partial: "◐", none: "○" }[g.state]} <b>${esc(g.name)}</b>：${esc(g.problem)}。缺了 ${esc(g.missing)}。完全解决：${esc(g.full)}；部分：${esc(g.partial)}${g.people.length ? `（研究所里：${g.people.map(esc).join("、")}）` : ""}</p>`).join("")}</div>` : ""}<p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>${productNote(c)}`;
     }
   }
   const ef = $('form[data-form="experiment"]');

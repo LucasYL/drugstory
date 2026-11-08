@@ -10,6 +10,7 @@ from . import (
     competition,
     development,
     engine,
+    gates,
     honors,
     patents,
     product_design,
@@ -339,6 +340,7 @@ def snapshot(s):
         {
             **{k: v for k, v in c.items() if k not in ("combo_tier", "combo_reason")},
             "discovery": discovery(s, k, c),
+            "gates": gates.view(s, k),
             "kind_name": KINDS[c["kind"]],
             "product_profile": shown_profile(c["key"]),
             "competition": round(competition.pressure(s, c["market"]), 2),
@@ -398,7 +400,13 @@ def snapshot(s):
         "roster": roster,
         "catalog": catalogs,
         "projects": [
-            {**project_view(s, p), "quick": assist.quick(s, p), "advice": assist.advice(s, p)} for p in s["projects"]
+            {
+                **project_view(s, p),
+                "quick": assist.quick(s, p),
+                "advice": assist.advice(s, p),
+                "gates": gates.view(s, p["catalog"], p),
+            }
+            for p in s["projects"]
         ],
         "products": [
             {**d, "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None}

@@ -6,7 +6,16 @@ from .units import SCALE
 from .view import shown_profile
 
 STATIC_FIELDS = ("scenarios", "professions", "stats", "experiments", "work_focuses")
-CATALOG_FIELDS = ("key", "competition", "announced_rivals", "requirements", "unlocked", "occupied", "discovery")
+CATALOG_FIELDS = (
+    "key",
+    "competition",
+    "announced_rivals",
+    "requirements",
+    "unlocked",
+    "occupied",
+    "discovery",
+    "gates",
+)
 
 
 def content():

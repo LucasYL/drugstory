@@ -289,6 +289,19 @@
                 "type": "null"
               }
             ]
+          },
+          "gates": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Gate"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -298,7 +311,8 @@
           "requirements",
           "unlocked",
           "occupied",
-          "discovery"
+          "discovery",
+          "gates"
         ],
         "additionalProperties": false
       }
@@ -833,6 +847,19 @@
           "items": {
             "$ref": "#/$defs/Advice"
           }
+        },
+        "gates": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -882,7 +909,8 @@
         "patent",
         "scene",
         "quick",
-        "advice"
+        "advice",
+        "gates"
       ],
       "additionalProperties": false
     },
@@ -1533,6 +1561,59 @@
         "projected",
         "final",
         "patients"
+      ],
+      "additionalProperties": false
+    },
+    "Gate": {
+      "type": "object",
+      "description": "阿尔茨海默四道关之一：公开规则与当前研究所的解决情况。",
+      "properties": {
+        "key": {
+          "enum": [
+            "bbb",
+            "population",
+            "aria",
+            "endpoint"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "string"
+        },
+        "full": {
+          "type": "string"
+        },
+        "partial": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "full",
+            "partial",
+            "none"
+          ]
+        },
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "problem",
+        "missing",
+        "full",
+        "partial",
+        "state",
+        "people"
       ],
       "additionalProperties": false
     }

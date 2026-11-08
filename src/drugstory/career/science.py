@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from statistics import NormalDist
 
-from . import development, product_design, readouts, talents
+from . import development, gates, product_design, readouts, talents
 from .content import BUILD, CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
 from .model import ability, check, hero, power, rand
 
@@ -111,9 +111,12 @@ def generate_candidates(s, p):
             if stat == "effect" and kind == "innovative":
                 mean -= 5 * spec["difficulty"]
                 mean += lessons
-            actual = rand(s, "candidate", p["id"], i, stat).gauss(mean, sd)
+            actual = rand(s, "candidate", p["id"], spec.get("modality_id"), i, stat).gauss(mean, sd)
             if stat == "effect" and kind == "innovative":
                 actual += s["mechanisms"][mechanism_key]
+                if combo_tier(s, spec, p["team"]) <= -2:
+                    # 不可能的组合：获益压在 II 期门槛以下，不再靠运气获批
+                    actual = min(actual, STAGES["II"]["limits"]["effect"] - 8)
             c["truth"][stat] = min(98, max(15, actual))
             c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
             sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
@@ -142,6 +145,11 @@ def limits(p, key):
 def skill_effects(s, p, ids, key, partner=False):
     """团队专长对本阶段的影响：工期倍率与减免、各指标噪声倍率、门槛调整。"""
     fx = {"weeks": 1.0, "minus": 0, "noise": {}, "limits": {}}
+    hard = gates.effects(s, p, key, partner)
+    fx["weeks"] *= hard["weeks"]
+    fx["limits"].update(hard["limits"])
+    for stat in STAGES[key]["limits"]:
+        fx["noise"][stat] = hard["noise"]
     if partner:
         return fx
 
@@ -175,7 +183,7 @@ def skill_effects(s, p, ids, key, partner=False):
         noise(stats, 0.85)
     if any(h["id"] in ids and h.get("prodigy") and h["rank"] == 1 for h in s["heroes"]):
         noise(stats, 1.1)
-    if key == "I" and talents.has(s, "guardian", ids):
+    if key == "I" and talents.has(s, "guardian", ids) and not gates.applies(p["catalog"]):
         fx["limits"]["safety"] = fx["limits"].get("safety", 0) - 4
     if key == "confirm" and talents.has(s, "forge", ids):
         fx["limits"]["effect"] = fx["limits"].get("effect", 0) - 6

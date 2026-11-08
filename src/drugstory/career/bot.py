@@ -77,7 +77,7 @@ def choose(s, novice=False, remaining=960):
             if not novice and key in ("II", "III") and sc.outlook(p) < 0.10:
                 return g.execute(s, "terminate", {"project": pid})
             plan = "focused" if key == "III" and p["population"] == "focused" else "standard"
-            if not novice and key in CLINICAL and cash > 2000:
+            if not novice and key in CLINICAL and cash > 2000 and plan != "focused":
                 estimate = sc.plan_phase(s, p, ids, "standard", mode)
                 if sc.phase_probability(p, key, "standard", estimate["noise_by_stat"]) >= 0.65:
                     plan = "expanded"

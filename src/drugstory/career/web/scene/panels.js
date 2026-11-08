@@ -171,6 +171,17 @@
       return `<div class="quick blocked"><b>${esc(q.label)}</b><small>${esc(busyNote(q))}</small></div>`;
     return `<button class="quick" data-command="${q.command}" data-args="${args(q.args)}"><b>${esc(q.label)}</b><small>${esc(meta)}</small>${team ? `<small class="who">${esc(team)}</small>` : ""}</button>${cashNote(q)}`;
   }
+  // 最后的难题：阿尔茨海默的四道关，谁能过一目了然
+  function gateBlock(list) {
+    if (!list) return "";
+    const label = { full: "已解决", partial: "部分解决", none: "缺人" };
+    return `<div class="gates"><b>最后的难题 · 四道关</b>${list
+      .map(
+        (g) =>
+          `<div class="gate ${g.state}"><span class="pill">${label[g.state]}</span><span><b>${esc(g.name)}</b> ${esc(g.problem)}<small>${g.state === "full" ? "" : `缺了：${esc(g.missing)}。`}${g.people.length ? `研究所里：${g.people.map(esc).join("、")}` : `完全解决：${esc(g.full)}；部分：${esc(g.partial)}`}</small></span></div>`,
+      )
+      .join("")}</div>`;
+  }
   // 研究顾问：只在关键时刻出现，按钮直接安排对应的专项研究
   function advisor(p) {
     if (!p.advice?.length) return "";
@@ -226,7 +237,7 @@
         .join("")}</div></div>`;
     }
     if (p.status === "ready")
-      return `${advisor(p)}${quickButton(p)}<div class="act-row">${p.quick && !p.quick.ok ? cmd("暂缓，等人空出来", "defer", { project: p.id, waiting: 1 }, "primary small") : ""}${modalButton("调整方案", "phase", p.id, "small")}${modalButton("专项研究", "experiment", p.id, "small")}${p.index < 2 ? modalButton("换候选", "switch", p.id, "small") : ""}${deferButton(p)}</div>`;
+      return `${gateBlock(p.gates)}${advisor(p)}${quickButton(p)}<div class="act-row">${p.quick && !p.quick.ok ? cmd("暂缓，等人空出来", "defer", { project: p.id, waiting: 1 }, "primary small") : ""}${modalButton("调整方案", "phase", p.id, "small")}${modalButton("专项研究", "experiment", p.id, "small")}${p.index < 2 ? modalButton("换候选", "switch", p.id, "small") : ""}${deferButton(p)}</div>`;
     if (p.status === "result") {
       const review = p.key === "review";
       return `${resultBars(result)}${quickButton(p)}<div class="act-row">${review ? "" : modalButton("调整方案", "phase", p.id, "small")}${p.quotes.length ? modalButton(`授权报价 · ${p.quotes.length}`, "license", p.id, "small accent") : ""}${review ? "" : cmd("先放着", "continue_project", { project: p.id }, "ghost small", false, "进入下一阶段的准备状态，稍后再开工")}${deferButton(p)}</div>${p.kind === "innovative" && ["preclinical", "II"].includes(p.key) && !p.quotes.length ? '<p class="hint-line">证据还不够形成授权报价。</p>' : ""}`;
@@ -376,7 +387,7 @@
       })
       .join("")}</div>${
       c
-        ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p><div class="checks">${c.requirements.map((r) => `<span class="${r.ok ? "ok" : "no"}">${r.ok ? "✓" : "○"} ${esc(r.text)}</span>`).join("")}</div><p class="meta-line">竞争压力 ${c.competition.toFixed(1)} / 3${c.announced_rivals.length ? " · 对手：" + c.announced_rivals.map(esc).join("、") : ""}${c.discovery ? " · " + esc(c.discovery.reason) : ""}</p><p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
+        ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p><div class="checks">${c.requirements.map((r) => `<span class="${r.ok ? "ok" : "no"}">${r.ok ? "✓" : "○"} ${esc(r.text)}</span>`).join("")}</div><p class="meta-line">竞争压力 ${c.competition.toFixed(1)} / 3${c.announced_rivals.length ? " · 对手：" + c.announced_rivals.map(esc).join("、") : ""}${c.discovery?.reason ? " · " + esc(c.discovery.reason) : ""}${c.discovery?.mechanism != null ? ` · 叶清和看这条通路：机制偏移 ${c.discovery.mechanism > 0 ? "+" : ""}${c.discovery.mechanism}` : ""}</p>${gateBlock(c.gates)}<p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
             state.work_focuses,
           )
             .map(

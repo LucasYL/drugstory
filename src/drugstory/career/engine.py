@@ -9,6 +9,7 @@ from . import (
     challenge,
     development,
     events,
+    gates,
     honors,
     patents,
     product_design,
@@ -119,6 +120,7 @@ def start_project(s, catalog: str, heroes: list, design: str = "standard", work_
         "feedback": "正在筛选候选与整理参比资料。",
     }
     sc.generate_candidates(s, p)
+    gates.lock_design(s, p)
     s["projects"].append(p)
     log(s, f"启动 {p['name']}：8 周筛选，费用 ¥70 万。")
 
@@ -349,6 +351,7 @@ def start_partner_phase(s, p, d):
     key = sc.stage_key(p)
     plan = "focused" if p["population"] == "focused" and key in ("II", "III") else "standard"
     d["execution"] = sc.plan_phase(s, p, [], plan, key=key, partner=True)
+    p.setdefault("adjust", {})[key] = d["execution"]["adjust"]
     d["left"] = d["execution"]["weeks"]
     d["cost_per_week"] = d["execution"]["cost"] / d["left"]
     d["remaining_cost"] = sum(
@@ -410,7 +413,7 @@ def inherit_options(s, teacher):
     if any(r["teacher"] == teacher for r in s.get("inheritances", [])):
         return []
     skill = talents.ABILITIES[teacher]["inherit"]
-    return [
+    return [  # 觉醒的李天天直接学传奇本人的专长（见 inherit）
         h["id"]
         for h in s["heroes"]
         if h["employed"]
@@ -437,7 +440,8 @@ def inherit(s, teacher: str, pupil: str):
             "name": f"{t['name']}传承{u['name']}",
             "heroes": [teacher, pupil],
             "left": INHERIT_WEEKS,
-            "skill": talents.ABILITIES[teacher]["inherit"],
+            # 觉醒的李天天「融会贯通」：学的是传奇本人的专长，其他弟子学传奇传下来的那一项
+            "skill": teacher if u.get("prodigy") else talents.ABILITIES[teacher]["inherit"],
         }
     )
     log(s, f"{t['name']}开始把多年的经验传给{u['name']}，需要 {INHERIT_WEEKS} 周。")

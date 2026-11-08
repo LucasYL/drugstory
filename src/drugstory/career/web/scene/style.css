@@ -1978,3 +1978,46 @@ canvas.mini {
 .rating-card p {
   margin: 0;
 }
+
+/* 阿尔茨海默四道关 */
+.gates {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.gates > b {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.gate {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.gate small {
+  display: block;
+  color: var(--muted);
+}
+.gate .pill {
+  justify-self: start;
+  font-size: 11px;
+}
+.gate.full .pill {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.gate.partial .pill {
+  background: var(--wait-soft);
+  color: #9a6214;
+}
+.gate.none .pill {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
