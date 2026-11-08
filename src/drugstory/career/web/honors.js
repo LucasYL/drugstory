@@ -6,6 +6,7 @@ function competitionView() {
 function honorsView() {
   const h = state.honors;
   return `<h2>让二十年，留下值得记住的事</h2><p class="muted">第一年只有观察与积累。第 2 年起不用报名：年末自动评所有类别，每年最多颁一个大奖，其余胜出的类别记为提名。对手的领先线每年提高；同一类第二次获奖奖金减半。</p>
+  <h3>章节与疾病地图</h3><p>${state.chapters.current ? `第 ${state.chapters.current.index} 章「${esc(state.chapters.current.name)}」 · 目标：${esc(state.chapters.current.goal)}` : "五章都完成了"} · 已攻克 ${state.chapters.cured} 种疾病 ${modalButton("查看章节与地图", "chapters")}</p>
   <h3>研究所评级</h3><p>${state.rating.final ? `任期评级 <b>${state.rating.final.grade}</b>「${esc(state.rating.final.title)}」，已定格。` : `按当前进度预计 <b>${state.rating.projected.grade}</b>「${esc(state.rating.projected.title)}」 · ${state.rating.term} 年任期还剩 ${Math.ceil(state.rating.weeks_left / 48)} 年 · 已帮助 ${num(Math.round(state.rating.patients / 10000))} 万人次`} ${modalButton("查看五项分数", "rating")}</p>
   <h3>第 ${h.year} 届研究大会</h3><div class="card-grid">${h.categories.map((c) => `<article class="project-card"><h3>${esc(c.name)}</h3><p>${esc(c.description)}</p><p>本年成果分 <b>${c.score}</b> · 当前领先线 <b>${c.benchmark}</b></p><p class="muted">${esc(c.requirement)}</p><details><summary>本届对手</summary>${c.field.map((r) => `<p>${esc(r.name)} · ${r.score}</p>`).join("")}</details>${awardStatus(c)}</article>`).join("")}</div>
   <h3>终局挑战</h3><p>最高科学荣誉「星火生命科学大奖」是游戏中的诺贝尔级挑战，奖励经验证的突破与培养传承，不因一款药获批自动授予。</p>
@@ -51,6 +52,7 @@ function awardStatus(c) {
 function extensionModal(type, h, id) {
   if (type === "ceremony") return ceremonyView();
   if (type === "rating") return ratingView();
+  if (type === "chapters") return chaptersView(id === "done");
   if (type === "study") {
     const study = state.honors.studies.find((x) => x.product === id);
     return formFrame(
@@ -63,6 +65,30 @@ function extensionModal(type, h, id) {
   return "";
 }
 
+function chaptersView(celebrate) {
+  const c = state.chapters;
+  const close = '<button class="modal-close" data-close aria-label="关闭弹窗">×</button>';
+  const last = c.done.at(-1);
+  const head =
+    celebrate && last
+      ? `<div class="chapter-done"><p>章节完成</p><h2 id="modal-title">「${esc(last.name)}」 ${"★".repeat(last.stars)}${"☆".repeat(3 - last.stars)}</h2></div>`
+      : `<h2 id="modal-title">研究所的路</h2>`;
+  const cur = c.current
+    ? `<section class="chapter-now"><p class="sub">第 ${c.current.index} / ${c.total} 章 · ${esc(c.current.when)}</p><h3>${esc(c.current.name)}</h3><p>${esc(c.current.text)}</p><p><b>目标：${esc(c.current.goal)}</b>${c.current.reward ? ` · 完成奖励 ¥${c.current.reward} 万` : ""}</p><p>${c.current.stars.map((x) => `${x.ok ? "★" : "☆"} ${esc(x.text)}`).join("<br>")}</p></section>`
+    : "<p>五章都完成了。剩下的时间，按你自己的想法经营。</p>";
+  const tiers = ["common", "novel", "hard", "final"];
+  const map = tiers
+    .map((t) => {
+      const rows = c.map.filter((r) => r.tier === t);
+      return `<h4>${esc(c.tiers[t])} · ${rows.filter((r) => r.cured).length}/${rows.length}</h4><div class="disease-grid">${rows.map((r) => `<span class="disease ${r.cured ? "cured" : ""} ${t}" title="${esc(r.story || "")}">${esc(r.disease)}</span>`).join("")}</div>`;
+    })
+    .join("");
+  const stories = c.map.filter((r) => r.cured && r.story);
+  const bounties = c.bounties.length
+    ? c.bounties.map((b) => `<p><b>${esc(b.disease)}</b> · 第 ${Math.floor(b.deadline / 48) + 1} 年前 · 奖励 ¥${b.reward} 万</p>`).join("")
+    : '<p class="sub">暂时没有新的委托。大约每两年会有一封患者组织的来信。</p>';
+  return `<div class="chapters-card">${close}${head}${cur}<h3>患者组织委托</h3>${bounties}<h3>疾病地图 · 已攻克 ${c.cured} 种</h3>${map}${stories.length ? `<details><summary>患者的话</summary>${stories.map((r) => `<p>「${esc(r.story)}」<small> · ${esc(r.disease)}</small></p>`).join("")}</details>` : ""}<button class="primary" data-close>继续</button></div>`;
+}
 function ratingBars(r) {
   return `<div class="rating-dims">${r.dimensions
     .map(

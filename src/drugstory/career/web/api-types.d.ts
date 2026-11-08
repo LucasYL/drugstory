@@ -5,7 +5,7 @@ export type Event = {
   "version": 1;
   "id": number;
   "week": number;
-  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "cash_changed" | "notice";
+  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "chapter_completed" | "bounty_offered" | "bounty_completed" | "cash_changed" | "notice";
   "actors": (string)[];
   "project": string | null;
   "room": RoomId | null;
@@ -318,4 +318,14 @@ export type GameState = {
   "patents": (Patent)[];
   "assist": Assist;
   "rating": Rating;
+  "chapters": {
+  "current": { [key: string]: JsonValue } | null;
+  "done": (JsonValue)[];
+  "total": number;
+  "map": (JsonValue)[];
+  "cured": number;
+  "tiers": { [key: string]: string };
+  "bounties": (JsonValue)[];
+  "bounty_history": (JsonValue)[];
+};
 };

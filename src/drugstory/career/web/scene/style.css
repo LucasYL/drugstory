@@ -2021,3 +2021,54 @@ canvas.mini {
   background: var(--bad-soft);
   color: var(--bad);
 }
+
+/* 章节、疾病地图 */
+.chapters-card {
+  display: grid;
+  gap: 8px;
+}
+.chapters-card h3,
+.chapters-card h4,
+.chapters-card p {
+  margin: 0;
+}
+.chapter-done {
+  text-align: center;
+  color: #9a6214;
+}
+.chapter-now {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  display: grid;
+  gap: 4px;
+}
+.disease-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.disease {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+}
+.disease.cured {
+  border-style: solid;
+  border-color: var(--good);
+  background: var(--good-soft);
+  color: var(--good);
+}
+.disease.final {
+  border-color: #8462c4;
+}
+.disease.final.cured {
+  background: #efe7fb;
+  color: #5b3fa0;
+}
+.g-chapter b {
+  color: #9a6214;
+}

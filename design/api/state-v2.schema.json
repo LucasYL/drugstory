@@ -347,6 +347,72 @@
     },
     "rating": {
       "$ref": "#/$defs/Rating"
+    },
+    "chapters": {
+      "type": "object",
+      "description": "章节目标、疾病地图和患者组织委托（只读）。",
+      "properties": {
+        "current": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "done": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "total": {
+          "type": "integer"
+        },
+        "map": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "cured": {
+          "type": "integer"
+        },
+        "tiers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "bounties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "bounty_history": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        }
+      },
+      "required": [
+        "current",
+        "done",
+        "total",
+        "map",
+        "cured",
+        "tiers",
+        "bounties",
+        "bounty_history"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -404,7 +470,8 @@
     "patents",
     "assist",
     "negative_months",
-    "rating"
+    "rating",
+    "chapters"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -468,6 +535,9 @@
             "award_won",
             "legacy_reached",
             "term_ended",
+            "chapter_completed",
+            "bounty_offered",
+            "bounty_completed",
             "cash_changed",
             "notice"
           ]

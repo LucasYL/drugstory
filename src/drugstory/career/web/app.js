@@ -61,6 +61,7 @@ async function send(name, args = {}) {
   requestBusy = true;
   const priorFestivalYear = state?.honors?.festivals.at(-1)?.year || 0;
   const priorFinal = Boolean(state?.rating?.final);
+  const priorChapters = state?.chapters?.done.length ?? 0;
   try {
     const data = await driver.act(name, args);
     state = hydrate(data);
@@ -68,6 +69,7 @@ async function send(name, args = {}) {
     render();
     $("#save-status").textContent = "✓ 进度已保存";
     if (!priorFinal && data.rating?.final) showModal("rating");
+    else if (data.chapters && data.chapters.done.length > priorChapters) showModal("chapters", "done");
     else if ((data.honors.festivals.at(-1)?.year || 0) > priorFestivalYear)
       showModal("ceremony");
   } catch (error) {

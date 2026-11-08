@@ -210,6 +210,10 @@ def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
         "final": None,
         "nominations": [],
         "inheritances": [],
+        "chapter": 0,
+        "chapter_log": [],
+        "bounties": [],
+        "bounties_done": [],
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -265,6 +269,10 @@ def migrate_v8(s):
     s.setdefault("final", None)
     s.setdefault("nominations", [])
     s.setdefault("inheritances", [])
+    s.setdefault("chapter", 0)
+    s.setdefault("chapter_log", [])
+    s.setdefault("bounties", [])
+    s.setdefault("bounties_done", [])
     for h in s["heroes"]:
         h.setdefault("prodigy", False)
         h.setdefault("joined", 0)

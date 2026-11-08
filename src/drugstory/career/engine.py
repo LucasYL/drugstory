@@ -7,6 +7,7 @@ import inspect
 
 from . import (
     challenge,
+    chapters,
     development,
     events,
     gates,
@@ -731,6 +732,8 @@ def advance(s, weeks: int = 4):
         patents.tick(s)
         e.market_step(s)
         honors.annual(s)
+        chapters.offer_bounty(s)
+        chapters.settle_bounties(s)
         s["minimum_cash"] = min(s["minimum_cash"], s["cash"])
         if s["week"] % 4 == 0:
             s["negative_months"] = s["negative_months"] + 1 if s["cash"] < 0 else 0
@@ -917,6 +920,7 @@ def execute(state, command, args=None):
         candidate["objective_done"] = True
         log(candidate, "公司路线目标达成！获得 100 经营分，可以继续培养团队、探索新项目。")
     honors.update(candidate)
+    chapters.update(candidate)
     candidate["actions"].append({"week": state["week"], "command": command, "args": copy.deepcopy(args)})
     return candidate
 

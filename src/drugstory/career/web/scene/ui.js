@@ -206,6 +206,10 @@
     deal_signed: ["授权签约", "big"],
     award_won: ["年度获奖", "big"],
     legacy_reached: ["终局荣誉", "big"],
+    chapter_completed: ["章节完成", "big"],
+    bounty_offered: ["患者来信", ""],
+    bounty_completed: ["委托完成", "big"],
+    term_ended: ["任期结束", "big"],
     facility_upgraded: ["扩建落成", ""],
     phase_finished: ["阶段结果", ""],
   };
@@ -252,6 +256,9 @@
       return `<button data-speed="1" class="g-go"><b>▶ 开始</b><span>按 1× 让时间走起来；有决定会自动停</span></button>`;
     if (idle.length && Object.values(s.assist.services).some((v) => v.hero))
       return `<button data-tab="services" class="g-tip"><b>${idle.length} 位伙伴空闲</b><span>可以接技术服务赚周转金</span></button>`;
+    const ch = s.chapters.current;
+    if (ch)
+      return `<button data-scene="chapters" class="g-chapter"><b>第 ${ch.index} 章 · ${esc(ch.name)}</b><span>目标：${esc(ch.goal)}${ch.reward ? ` · 奖励 ¥${ch.reward} 万` : ""}</span></button>`;
     return "";
   }
   function roomSummary(id) {
@@ -555,6 +562,7 @@
     if (b.dataset.scene === "gallery") gallery();
     if (b.dataset.scene === "help") help();
     if (b.dataset.scene === "rating") showModal("rating");
+    if (b.dataset.scene === "chapters") showModal("chapters");
     if (b.dataset.scene === "next") {
       forceNext = true;
       await send("next_event", { batches: 0 });

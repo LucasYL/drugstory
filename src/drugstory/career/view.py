@@ -7,6 +7,7 @@ import math
 from . import (
     assist,
     challenge,
+    chapters,
     competition,
     development,
     engine,
@@ -417,6 +418,7 @@ def snapshot(s):
         "rivals": competition.public(s),
         "honors": honors.view(s),
         "rating": rating.view(s),
+        "chapters": chapters.view(s),
         "work_focuses": development.FOCUSES,
         "orders": e.orders(s),
         "assist": assist.view(s),
