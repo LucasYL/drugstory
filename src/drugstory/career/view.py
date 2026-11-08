@@ -257,6 +257,20 @@ def project_scene(p, key):
     }
 
 
+def discovery(s, key, c):
+    """组合手记：筛选后才写入；丹尼尔「靶点侦察」在职时立项前就能看到适配档位，叶清和看到机制偏移。"""
+    note = s["notebook"].get(key)
+    if c["kind"] != "innovative":
+        return note
+    if note is None and talents.has(s, "scout"):
+        note = {"tier": c["combo_tier"], "reason": c["combo_reason"], "week": None, "scouted": True}
+    if note is not None and talents.has(s, "star"):
+        note = {**note, "mechanism": pts(sc.mechanism(s, c))}
+    elif talents.has(s, "star"):
+        note = {"tier": None, "reason": None, "week": None, "mechanism": pts(sc.mechanism(s, c))}
+    return note
+
+
 def snapshot(s):
     occupied = busy(s)
     places = whereabouts(s)
@@ -287,9 +301,13 @@ def snapshot(s):
                 "story": ROSTER[h["id"]]["story"],
                 "trait": talents.trait(h["id"]),
                 "personal_project": stories.options(s, h),
-                "signature_value": pts(talents.value(h))
-                if talents.ABILITIES[h["id"]]["kind"] == "work"
-                else talents.value(h),
+                "awakened": talents.awakened(h),
+                "potential": talents.potential(h),
+                "inherited": talents.inherited(h),
+                "inherit_to": engine.inherit_options(s, h["id"]),
+                "retire_in": (
+                    max(0, engine.LEGEND_YEARS * 48 - (s["week"] - h.get("joined", 0))) if h["tier"] == 4 else None
+                ),
             }
         )
     roster = []
@@ -314,12 +332,13 @@ def snapshot(s):
                 "connecting": any(j.get("target") == key for j in s["jobs"]),
                 "skill": SKILLS[c["profession"]],
                 "trait": talents.trait(key),
+                "potential": talents.potential(recruit),
             }
         )
     catalogs = [
         {
             **{k: v for k, v in c.items() if k not in ("combo_tier", "combo_reason")},
-            "discovery": s["notebook"].get(k),
+            "discovery": discovery(s, k, c),
             "kind_name": KINDS[c["kind"]],
             "product_profile": shown_profile(c["key"]),
             "competition": round(competition.pressure(s, c["market"]), 2),

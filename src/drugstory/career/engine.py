@@ -5,13 +5,26 @@ from __future__ import annotations
 import copy
 import inspect
 
-from . import challenge, development, events, honors, patents, product_design, rating, readouts, stories, trial_choices
+from . import (
+    challenge,
+    development,
+    events,
+    honors,
+    patents,
+    product_design,
+    rating,
+    readouts,
+    stories,
+    talents,
+    trial_choices,
+)
 from . import economy as e
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
 from .model import (
     ACTIVE,
     DECISIONS,
+    RANK_CAP,
     ability,
     available_money,
     busy,
@@ -121,6 +134,11 @@ def choose_candidate(s, project: str, candidate: int):
     p["feedback"] = "候选已确定。先看证据与未知项，再决定是否投入下一阶段。"
 
 
+def clinical_slots(s):
+    """自营临床席位；欧阳岚「多中心」在职时多一个。"""
+    return FACILITIES[s["facility"]]["slots"] + (1 if talents.has(s, "strategist") else 0)
+
+
 def internal_usage(s):
     return sum(p["clinical_started"] and p["mode"] == "internal" and p["status"] in ACTIVE for p in s["projects"])
 
@@ -136,7 +154,7 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
     if key in CLINICAL:
         check(power(s, heroes, "clinical", cro) >= 28, "临床阶段需要临床负责人，或选择外部 CRO")
         if not cro and not (p["clinical_started"] and p["mode"] == "internal"):
-            check(internal_usage(s) < FACILITIES[s["facility"]]["slots"], "自营临床席位已满，可等待或选择 CRO")
+            check(internal_usage(s) < clinical_slots(s), "自营临床席位已满，可等待或选择 CRO")
     else:
         check(
             max(power(s, heroes, role) for role in STAGES[key]["roles"]) >= 25,
@@ -150,6 +168,7 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
         check((plan == "focused") == (p["population"] == "focused"), "III 期须延续 II 期确定的人群")
     execution = sc.plan_phase(s, p, heroes, plan, mode)
     available_money(s, execution["cost"])
+    p.setdefault("adjust", {})[key] = execution["adjust"]
     p.update(
         status="running",
         team=heroes,
@@ -352,10 +371,13 @@ def hire(s, character: str):
     prior = next((h for h in s["heroes"] if h["id"] == character), None)
     if prior:
         prior["employed"] = True
+        prior["joined"] = s["week"]
     else:
         from .model import make_hero
 
-        s["heroes"].append(make_hero(character))
+        recruit = make_hero(character)
+        recruit["joined"] = s["week"]
+        s["heroes"].append(recruit)
     log(s, f"{RANKS[ROSTER[character]['tier']]}·{ROSTER[character]['name']}加入研究社。")
 
 
@@ -368,6 +390,73 @@ def dismiss(s, character: str):
     spend(s, cost, "severance")
     h["employed"] = False
     log(s, f"{h['name']}暂离公司，履历保留，可以在满足条件时重新邀请。")
+
+
+# 传奇在职约八年后退休；提前一年提醒，可以先安排传承。
+LEGEND_YEARS = 8
+INHERIT_WEEKS = 12
+INHERIT_COST = 200
+
+
+def inherit_slots(h):
+    return 2 if h.get("prodigy") and talents.awakened(h) else 1
+
+
+def inherit_options(s, teacher):
+    """传奇可以把专长传给谁：同专业的弟子；觉醒后的李天天不限专业，可以接两位传奇。"""
+    t = next((h for h in s["heroes"] if h["id"] == teacher), None)
+    if not t or t["tier"] != 4 or not t["employed"] or "inherit" not in talents.ABILITIES[teacher]:
+        return []
+    if any(r["teacher"] == teacher for r in s.get("inheritances", [])):
+        return []
+    skill = talents.ABILITIES[teacher]["inherit"]
+    return [
+        h["id"]
+        for h in s["heroes"]
+        if h["employed"]
+        and h["id"] != teacher
+        and h["tier"] < 4
+        and skill not in h.get("inherited", [])
+        and len(h.get("inherited", [])) < inherit_slots(h)
+        and (h["profession"] == t["profession"] or (h.get("prodigy") and talents.awakened(h)))
+    ]
+
+
+def inherit(s, teacher: str, pupil: str):
+    check(
+        pupil in inherit_options(s, teacher),
+        "这位传奇已经传承过，或弟子不符合条件（同专业；觉醒后的李天天不限专业）",
+    )
+    free_team(s, [teacher, pupil])
+    available_money(s, INHERIT_COST)
+    spend(s, INHERIT_COST, "training")
+    t, u = hero(s, teacher), hero(s, pupil)
+    s["jobs"].append(
+        {
+            "kind": "inherit",
+            "name": f"{t['name']}传承{u['name']}",
+            "heroes": [teacher, pupil],
+            "left": INHERIT_WEEKS,
+            "skill": talents.ABILITIES[teacher]["inherit"],
+        }
+    )
+    log(s, f"{t['name']}开始把多年的经验传给{u['name']}，需要 {INHERIT_WEEKS} 周。")
+
+
+def retirements(s):
+    """月底检查：在职满八年的传奇退休（手上有活就等做完）；提前一年提醒。"""
+    occupied = busy(s)
+    for h in s["heroes"]:
+        if not h["employed"] or h["tier"] != 4:
+            continue
+        served = s["week"] - h.get("joined", 0)
+        if served >= (LEGEND_YEARS - 1) * 48 and not h.get("retire_notice"):
+            h["retire_notice"] = True
+            log(s, f"{h['name']}明年就要退休了。退休前可以在伙伴页安排一次传承，把专长留给弟子。")
+        if served >= LEGEND_YEARS * 48 and h["id"] not in occupied:
+            h["employed"] = False
+            h["retired"] = True
+            log(s, f"{h['name']}正式退休。研究所会记得这{LEGEND_YEARS}年。")
 
 
 def headcount(s):
@@ -388,7 +477,10 @@ def resize(s, character: str, members: int):
 def train(s, character: str):
     h = hero(s, character)
     free_team(s, [character])
-    check(ability(h) < [0, 48, 66, 83, 97][h["rank"]], "当前阶位能力已接近上限，需要真实项目和晋阶")
+    check(
+        ability(h) < min(RANK_CAP[h["rank"]], talents.potential(h)),
+        "已到当前阶位或本人潜力的上限，需要真实项目和晋阶",
+    )
     cost = 40 + h["rank"] * 20
     available_money(s, cost)
     spend(s, cost, "training")
@@ -450,6 +542,7 @@ def take_service(s, order: str, character: str):
     check(h["profession"] == offer["profession"] and ability(h) >= offer["requirement"], "专业或能力不符合交付要求")
     available_money(s, offer["cost"])
     spend(s, offer["cost"], "service_cost")
+    reward = offer["reward"] * (1.3 if talents.level(h, "pill") else 1)  # 苏小禾的服务回款 +30%
     s["service_orders"].append(order)
     s["jobs"].append(
         {
@@ -458,7 +551,7 @@ def take_service(s, order: str, character: str):
             "heroes": [character],
             "left": offer["weeks"],
             "profession": offer["profession"],
-            "reward": offer["reward"],
+            "reward": round(reward, 1),
         }
     )
 
@@ -506,7 +599,22 @@ def finish_phase(s, p):
         failures = result["failures"]
         repairable = set(failures) <= {"quality", "exposure"} and (p["kind"] == "generic" or key == "review")
         close = all(result["values"][stat] >= result["limits"][stat] - 9 for stat in failures)
+        # 雷振东「排雷」：I 期只因安全不过，可以补一次研究
+        if key == "I" and failures == ["safety"] and talents.has(s, "shield", p["team"]):
+            repairable = close = True
+        # 奥马尔觉醒：每个项目有一次临床失败可以重新分析
+        if key in CLINICAL and talents.has(s, "curve", p["team"]) >= 2 and not p.get("reanalyzed"):
+            repairable = close = True
+            p["reanalyzed"] = True
         p["status"] = "problem" if repairable and close and p["repairs"] < 1 else "failed"
+        refund = 0.0
+        if p["status"] == "failed" and key == "II" and talents.has(s, "sprout") >= 2:
+            refund = max(refund, p["execution"]["cost"] * 0.5)
+        if p["status"] == "failed" and talents.has(s, "wizard") >= 2:
+            refund = max(refund, p["execution"]["cost"] * 0.4)
+        if refund:
+            earn(s, refund, "refunds")
+            log(s, f"{p['name']}：按事先的约定退回 ¥{refund:,.0f} 万阶段费用。")
         p["feedback"] = "本次未建立足够证据：" + "、".join(STATS[k] for k in failures)
         p["feedback"] += (
             "。可补正一次，须改善实际工艺再验证。"
@@ -629,6 +737,8 @@ def advance(s, weeks: int = 4):
                 log(s, "连续三个月月底现金为负，公司停止经营。研究记录保留，可在新局调整路线。")
         if not s["career_done"] and s["week"] >= 960:
             s["career_done"] = True
+        if s["week"] % 4 == 0:
+            retirements(s)
         rating.finish_term(s)
         if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
             break
@@ -744,6 +854,7 @@ COMMANDS = {
         advance,
         next_event,
         independent_study,
+        inherit,
         personal_project,
         trial_decision,
         continue_and_run,

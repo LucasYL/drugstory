@@ -32,7 +32,7 @@ def quest_ready():
 
 def test_all_characters_have_a_unique_professional_story_and_valid_peer():
     assert set(stories.STORIES) == set(ROSTER)
-    assert len({v[0] for v in stories.STORIES.values()}) == 20
+    assert len({v[0] for v in stories.STORIES.values()}) == len(ROSTER) == 21
     for key, (_, text, role) in stories.STORIES.items():
         assert len(text) > 20
         assert role != ROSTER[key]["profession"]

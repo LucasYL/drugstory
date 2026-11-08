@@ -240,13 +240,42 @@
                 "type": "object",
                 "properties": {
                   "tier": {
-                    "type": "integer"
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "reason": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "week": {
-                    "type": "integer"
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "scouted": {
+                    "type": "boolean",
+                    "description": "丹尼尔「靶点侦察」立项前看到的适配档位"
+                  },
+                  "mechanism": {
+                    "type": "integer",
+                    "description": "叶清和「机制直觉」看到的靶点机制偏移（显示刻度）"
                   }
                 },
                 "required": [

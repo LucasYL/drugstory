@@ -31,6 +31,14 @@ def recruit_requirements(s, key):
             (f"{PROFESSIONS[prof]}知识 {knowledge}", s["knowledge"][prof] >= knowledge),
             (f"研究里程碑 { {2: 2, 3: 8, 4: 20}[tier] }", s["milestones"] >= {2: 2, 3: 8, 4: 20}[tier]),
         ]
+    if c.get("prodigy"):
+        checks += [
+            ("少年班来信：经营满两年", s["week"] >= 96),
+            ("至少一位精英或更高的生物伙伴", any(h["employed"] and h["rank"] >= 2 for h in s["heroes"])),
+        ]
+    retired = any(h["id"] == key and h.get("retired") for h in s["heroes"])
+    if retired:
+        checks += [("已经退休，不能再邀请", False)]
     if tier >= 3:
         checks += [
             (f"{FACILITIES[tier - 2]['name']}或更高", s["facility"] >= tier - 2),
@@ -133,7 +141,8 @@ def make_product(s, p, partner=False, name=None):
     benefit = max(0.65, min(1.45, 0.85 + (values["effect"] - 65) / 70))
     if p["kind"] == "generic":
         benefit = 1
-    reach = (0.65 if p.get("population") == "focused" else 1) * p.get("trial_reach", 1)
+    focused = p.get("population") == "focused" and talents.has(s, "bridge") < 2
+    reach = (0.65 if focused else 1) * p.get("trial_reach", 1)
     benefit_design = product_design.reward(p)
     reach *= 1.08 if benefit_design == "adherence" else 1.10 if benefit_design == "tolerability" else 1
     product = {
@@ -207,7 +216,11 @@ def base_sales(s, d):
     share = 1 / (1 + 0.55 * competitors + 0.4 * siblings)
     price = max(0.65, 1 - age / 1800) if d["kind"] == "generic" else 1
     revenue = d["peak"] * curve * share * price * product_design.supply_factor(s, d)
-    margin = min(0.90, d["margin"])
+    margin = d["margin"]
+    if not d["partner"]:
+        margin += 0.06 if talents.has(s, "architect") else 0
+        margin += 0.03 if talents.has(s, "crystal") >= 2 else 0
+    margin = min(0.90, margin)
     return revenue, revenue * margin
 
 
@@ -337,15 +350,23 @@ def finish_job(s, job):
         )
     elif job["kind"] == "train":
         h = next(h for h in s["heroes"] if h["id"] == job["heroes"][0])
-        h["training"] += 3
+        h["training"] += 4 if h.get("prodigy") else 3
         h["xp"] += 5
         log(s, f"{h['name']}完成培训。晋阶仍需要真实项目履历。")
     elif job["kind"] == "mentor":
         pupil = next(h for h in s["heroes"] if h["id"] == job["heroes"][1])
-        pupil["xp"] += 10 + talents.bonus(s, [job["heroes"][0]], "mentor", "*")
+        pupil["xp"] += 10
         pupil["training"] += 2
         pupil["mentored"].append(job["heroes"][0])
         log(s, f"{pupil['name']}完成导师课题，专业经验增加；还需要自己的项目履历。")
+    elif job["kind"] == "inherit":
+        teacher, pupil = (next(h for h in s["heroes"] if h["id"] == k) for k in job["heroes"])
+        pupil.setdefault("inherited", []).append(job["skill"])
+        s.setdefault("inheritances", []).append(
+            {"teacher": teacher["id"], "pupil": pupil["id"], "skill": job["skill"], "week": s["week"]}
+        )
+        pupil["xp"] += 10
+        log(s, f"{teacher['name']}完成传承：{pupil['name']}学会了「{talents.inherited(pupil)[-1]['name']}」。")
     elif job["kind"] == "connect":
         s["connections"].append(job["target"])
         gain_work(s, job["heroes"], "collaboration-" + job["target"], 6)

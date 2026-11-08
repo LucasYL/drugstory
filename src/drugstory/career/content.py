@@ -81,7 +81,7 @@ BUILD = {key for key, d in STAGES.items() if d["category"] == "build"}
 
 
 def validate():
-    assert len(ROSTER) == 20
+    assert len(ROSTER) == 21
     assert len(COMBINATIONS["combinations"]) == 288
     assert len([c for c in CATALOG.values() if c["kind"] == "innovative"]) == 288
     for c in CATALOG.values():

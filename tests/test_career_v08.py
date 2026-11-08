@@ -181,11 +181,11 @@ def test_milestones_are_events_and_recorded_once():
 
 
 def test_cast_has_unique_names_and_scene_data():
-    assert len({c["name"] for c in ROSTER.values()}) == 20
+    assert len({c["name"] for c in ROSTER.values()}) == 21
     for c in ROSTER.values():
         assert c["nickname"] and len(c["bio"]) > 20 and c["look"]["prop"]
     content = api.content()
-    assert len(content["roster"]) == 20 and all("look" in c for c in content["roster"])
+    assert len(content["roster"]) == 21 and all("look" in c for c in content["roster"])
     s = ready("innovative")
     s = g.execute(s, "run_phase", {"project": "1", "heroes": ["sprout", "beaker", "pill"]})
     heroes = {h["id"]: h for h in snapshot(s)["heroes"]}

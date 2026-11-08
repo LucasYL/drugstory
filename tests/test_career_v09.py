@@ -117,8 +117,8 @@ def test_additional_experiments_distinguish_developing_from_measuring():
     assert scene["activity"] == "make" and scene["total"] == 8 and scene["elapsed"] == 3
 
 
-def test_signature_display_uses_research_points_but_not_for_schedule_weeks():
+def test_hero_view_shows_potential_and_awakening():
     view = snapshot(ready("innovative"))
     heroes = {h["id"]: h for h in view["heroes"]}
-    assert heroes["pill"]["signature_value"] == 30
-    assert heroes["ruler"]["signature_value"] == 2
+    assert heroes["pill"]["potential"] == 88 and heroes["pill"]["awakened"] is False
+    assert heroes["ruler"]["trait"]["name"] == "期中嗅觉" and heroes["ruler"]["retire_in"] is None

@@ -72,10 +72,16 @@ def packages(s, p, ids, key):
         mastery = max(0, (ability(h) - 22) / 65) ** 1.25
         base = (2 + 15 * mastery) * (1 + 0.16 * math.sqrt(members))
         base += s.get("equipment", {}).get(role, 0) * 2
-        output = {
-            stat: min(24, base * weight + talents.work_bonus(h, key, stat))
-            for stat, weight in ROLE_OUTPUT[key][role].items()
-        }
+        output = {stat: min(24, base * weight) for stat, weight in ROLE_OUTPUT[key][role].items()}
+        # 专长：林巧优化时顺手改善工艺；苏小禾的处方更稳；陈一鸣觉醒后冲刺开发量 +30%
+        if key == "optimize" and talents.level(h, "catalyst"):
+            output["quality"] = output.get("quality", 0) + 4
+        if key == "design" and talents.level(h, "catalyst") >= 2:
+            output["quality"] = output.get("quality", 0) + 6
+        if key == "formulation" and talents.level(h, "pill"):
+            output["quality"] = output.get("quality", 0) + 4
+        if key == "optimize" and talents.level(h, "beaker") >= 2:
+            output = {stat: amount * 1.3 for stat, amount in output.items()}
         focus = p.get("work_focus", "balanced")
         if focus == "potency" and "effect" in output:
             output["safety"] = output.get("safety", 0) - output["effect"] * 0.25

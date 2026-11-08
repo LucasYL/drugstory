@@ -456,7 +456,7 @@
   /* ---------- 弹窗：图鉴、帮助 ---------- */
   function gallery() {
     q("#modal-body").innerHTML =
-      `<h2 id="modal-title">伙伴图鉴 · 20 位研究者</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><p class="sub">从见习到传奇。点人物看背景、招牌能力和加入条件。</p><div class="gallery-grid">${staticContent.roster.map((h) => `<button data-cast="${h.key}"><canvas data-cast-portrait="${h.key}" aria-hidden="true"></canvas><b>${esc(h.name)}</b><span>「${esc(h.nickname)}」</span><small>${state.heroes.some((p) => p.id === h.key) ? "已加入" : ["", "见习", "精英", "大师", "传奇"][h.tier]}</small></button>`).join("")}</div>`;
+      `<h2 id="modal-title">伙伴图鉴 · 21 位研究者</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><p class="sub">从见习到传奇。点人物看背景、招牌能力和加入条件。</p><div class="gallery-grid">${staticContent.roster.map((h) => `<button data-cast="${h.key}"><canvas data-cast-portrait="${h.key}" aria-hidden="true"></canvas><b>${esc(h.name)}</b><span>「${esc(h.nickname)}」</span><small>${state.heroes.some((p) => p.id === h.key) ? "已加入" : ["", "见习", "精英", "大师", "传奇"][h.tier]}</small></button>`).join("")}</div>`;
     if (!q("#modal").open) q("#modal").showModal();
     for (const el of document.querySelectorAll("[data-cast-portrait]"))
       renderer.drawPortrait(

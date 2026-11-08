@@ -58,8 +58,14 @@ def hero(s, key):
     return h
 
 
+RANK_CAP = [0, 48, 66, 83, 99]
+
+
 def ability(h):
-    cap = [0, 48, 66, 83, 97][h["rank"]]
+    """阶位决定当前能练到多高，潜力上限决定这个人最终能练到多高。"""
+    from .talents import potential
+
+    cap = min(RANK_CAP[h["rank"]], potential(h))
     return min(cap, h["base"] + 8 * (h["rank"] - h["tier"]) + h["training"] + min(8, h["xp"] // 15))
 
 
@@ -129,6 +135,10 @@ def make_hero(key):
         "members": 2,
         "employed": True,
         "mentored": [],
+        "prodigy": bool(c.get("prodigy")),
+        "joined": 0,
+        "inherited": [],
+        "retired": False,
     }
 
 
@@ -137,6 +147,8 @@ def gain_work(s, ids, tag, amount, case_id=None):
         h = hero(s, key)
         n = h["work"].get(tag, 0)
         gain = amount if n < 3 else amount // 2 if n < 6 else 0
+        if h.get("prodigy"):
+            gain = gain * 3 // 2
         h["work"][tag] = n + 1
         h["xp"] += gain
         if gain:
@@ -197,6 +209,7 @@ def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
         "term": term,
         "final": None,
         "nominations": [],
+        "inheritances": [],
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -251,6 +264,12 @@ def migrate_v8(s):
     s.setdefault("term", 20)
     s.setdefault("final", None)
     s.setdefault("nominations", [])
+    s.setdefault("inheritances", [])
+    for h in s["heroes"]:
+        h.setdefault("prodigy", False)
+        h.setdefault("joined", 0)
+        h.setdefault("inherited", [])
+        h.setdefault("retired", False)
     for d in s["products"]:
         d.setdefault("patients", round(d.get("total_revenue", 0) * PATIENTS_PER_WAN[d["kind"]]))
     for festival in s.get("festivals", []):

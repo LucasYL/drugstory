@@ -315,7 +315,7 @@ def test_orders_limited_pay_on_completion_and_idle_hero_can_train():
         g.execute(s, "take_service", {"order": order["id"], "character": "beaker"})
     s = g.execute(s, "train", {"character": "beaker"})
     s = g.execute(s, "advance", {"weeks": 48})
-    assert s["income"]["services"] == order["reward"] and s["services_done"] == 1
+    assert s["income"]["services"] == pytest.approx(order["reward"] * 1.3) and s["services_done"] == 1, "苏小禾 +30%"
 
 
 def test_competition_changes_sales_but_not_phase_requirements():

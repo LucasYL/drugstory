@@ -12,7 +12,7 @@ import copy
 
 from . import economy as e
 from . import science as sc
-from .content import CLINICAL, EXPERIMENTS, FACILITIES, PATHS, PROFESSIONS, STAGES
+from .content import CLINICAL, EXPERIMENTS, PATHS, PROFESSIONS, STAGES
 from .model import ability, busy, power
 from .units import pts
 
@@ -48,7 +48,7 @@ def recommended_team(s, p):
     mode = "cro" if stage in CLINICAL and not any(h["profession"] == "clinical" for h in available) else "internal"
     if (
         stage in CLINICAL
-        and engine.internal_usage(s) >= FACILITIES[s["facility"]]["slots"]
+        and engine.internal_usage(s) >= engine.clinical_slots(s)
         and not (p["clinical_started"] and p["mode"] == "internal")
     ):
         mode = "cro"

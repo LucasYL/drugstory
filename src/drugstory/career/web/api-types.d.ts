@@ -291,9 +291,11 @@ export type GameState = {
   "unlocked": boolean;
   "occupied": boolean;
   "discovery": {
-  "tier": number;
-  "reason": string;
-  "week": number;
+  "tier": number | null;
+  "reason": string | null;
+  "week": number | null;
+  "scouted"?: boolean;
+  "mechanism"?: number;
 } | null;
 })[];
   "revision": number;

@@ -9,6 +9,8 @@ from . import development, product_design, readouts, talents
 from .content import BUILD, CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES, STATS
 from .model import ability, check, hero, power, rand
 
+FINAL = ("failed", "terminated")
+
 NORMAL = NormalDist()
 STAT_ROLE = {"effect": "bio", "safety": "tox", "exposure": "chem", "quality": "proc"}
 
@@ -33,6 +35,31 @@ def update_belief(c, stat, value, sigma):
     b["observations"] += 1
 
 
+def failures_on_target(s, p):
+    """同靶点失败或终止过几次（司马衡「失败地图」）。"""
+    target = CATALOG[p["catalog"]].get("target")
+    return sum(
+        1
+        for q in s["projects"]
+        if q["id"] != p["id"] and q["status"] in FINAL and CATALOG[q["catalog"]].get("target") == target
+    )
+
+
+def combo_tier(s, spec, ids):
+    tier = spec.get("combo_tier", 0)
+    if tier == -1 and talents.has(s, "alchemist", ids):
+        return 0  # 伊莲娜「不可能的分子」
+    return tier
+
+
+def mechanism(s, spec):
+    """靶点天生的机制偏移：按种子和靶点确定，不消耗、不改变任何随机状态。"""
+    key = spec["target"] + "|" + spec["indication"]
+    if key in s["mechanisms"]:
+        return s["mechanisms"][key]
+    return rand(s, "mechanism", key).gauss(0, 6)
+
+
 def generate_candidates(s, p):
     spec = CATALOG[p["catalog"]]
     kind = p["kind"]
@@ -43,7 +70,7 @@ def generate_candidates(s, p):
         "generic": [86, 84, 76, 77],
         "improved": [70, 76, 73, 74],
         "innovative": [
-            58 + expertise + {-2: -24, -1: -12, 0: -3, 1: 2, 2: 6}.get(spec.get("combo_tier", 0), 0),
+            58 + expertise + {-2: -24, -1: -12, 0: -3, 1: 2, 2: 6}.get(combo_tier(s, spec, p["team"]), 0),
             72,
             70,
             72,
@@ -64,7 +91,9 @@ def generate_candidates(s, p):
             ("稳定优先处方", {"quality": 5, "exposure": -2}),
             ("放大友好处方", {"quality": 7, "safety": -2}),
         ]
-    extra = talents.bonus(s, p["team"], "screen")
+    extra = 1 if talents.has(s, "scout", p["team"]) >= 2 else 0
+    lessons = min(12, 4 * failures_on_target(s, p)) if kind == "innovative" and talents.has(s, "wizard") else 0
+    narrow = 0.7 if talents.has(s, "sprout", p["team"]) else 1.0
     styles += [(f"备用线索 {i + 1}", {}) for i in range(extra)]
     for i, (label, offsets) in enumerate(styles):
         c = {
@@ -81,12 +110,15 @@ def generate_candidates(s, p):
             mean += offsets.get(stat, 0)
             if stat == "effect" and kind == "innovative":
                 mean -= 5 * spec["difficulty"]
+                mean += lessons
             actual = rand(s, "candidate", p["id"], i, stat).gauss(mean, sd)
             if stat == "effect" and kind == "innovative":
                 actual += s["mechanisms"][mechanism_key]
             c["truth"][stat] = min(98, max(15, actual))
             c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
             sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
+            if stat == "effect":
+                sigma *= narrow
 
             observe(s, p, c, stat, sigma, "screen")
         p["candidates"].append(c)
@@ -100,7 +132,54 @@ def limits(p, key):
     out = dict(STAGES[key]["limits"])
     if "effect" in out and key in ("II", "III"):
         out["effect"] += CATALOG[p["catalog"]].get("threshold_bonus", 4 * CATALOG[p["catalog"]]["difficulty"])
+    # 开工时按团队专长（和疾病的特殊难关）记下的门槛调整
+    for stat, delta in p.get("adjust", {}).get(key, {}).items():
+        if stat in out:
+            out[stat] += delta
     return product_design.adjust_limits(p, key, out)
+
+
+def skill_effects(s, p, ids, key, partner=False):
+    """团队专长对本阶段的影响：工期倍率与减免、各指标噪声倍率、门槛调整。"""
+    fx = {"weeks": 1.0, "minus": 0, "noise": {}, "limits": {}}
+    if partner:
+        return fx
+
+    def noise(stats, factor):
+        for stat in stats:
+            fx["noise"][stat] = fx["noise"].get(stat, 1.0) * factor
+
+    stats = list(STAGES[key]["limits"])
+    if key == "optimize" and talents.has(s, "beaker", ids):
+        fx["weeks"] *= 0.75
+    if key == "III" and talents.has(s, "strategist", ids):
+        fx["weeks"] *= 0.7
+    if key == "II" and talents.has(s, "ruler", ids) >= 2:
+        fx["minus"] += 2
+    if talents.has(s, "bubble", ids) >= 2:
+        noise(["safety"], 0.85)
+    if key == "preclinical" and talents.has(s, "shield", ids) >= 2:
+        noise(stats, 0.7)
+    if key == "review" and talents.has(s, "judge", ids):
+        noise(stats, 0.5)
+    if talents.has(s, "crystal", ids):
+        noise(["quality"], 0.5)
+    if key == "quality" and talents.has(s, "pill", ids) >= 2:
+        noise(stats, 0.5)
+    if key in CLINICAL:
+        if talents.has(s, "ruler", ids):
+            noise(stats, 0.92)
+        if talents.has(s, "curve", ids):
+            noise(stats, 0.85)
+    if key == "III" and talents.has(s, "oracle", ids):
+        noise(stats, 0.85)
+    if any(h["id"] in ids and h.get("prodigy") and h["rank"] == 1 for h in s["heroes"]):
+        noise(stats, 1.1)
+    if key == "I" and talents.has(s, "guardian", ids):
+        fx["limits"]["safety"] = fx["limits"].get("safety", 0) - 4
+    if key == "confirm" and talents.has(s, "forge", ids):
+        fx["limits"]["effect"] = fx["limits"].get("effect", 0) - 6
+    return fx
 
 
 def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=False):
@@ -112,8 +191,8 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         skill = 60
     members = sum(min(hero(s, h)["members"], 2 + hero(s, h)["rank"]) for h in ids)
     speed = 1 + min(0.45, members / max(1, len(ids)) * 0.10)
-    saving = talents.bonus(s, ids, "schedule", key) if key in CLINICAL and not partner else 0
-    weeks = max(4, math.ceil(d["weeks"] * strategy["time"] / speed) - saving)
+    fx = skill_effects(s, p, ids, key, partner)
+    weeks = max(4, math.ceil(d["weeks"] * strategy["time"] * fx["weeks"] / speed) - fx["minus"])
     cost = d["cost"] * strategy["cost"] * (1.3 if cro and not partner else 1)
     if p["kind"] == "innovative":
         cost *= 1.2 if CATALOG[p["catalog"]]["difficulty"] else 1
@@ -138,6 +217,7 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         else:
             endpoint_skill = 0.7 * specialist + 0.3 * skill
         noise_by_stat[stat] = d["noise"] * strategy["noise"] * max(0.65, 1.2 - endpoint_skill / 160)
+        noise_by_stat[stat] *= fx["noise"].get(stat, 1.0)
     if enhanced:
         noise_by_stat = {stat: value * 0.8 for stat, value in noise_by_stat.items()}
     noise = sum(noise_by_stat.values()) / len(noise_by_stat)
@@ -152,11 +232,12 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         "mode": mode,
         "category": d["category"],
         "work": development.packages(s, p, ids, key) if p.get("chosen") is not None else [],
+        "adjust": fx["limits"],
     }
     if p.get("chosen") is not None:
-        result["probability"] = phase_probability(
-            development.projected(p, key, result["work"]), key, plan, noise_by_stat
-        )
+        preview = development.projected(p, key, result["work"])
+        preview.setdefault("adjust", {})[key] = fx["limits"]
+        result["probability"] = phase_probability(preview, key, plan, noise_by_stat)
     return result
 
 
@@ -253,17 +334,22 @@ def experiment_plan(s, p, kind, stat, ids):
     c = selected(p)
     check(p["index"] < 2 or kind in ("validate", "marker"), "进入临床后不能直接改变分子性质")
     check(p["status"] == "ready", "只能在阶段开始前安排专项研究")
-    check(c["checks"].get(kind + stat, 0) < (2 if kind == "validate" else 1), "这项研究已经完成，不能反复刷结果")
+    repeats = (3 if talents.has(s, "bubble", ids) else 2) if kind == "validate" else 1
+    check(c["checks"].get(kind + stat, 0) < repeats, "这项研究已经完成，不能反复刷结果")
     role = EXPERIMENTS[kind]["role"] or STAT_ROLE[stat]
     check(power(s, ids, role) >= (55 if kind in ("translate", "marker") else 25), "需要对应专业的研究能力")
     if kind == "refine":
-        check(c["optimized"] < 2, "这个候选已经完成两次定向优化")
+        most = 3 if talents.has(s, "triple_refine", ids) else 2
+        check(c["optimized"] < most, f"这个候选已经完成 {most} 次定向优化")
     if kind == "marker":
         check(
             p["kind"] == "innovative" and p["index"] <= PATHS["innovative"].index("II"),
             "人群分层应在 II 期方案确定前验证",
         )
-    return {**EXPERIMENTS[kind], "kind": kind, "stat": stat, "role": role}
+    plan = {**EXPERIMENTS[kind], "kind": kind, "stat": stat, "role": role}
+    if kind == "validate" and talents.has(s, "bubble", ids):
+        plan["cost"] = plan["cost"] / 2  # 娜迪亚「再核一遍」
+    return plan
 
 
 def finish_experiment(s, p):
@@ -272,6 +358,10 @@ def finish_experiment(s, p):
     n = c["checks"].get(kind + stat, 0)
     skill = power(s, p["team"], e["role"])
     if kind == "marker":
+        if talents.has(s, "bridge", p["team"]) and not c.get("imaging"):
+            # 沈墨言「影像标志物」：用影像找到的获益人群效果翻倍
+            c["subgroup"] *= 2
+            c["imaging"] = True
         sigma = max(3, 9 - skill / 15)
         sample = c["subgroup"] + rand(s, p["id"], "marker").gauss(0, sigma)
         b = c["marker"]

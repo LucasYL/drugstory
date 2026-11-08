@@ -105,12 +105,15 @@ def test_interim_stop_releases_budget_and_is_separate_from_failure():
 
 
 def test_signature_replaces_stacked_traits_and_personal_project_upgrades_it():
+    # v0.11：个人课题完成且晋升到大师后才「觉醒」
     s = quest_ready()
-    initial = talents.value(s["heroes"][0])
+    assert talents.has(s, "beaker") == 1
     s = g.execute(s, "personal_project", {"character": "beaker", "partner": "pill", "choice": "practice"})
     s = g.execute(s, "next_event")
-    assert talents.value(s["heroes"][0]) > initial
-    assert len(talents.ABILITIES) == 20
+    assert s["heroes"][0]["personal"] and talents.has(s, "beaker") == 1
+    s["heroes"][0]["rank"] = 3
+    assert talents.has(s, "beaker") == 2
+    assert len(talents.ABILITIES) == 21
     assert not {"specialize", "platform_policy", "set_production"} & g.COMMANDS.keys()
 
 
