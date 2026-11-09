@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hmac
 import json
+import re
 import secrets
 import tempfile
 import threading
@@ -44,16 +47,20 @@ def atomic_write(path: Path, text: str) -> None:
 
 class GameSession:
     def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation", difficulty="standard", term=20):
-        self.path = save_path
+        self.path = self.origin = save_path
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
         self.requests = {}
         source = load_path or (save_path if save_path.exists() else None)
         self.state = load(source) if source else new_game(seed, scenario, difficulty, term)
-        if self.state.get("migrated_from") == 8 and Path(source).resolve() == save_path.resolve():
-            # 不把 v8 存档覆盖成 v9：旧版本还要能读它。新进度写到旁边的新文件。
+        self.migrated = self.state.pop("migrated_from", None) == 8
+        if self.migrated and Path(source).resolve() == save_path.resolve():
+            # 不把 v8 存档覆盖成 v9：旧版本还要能读它。新进度写到旁边的新文件；
+            # 那个文件已经存在时说明上次已经另存过，接着它继续，不再回到 v8 的旧进度。
             self.path = save_path.with_name(f"{save_path.stem}-v11.json")
+            if self.path.exists():
+                self.state = load(self.path)
         snapshot(self.state)
         self.saved_at = None
 
@@ -90,8 +97,51 @@ class GameSession:
             return {**result, "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
 
-def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer:
+def create_server(
+    session: GameSession, port: int = 8885, *, public_url: str = "", credentials: str = ""
+) -> ThreadingHTTPServer:
+    public = urlsplit(public_url)
+    prefix = public.path.rstrip("/")
+    accounts: dict[bytes, GameSession] = {}
+    if public_url:
+        if (
+            public.scheme != "https"
+            or not re.fullmatch(r"[a-zA-Z0-9.-]+(?::[0-9]+)?", public.netloc)
+            or not re.fullmatch(r"(?:/[a-zA-Z0-9_-]+)+", prefix)
+            or public.query
+            or public.fragment
+        ):
+            raise ValueError("线上模式需要 HTTPS 子路径")
+        lines = [line for line in credentials.splitlines() if line]
+        if not lines:
+            raise ValueError("线上模式需要至少一个账号")
+        usernames = set()
+        for i, line in enumerate(lines):
+            username, _, _ = line.partition(":")
+            if (
+                not re.fullmatch(r"[!-9;-~]+:[!-~]+", line)
+                or (i and not re.fullmatch(r"[a-zA-Z0-9_-]+", username))
+                or username.casefold() in usernames
+            ):
+                raise ValueError("账号格式错误或用户名重复")
+            usernames.add(username.casefold())
+        save_dir = session.origin.with_name(f"{session.origin.stem}-accounts")
+        for i, line in enumerate(lines):
+            username = line.split(":", 1)[0]
+            account = session
+            if i:
+                account = GameSession(
+                    save_dir / f"{username}.json",
+                    seed=session.state["seed"],
+                    scenario=session.state["scenario"],
+                    difficulty=session.state["difficulty"],
+                    term=session.state["term"],
+                )
+            accounts[base64.b64encode(line.encode("ascii"))] = account
+
     class Handler(BaseHTTPRequestHandler):
+        timeout = 20
+
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ("200", "304"):
                 super().log_message(fmt, *args)
@@ -105,7 +155,7 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
             self.send_header(
                 "Content-Security-Policy",
                 "default-src 'self'; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; "
-                "object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+                "object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
             )
             if download:
                 self.send_header("Content-Disposition", f'attachment; filename="{download}"')
@@ -115,16 +165,54 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
         def send_json(self, data, status=200):
             self.send_bytes(json.dumps(data, ensure_ascii=False).encode(), "application/json; charset=utf-8", status)
 
-        def local_request(self) -> bool:
+        def route(self) -> tuple[str, GameSession] | None:
             host = self.headers.get("Host", "")
-            allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
-            return host in allowed and self.headers.get("Origin", f"http://{host}") == f"http://{host}"
+            allowed = (
+                {public.netloc}
+                if public_url
+                else {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+            )
+            origin = f"{'https' if public_url else 'http'}://{host}"
+            if host not in allowed or self.headers.get("Origin", origin) != origin:
+                self.send_json({"error": "请从游戏地址打开页面"}, 403)
+                return None
+            path = urlsplit(self.path).path
+            if prefix and path == prefix and self.command == "GET":
+                self.send_response(308)
+                self.send_header("Location", f"{prefix}/")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return None
+            if prefix and not path.startswith(f"{prefix}/"):
+                self.send_json({"error": "页面不存在"}, 404)
+                return None
+            account = session
+            if public_url:
+                scheme, _, value = self.headers.get("Authorization", "").partition(" ")
+                key = value.encode("latin-1") if scheme.lower() == "basic" else b""
+                account = next((owner for auth, owner in accounts.items() if hmac.compare_digest(key, auth)), None)
+                if account is None:
+                    self.send_response(401)
+                    self.send_header("WWW-Authenticate", 'Basic realm="Drugstory", charset="UTF-8"')
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return None
+            return path[len(prefix) :], account
+
+        def asset(self, name: str):
+            path = ASSETS / name
+            data = path.read_bytes()
+            kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[path.suffix]
+            if path.suffix == ".html" and prefix:
+                data = data.replace(b'<base href="/" />', f'<base href="{prefix}/" />'.encode(), 1)
+            self.send_bytes(data, f"{kind}; charset=utf-8")
 
         def do_GET(self):
-            if not self.local_request():
-                self.send_json({"error": "请从本地游戏地址打开页面"}, 403)
+            route = self.route()
+            if route is None:
                 return
-            path = urlsplit(self.path).path
+            path, session = route
             if path == "/api/state":
                 self.send_json(api.state(session.view()))
             elif path == "/api/content":
@@ -148,23 +236,25 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
                 "/scene/panels.js",
                 "/scene/style.css",
             ):
-                name = "index.html" if path in ("/scene", "/scene/") else path.rsplit("/", 1)[-1]
-                kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
-                self.send_bytes((ASSETS / "scene" / name).read_bytes(), f"{kind}; charset=utf-8")
-            elif path in ("/", "/app.js", "/honors.js", "/projects.js", "/style.css", "/api-driver.js"):
-                name = {"/": "index.html"}.get(path, path.lstrip("/"))
-                kind = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}[Path(name).suffix]
-                self.send_bytes((ASSETS / name).read_bytes(), f"{kind}; charset=utf-8")
+                self.asset("scene/index.html" if path in ("/scene", "/scene/") else path.lstrip("/"))
+            elif path == "/" and public_url:
+                self.asset("scene/index.html")
+            elif path in ("/", "/text", "/app.js", "/honors.js", "/projects.js", "/style.css", "/api-driver.js"):
+                self.asset("index.html" if path in ("/", "/text") else path.lstrip("/"))
             elif path == "/favicon.ico":
                 self.send_bytes(b"", "image/x-icon", 204)
             else:
                 self.send_json({"error": "页面不存在"}, 404)
 
         def do_POST(self):
-            if not self.local_request() or self.headers.get("X-Game-Token") != session.token:
+            route = self.route()
+            if route is None:
+                return
+            path, session = route
+            if self.headers.get("X-Game-Token") != session.token:
                 self.send_json({"error": "连接已更新，请刷新页面后继续"}, 403)
                 return
-            if urlsplit(self.path).path not in ("/api/action", "/api/preview"):
+            if path not in ("/api/action", "/api/preview"):
                 self.send_json({"error": "没有这个接口"}, 404)
                 return
             try:
@@ -174,7 +264,7 @@ def create_server(session: GameSession, port: int = 8885) -> ThreadingHTTPServer
                 data = json.loads(self.rfile.read(size))
                 if not isinstance(data, dict):
                     raise ValueError("操作内容必须是一个对象")
-                if urlsplit(self.path).path == "/api/preview":
+                if path == "/api/preview":
                     with session.lock:
                         if data.get("revision") != session.revision:
                             raise Conflict("进度已经变化，请重新选择方案。")
@@ -200,15 +290,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--term", type=int, choices=[10, 20], default=20, help="新局的任期（年）")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
+    parser.add_argument("--public-url", default="", help="HTTPS 反代入口，例如 https://example.com/game/")
+    parser.add_argument("--auth-file", type=Path, help="线上登录文件，每行一个 用户名:密码。首个账号使用指定存档。")
     args = parser.parse_args(argv)
     try:
         session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty, args.term)
-        server = create_server(session, args.port)
+        credentials = args.auth_file.read_text().rstrip("\r\n") if args.auth_file else ""
+        server = create_server(session, args.port, public_url=args.public_url, credentials=credentials)
     except (OSError, ValueError) as e:
         parser.exit(1, f"启动失败：{e}\n")
     print(f"新药物语：http://127.0.0.1:{server.server_port}", flush=True)
     print(f"每次操作自动保存到 {session.path.resolve()}；按 Ctrl+C 关闭服务。", flush=True)
-    if session.state.get("migrated_from") == 8:
+    if session.path != session.origin:
         print("已读入 v0.10 的 v8 存档；原文件不会被改写，新进度保存在上面这个文件。", flush=True)
     try:
         server.serve_forever()

@@ -2,7 +2,7 @@
 (function (root) {
   class ApiDriver {
     constructor(
-      fetcher = (...args) => fetch(...args),
+      fetcher = (path, options) => fetch(path.slice(1), options),
       uuid = () => crypto.randomUUID(),
     ) {
       this.fetcher = fetcher;

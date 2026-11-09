@@ -245,6 +245,7 @@ def loads(text):
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") in READABLE,
             "研究所版读取 v8、v9 存档；v7 请在 8883、v6 请在 8881 继续游玩",
         )
+        s.pop("migrated_from", None)  # 只标记「这次读入时刚升级」，不随存档延续
         if s["version"] == 8:
             migrate_v8(s)
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")

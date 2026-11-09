@@ -48,6 +48,21 @@ uv run drugstory --scenario foundation --seed 42
 - 网页默认存档改为 `saves/scene-autosave-v11.json`，和 v0.10 的 `saves/scene-autosave.json` 互不干扰。
 - 不要让两个服务同时写同一个文件。服务只监听本机。
 
+## 跨设备试玩
+
+v0.10.1 支持挂在 HTTPS 子路径上。试玩入口为 [researchbuddy.cc/game/](https://researchbuddy.cc/game/)，从电脑和手机使用同一游戏账号登录时，共用服务端存档。v0.10.2 支持多个账号，各有独立进度。多个设备同时操作会触发版本冲突提示，重新读取进度后再决定。
+
+自行部署时，先在仓库外准备权限为 600 的登录文件，每行写一个 `用户名:密码`。首行账号使用 `--save-path` 指定的原存档，其余账号用旁边的 `<存档名>-accounts` 目录。切换账号时可以打开新的无痕窗口。用反向代理终止 TLS，保留外部 Host 和原始路径，转发至本机端口：
+
+```bash
+uv run drugstory-web --port 8902 --public-url https://example.com/game/ \
+  --auth-file /path/to/private/login.txt --save-path saves/hosted-autosave.json
+```
+
+线上模式的子路径首页显示场景，`/game/text` 是文字版。游戏资源和 API 都在同一前缀下，游戏服务绑定回环地址。通过独立保存路径保留跨设备进度。
+
+**线上服务从 v0.10 升到 v0.11：** 启动命令不变，`--save-path` 仍指向原来的 v8 存档。每个账号的 v8 原档都不改写，新进度写到旁边的 `<原名>-v11.json`（其他账号在 `<存档名>-accounts/<用户名>-v11.json`）；服务重启后接着 `-v11` 那份继续。要退回 v0.10，换回旧代码用同一条命令启动即可，读到的是升级前的 v8 进度。
+
 ## 本版变化
 
 - **任期与评级**：开局选十年或二十年；任期结束那周弹出结算，评级和结局定格，之后可以继续经营。
@@ -80,7 +95,7 @@ uv run python scripts/boundary-hard-targets.py --seeds 40
 ```
 
 验证范围：
-- 143 项 Python 测试和 9 项 Node 测试；全部 JS 语法检查；Schema 与类型同步。
+- 145 项 Python 测试和 9 项 Node 测试；全部 JS 语法检查；Schema 与类型同步。
 - 关键鼠标流程：自动参评、研究顾问、评级与任期结算、四道关、章节、新画法、文字版、手机宽度。
 
 模拟结果：

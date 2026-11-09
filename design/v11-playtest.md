@@ -139,7 +139,7 @@
 ## 六、验证
 
 ```bash
-uv run pytest -q                           # 143 项
+uv run pytest -q                           # 145 项
 node --test tests/test_scene_transport.cjs # 9 项
 uv run ruff check . && uv run ruff format --check .
 uv run python scripts/generate-api-types.py
@@ -165,6 +165,12 @@ uv run python scripts/playtest-v08.py --seeds 2 --jobs 4
 - v0.11 写 v9。读入 v8 存档时只在内存里补字段，原文件不改写，新进度另存为 `<原名>-v11.json`（有测试）。
 - 网页默认存档改为 `saves/scene-autosave-v11.json`，命令行改为 `saves/institute-cli-v11.json`。
 - v0.10 不能读 v9 存档。
+
+### 线上部署（合入 v0.10.1、v0.10.2 之后）
+
+- 合并后 145 项 Python、9 项 Node 测试、Ruff、API 类型生成检查通过。
+- 新增回归：两个账号各有一份 v8 存档，服务按同一条命令启动两次。v8 原档逐字节不变；第二次启动读到的是 `-v11.json` 里的进度；其他账号读回自己的 v8 进度而不是新开一局。合并前这三点里后两点都不成立（重启会回到 v8 旧进度，账号目录会换名）。
+- 浏览器在 `https://example.test/game/` 前缀下带登录打开场景（1440 宽与 iPhone 13 宽）、图鉴、文字版，推进两周：没有 4xx 响应和控制台错误。这是本地转发到独立测试存档，不是公网环境；`researchbuddy.cc` 上的正式服务没有碰。
 
 ## 七、已知限制
 

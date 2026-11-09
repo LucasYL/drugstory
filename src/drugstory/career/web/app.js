@@ -501,7 +501,7 @@ async function updatePreview() {
   const [, args] = formArgs(form),
     sequence = ++previewSequence;
   try {
-    const response = await fetch("/api/preview", {
+    const response = await fetch("api/preview", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
