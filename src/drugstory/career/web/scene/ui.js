@@ -524,7 +524,11 @@
     if (b.dataset.sceneProject)
       select({ type: "project", id: b.dataset.sceneProject });
     if (b.dataset.cast) cast(b.dataset.cast);
-    if (b.dataset.npOpen !== undefined) select({ type: "new" });
+    if (b.dataset.npOpen !== undefined) {
+      // 重新打开时重挑第一个可开始的品种：上次选中的那个多半已经在研或在售，开始按钮会是灰的。
+      P().np.pick = null;
+      select({ type: "new" });
+    }
     if (b.dataset.npRoute) {
       P().np.route = b.dataset.npRoute;
       renderPanel(true);
