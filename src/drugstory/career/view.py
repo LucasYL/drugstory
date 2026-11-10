@@ -458,7 +458,7 @@ def snapshot(s):
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty
     goals, _ = e.objectives(s)
     return {
-        "version": "0.12",
+        "version": "0.13",
         "api_version": 2,
         "display_scale": 10,
         "event_cursor": s["event_seq"],

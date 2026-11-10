@@ -305,7 +305,8 @@
         .filter(Boolean)
         .join(" · ");
       const inner = `<b>${esc(o.label)}</b><small>${esc(meta)}</small><small class="who">${esc(o.note)}</small>`;
-      const cls = `option ${o === first ? "primary" : ""} ${o.kind === "stop" ? "ghost danger" : ""}`;
+      // 推荐的那一项和其他决定卡的大按钮一样（.quick），回车执行的也是它
+      const cls = `option ${o === first ? "primary quick" : ""} ${o.kind === "stop" ? "ghost danger" : ""}`;
       if (o.kind === "switch") return `<button class="${cls}" data-modal="switch" data-id="${p.id}" ${o.ok ? "" : "disabled"}>${inner}</button>`;
       if (o.kind === "stop") return `<button class="${cls}" data-modal="terminate" data-id="${p.id}">${inner}</button>`;
       return `<button class="${cls}" data-command="${o.command}" data-args="${args(o.args)}" ${o.ok ? "" : "disabled"}>${inner}</button>`;

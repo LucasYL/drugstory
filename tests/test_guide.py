@@ -45,6 +45,12 @@ def test_doable_suggestions_really_succeed(seed, weeks):
     """blocker 不复制状态试执行；这里用真实引擎核对它的判断。"""
     s = bot.play(seed, weeks=weeks)
     for item in guide.suggestions(s, limit=10):
+        if item["kind"] == "personal":
+            # 引导只在有对口的空闲伙伴时提个人课题，玩家点开就能开始
+            from drugstory.career import stories
+
+            h = next(x for x in s["heroes"] if x["id"] == item["hero"])
+            assert [k for k in stories.options(s, h)["partners"] if k != h["id"]]
         if not item["command"]:
             continue
         if item["ok"]:

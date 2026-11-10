@@ -22,6 +22,21 @@
 
 **场景。** `#sheet` 是手机上的决定面板；成员用 `art.js` 的新画法；`panels.js` 的新项目页分为疾病卡、主流路线、自由组合三层。
 
+## v0.13 的变化
+
+**存档 v11。** `MIGRATIONS[10] = migrate_v10` 补 `year_goal`、`goal_history`、`goal_log`、`fellowships`、`wards`，并把已到原第 3 章及以后的章节下标后移一位（新插入的「新的实验室」算作跳过，不补奖励）。`resolve_save` 的查找顺序是「`-v13` → `-v12` → `-v11` → 原文件」，新进度写 `-v13`。旧文件只读不改。
+
+**新模块。**
+- `goals.py`：年度目标。`honors.annual` 在颁奖后调用 `close_year` 和 `offer(year + 1)`；`engine.execute` 每个操作后调用 `goals.update`。出题用 `rand(s, "goals", year)`，只看公开状态。
+- `skills.py`：主动技能。九种原语，21 个技能的数据在 `abilities.json` 的 `active`；`use_skill` 先检查后修改，随机都带键。快照的人物 `active`、项目 `skills` 列出能用在哪。
+- `gates.py` + `data/challenges.json`：难病搭档关（阿尔茨海默、KRAS G12C、乙肝、Lp(a)）。`science.plan_phase` 用 `gates.effects` 调门槛、噪声、工期；`economy.make_product` 乘 `gates.peak_factor`；立项筛选时 `gates.lock_design` 定下由分子设计决定的关。
+- `incidents.py` + `data/incidents.json`：失败事件卡。`engine.finish_phase` 失败时 `incidents.draw` 用 `rand(s, "incident", 项目, 阶段, 补正次数)` 抽原因；`incidents.options` 只读，进快照项目的 `incident`；新命令 `rework_expert`。
+- `investments.py`：花钱的出口。命令 `build_line`、`access_program`、`fund_fellowship`、`build_ward`；每周运营费在 `advance` 里记为 `operations`，患者援助在 `market_step` 里记为 `access`。
+
+**专长看得见。** `talents.trigger` 发 `talent_triggered`，同一人、同一专长在同一项目的同一阶段只报一次（`p["talent_seen"]`），人物记 `talent_uses`。`science.skill_effects` 返回 `notes`，开工时发事件。
+
+**快照新增。** `year_goal`；人物 `active`、`talent_uses`；项目 `talents_used`、`skills`、`incident`；目录与项目的 `gates` 带 `title`；产品 `invest`；顶层 `investments`；`facility.slots` 改为实际自营临床席位（含病房和欧阳岚）。
+
 ## 公共接口
 
 - GET /api/content：版本化静态内容，客户端启动时读取一次：`rooms`（固定房间表，含每个房间承担的阶段）、`roster`（20 位角色的名字、外号、背景、外观）、`display_scale`（10）、项目、术语、方案和解锁条件文字；不含组合隐藏档位或理由。

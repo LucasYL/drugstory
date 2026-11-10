@@ -1,6 +1,6 @@
 [project]
 name = "drugstory"
-version = "0.12.0"
+version = "0.13.0"
 description = "新药物语：角色养成、药物研发与产业竞争的文字经营游戏"
 readme = "README.md"
 requires-python = ">=3.12"

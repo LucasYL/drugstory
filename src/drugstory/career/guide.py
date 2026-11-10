@@ -358,10 +358,14 @@ def personal_items(s):
     from . import stories
 
     out = []
+    occupied = busy(s)
     for h in s["heroes"]:
-        if not h["employed"]:
+        if not h["employed"] or h["id"] in occupied:
             continue
         info = stories.options(s, h)
+        # 课题要一位对口专业的空闲伙伴；没有就先不提，免得引导停在一件做不了的事上
+        if not [k for k in info["partners"] if k != h["id"]]:
+            continue
         if info["unlocked"] and not info["done"] and not info["running"]:
             out.append(
                 _item(

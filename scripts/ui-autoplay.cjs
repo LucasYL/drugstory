@@ -2,7 +2,7 @@
  *
  * 用来验收「只点推荐也能走下去」：决定卡的主按钮、候选「稳妥」、空研究台的「开始下一个项目」、
  * 新项目页的「开始筛选」，其余时间按「下一件事」。--guide 时，没有决定也会点左上角引导里
- * 带命令的按钮（v0.12 起引导按钮会直接执行建议的操作）。
+ * 带命令的按钮（v0.12 起引导按钮会直接执行建议的操作）。v0.13 起也会选年度目标（第一个），失败事件卡点推荐的那一项。
  *
  * 只操作浏览器，不读存档、不读隐藏数值。请对独立端口、独立存档的新局使用，不要对玩家的存档跑。
  *
@@ -32,7 +32,7 @@ function options(argv) {
   await page.goto(`http://127.0.0.1:${o.port}/scene`);
   await page.waitForTimeout(1500);
   const seen = new Set();
-  const counts = { quick: 0, choice: 0, pick: 0, start: 0, guide: 0, next: 0, modal: 0 };
+  const counts = { quick: 0, choice: 0, pick: 0, start: 0, guide: 0, goal: 0, next: 0, modal: 0 };
   let shots = 0,
     week = 0,
     stuck = 0,
@@ -62,6 +62,9 @@ function options(argv) {
         pick: [...document.querySelectorAll("aside.side button")].filter((b) => vis(b) && b.textContent.trim() === "选这个").length,
         empty: vis(document.querySelector("aside.side .empty button[data-np-open]")),
         guide: vis(document.querySelector("#scene-goal button[data-command]")) ? text(document.querySelector("#scene-goal")) : "",
+        // 年度目标：引导条上的「选一个今年的目标」打开选择弹窗；弹窗里点第一个「就它了」
+        goalOffer: vis(document.querySelector('#scene-goal button[data-modal="goals"].g-chapter')),
+        goalPick: !!(modal?.open && [...modal.querySelectorAll('button[data-command="pick_goal"]')].some(vis)),
         over: /停业/.test(text(document.querySelector("#scene-goal"))),
       };
     });
@@ -74,7 +77,11 @@ function options(argv) {
       await shoot("stuck");
       break;
     }
-    if (st.modal) {
+    if (st.goalPick) {
+      log("GOAL", st.modal);
+      await page.locator('#modal button[data-command="pick_goal"]:visible').first().click();
+      counts.goal++;
+    } else if (st.modal) {
       if (log("MODAL", st.modal)) await shoot("modal");
       const close = page.locator("#modal [data-close]").first();
       if (await close.count()) await close.click();
@@ -99,6 +106,8 @@ function options(argv) {
       log("EMPTY", "研究台空着 → 开始下一个项目");
       await page.locator("aside.side .empty button[data-np-open]").click();
       counts.start++;
+    } else if (st.goalOffer) {
+      await page.locator('#scene-goal button[data-modal="goals"]').first().click();
     } else if (o.guide && st.guide) {
       log("GUIDE", st.guide);
       await page.locator("#scene-goal button[data-command]").first().click();
