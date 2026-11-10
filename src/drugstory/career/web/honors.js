@@ -110,10 +110,16 @@ function ratingView() {
       <button class="primary" data-close>继续经营（评级已定格）</button></div>`;
   }
   const p = r.projected;
+  const levers = r.levers.length
+    ? `<h3>怎么涨分</h3><ul class="levers">${r.levers.map((l) => `<li><b>${esc(l.text)}</b><small>${esc(l.dimension)} ${l.gain >= 0 ? "+" : ""}${l.gain}${l.total_gain ? ` · 总分 +${l.total_gain}` : ""}</small></li>`).join("")}</ul>`
+    : "";
+  const head = r.early
+    ? `<div class="grade-big early">起步</div><h2 id="modal-title">前两年先打基础</h2><p class="sub">第 3 年起显示预计评级。下面是现在的五项分数。</p>`
+    : `<div class="grade-big">${p.grade}</div><h2 id="modal-title">按当前进度预计：${esc(p.title)}</h2>
+    <p class="sub">五项按已经过去的任期比例估计，任期结束那一周定格。${r.gap ? `距 ${r.gap.grade} 还差 ${r.gap.points} 分。` : ""}</p>`;
   return `<div class="rating-card">${close}<p>${r.term} 年任期 · 还剩 ${Math.ceil(r.weeks_left / 48)} 年</p>
-    <div class="grade-big">${p.grade}</div><h2 id="modal-title">按当前进度预计：${esc(p.title)}</h2>
-    <p class="sub">五项按已经过去的任期比例估计，任期结束那一周定格。现在的实际总分 ${r.current.total}（${r.current.grade}）。</p>
-    ${ratingBars(p)}<p>已帮助 <b>${num(Math.round(r.patients / 10000))} 万</b>人次 · 如果现在结束，结局会是「${esc(p.ending)}」。</p>
+    ${head}
+    ${ratingBars(p)}${levers}<p>已帮助 <b>${num(Math.round(r.patients / 10000))} 万</b>人次 · 如果现在结束，结局会是「${esc(p.ending)}」。</p>
     <details><summary>怎么算分</summary><p>惠及患者看产品覆盖的患者人次，难治疾病和创新药加权；科学突破看攻克的疾病难度和通过的独立复核；团队传承看自家培养的大师和传奇、带教和个人课题；经营稳健看现金增长、有没有出现负现金；行业声誉看大奖和提名。S ≥ 85，A ≥ 70，B ≥ 55，C ≥ 40。</p></details>
     <button class="primary" data-close>知道了</button></div>`;
 }

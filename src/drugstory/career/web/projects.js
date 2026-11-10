@@ -22,7 +22,7 @@ function productSalesNote(d) {
     tolerability: "耐受性支持 · 需求 +10%",
   };
   const capacity = state.market_capacity[d.market];
-  return `<p class="muted">${d.design_reward ? esc(names[d.design_reward]) : "标准产品路径"}${d.catalog === "g_pressure" && d.design_reward !== "supply" ? " · 每第三季度供货折减 12%（当前" + (Math.floor(state.week / 12) % 3 === 2 ? "生效" : "未生效") + "）" : ""}${capacity?.capacity ? ` · 本领域容量 ${money(capacity.capacity)} / 周，当前容量分配 ${(capacity.factor * 100).toFixed(0)}%` : ""}</p>`;
+  return `<p class="muted">${d.design_reward ? esc(names[d.design_reward]) : "标准产品路径"}${d.catalog === "g_pressure" && d.design_reward !== "supply" ? " · 单一供应商：每年有一个季度少卖 12%" : ""}${capacity?.capacity ? ` · 本领域容量 ${money(capacity.capacity)} / 周，当前容量分配 ${(capacity.factor * 100).toFixed(0)}%` : ""}</p>`;
 }
 function challengePanel() {
   return `<p class="muted">${state.challenge.mode === "competition" ? "产业竞逐：更强对手、有限市场容量；研发门槛不随财富增加。" : "舒展经营：新开局可选择产业竞逐。"}</p>`;

@@ -395,6 +395,10 @@
               }
             ],
             "description": "选品卡：每周利润区间、能卖几年、对手在售与在研（公开数据）。"
+          },
+          "share_loss": {
+            "type": "number",
+            "description": "同市场对手抢走的份额比例（0–1）。"
           }
         },
         "required": [
@@ -711,6 +715,37 @@
         },
         "observations": {
           "type": "integer"
+        },
+        "gate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "对照的门槛（点数）：当前阶段的，或剩余路径上最高的。"
+        },
+        "gate_stage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verdict": {
+          "enum": [
+            "很可能过",
+            "大概率过",
+            "可能过",
+            "悬",
+            "很难过",
+            "后面不考"
+          ]
         }
       },
       "required": [
@@ -719,7 +754,10 @@
         "mean",
         "low",
         "high",
-        "observations"
+        "observations",
+        "gate",
+        "gate_stage",
+        "verdict"
       ],
       "additionalProperties": false
     },
@@ -1757,6 +1795,66 @@
         },
         "patients": {
           "type": "integer"
+        },
+        "early": {
+          "type": "boolean",
+          "description": "前两年：先不给字母。"
+        },
+        "gap": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "grade": {
+                  "enum": [
+                    "S",
+                    "A",
+                    "B",
+                    "C",
+                    "D"
+                  ]
+                },
+                "points": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "grade",
+                "points"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "levers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dimension": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "gain": {
+                "type": "number"
+              },
+              "total_gain": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "dimension",
+              "text",
+              "gain",
+              "total_gain"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
@@ -1766,7 +1864,10 @@
         "current",
         "projected",
         "final",
-        "patients"
+        "patients",
+        "early",
+        "gap",
+        "levers"
       ],
       "additionalProperties": false
     },

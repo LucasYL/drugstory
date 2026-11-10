@@ -307,6 +307,10 @@ def migrate_v9(s):
         p.setdefault("pace", "standard")
     for d in s["products"]:
         d.setdefault("history", [])
+    # 旧存档里早就成立的成长机会不再提示，免得读档时一下子弹出一串
+    from .guide import moments
+
+    s["tips_seen"] += [key for key, _ in moments(s, s["tips_seen"]) if key not in s["tips_seen"]]
 
 
 MIGRATIONS = {8: migrate_v8, 9: migrate_v9}

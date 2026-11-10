@@ -17,6 +17,7 @@ CATALOG_FIELDS = (
     "gates",
     "outlook",
     "autopilot",
+    "share_loss",
 )
 
 

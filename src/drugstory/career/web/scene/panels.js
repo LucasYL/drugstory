@@ -31,6 +31,26 @@
     `<span class="pill ${tone(p)}">${esc(p.status_name)}${p.deferred ? " · 暂缓" : ""}</span>`;
 
   /* ---------- 小部件 ---------- */
+  // 「显示数字」：默认只显示词，数字放在悬停提示里；打开后词后面跟上数字
+  function numbersOn() {
+    try {
+      return localStorage.getItem("drugstory.numbers") === "1";
+    } catch {
+      return false;
+    }
+  }
+  function toggleNumbers() {
+    try {
+      localStorage.setItem("drugstory.numbers", numbersOn() ? "0" : "1");
+    } catch {
+      /* 存不了就只在这一页生效 */
+    }
+  }
+  const WORD_TONE = { 很可能过: "ok", 大概率过: "ok", 可能过: "mid", 悬: "mid", 很难过: "no", 后面不考: "mute" };
+  function evidenceWord(e) {
+    const nums = `${e.low}–${e.high}${e.gate != null ? ` · 门槛 ${e.gate}（${e.gate_stage}）` : ""}`;
+    return `<small class="word ${WORD_TONE[e.verdict] || ""}" title="${esc(nums)}">${esc(e.verdict)}${numbersOn() ? ` · ${e.low}–${e.high}` : ""}</small>`;
+  }
   function phaseTrack(p) {
     if (p.status === "licensed") return "";
     return `<ol class="track">${p.path
@@ -61,7 +81,8 @@
         const v = r.values[k],
           lim = r.limits[k];
         const x = (n) => Math.max(0, Math.min(100, ((n - lo) / (hi - lo)) * 100));
-        return `<div class="bar-row"><span>${esc(state.stats[k])}</span><span class="bar ${v >= lim ? "ok" : "no"}"><i style="width:${x(v)}%"></i><b style="left:${x(lim)}%"></b></span><small>${num(v)} / ${num(lim)}</small></div>`;
+        const word = r.words?.[k] || "";
+        return `<div class="bar-row"><span>${esc(state.stats[k])}</span><span class="bar ${v >= lim ? "ok" : "no"}" title="${num(v)} / 门槛 ${num(lim)}"><i style="width:${x(v)}%"></i><b style="left:${x(lim)}%"></b></span><small class="word ${v >= lim ? "ok" : "no"}" title="${num(v)} / 门槛 ${num(lim)}">${esc(word)}${numbersOn() ? ` · ${num(v)} / ${num(lim)}` : ""}</small></div>`;
       })
       .join("")}</div>`;
   }
@@ -84,7 +105,7 @@
     const limits = p.scene?.limits || {};
     const [lo, hi] = scaleOf(
       p.candidates.flatMap((c) =>
-        c.evidence.flatMap((e) => [e.low, e.high]),
+        c.evidence.flatMap((e) => [e.low, e.high, ...(e.gate != null ? [e.gate] : [])]),
       ),
     );
     return `<div class="cands" style="--n:${p.candidates.length}"><div class="cands-head"><span></span>${p.candidates
@@ -100,7 +121,7 @@
           `<div class="cands-row"><span class="stat">${esc(p.candidates[0].evidence.find((e) => e.key === k).name)}</span>${p.candidates
             .map((c) => {
               const e = c.evidence.find((x) => x.key === k);
-              return `<span>${rangeBar(e.low, e.high, limits[k], lo, hi)}<small>${e.low}–${e.high}</small></span>`;
+              return `<span>${rangeBar(e.low, e.high, e.gate ?? limits[k], lo, hi)}${evidenceWord(e)}</span>`;
             })
             .join("")}</div>`,
       )
@@ -115,7 +136,7 @@
           tags(c.id).includes("稳妥") ? "primary small" : "small",
         ),
       )
-      .join("")}</div></div><p class="hint-line">灰条是证据给出的可能范围，竖线是下一阶段的门槛。范围宽说明还不确定，不代表更好。</p>`;
+      .join("")}</div></div><p class="hint-line">灰条是可能的范围，竖线是门槛。范围越宽越不确定。</p>`;
   }
   // 某人还要忙几周：服务、培养看 jobs，项目看 left
   function busyFor(h) {
@@ -309,16 +330,16 @@
     if (current && p.active) {
       const ev = current.evidence;
       const [lo, hi] = scaleOf(
-        ev.flatMap((e) => [e.low, e.high, ...(limits[e.key] ? [limits[e.key]] : [])]),
+        ev.flatMap((e) => [e.low, e.high, ...(e.gate != null ? [e.gate] : limits[e.key] ? [limits[e.key]] : [])]),
       );
       evidenceBlock = `<section class="block"><h4>候选 ${current.id + 1} · ${esc(current.label)}<small>已优化 ${current.optimized}/2</small></h4>${ev
         .map(
           (e) =>
-            `<div class="bar-row"><span>${esc(e.name)}</span>${rangeBar(e.low, e.high, limits[e.key], lo, hi)}<small>${e.low}–${e.high}</small></div>`,
+            `<div class="bar-row"><span>${esc(e.name)}</span>${rangeBar(e.low, e.high, e.gate ?? limits[e.key], lo, hi)}${evidenceWord(e)}</div>`,
         )
         .join(
           "",
-        )}<p class="hint-line">竖线是「${esc(p.phase)}」的门槛。开发让灰条右移，验证让它变窄。</p></section>`;
+        )}<p class="hint-line">竖线是门槛（当前阶段不考的，用后面最高的那个）。开发让灰条右移，验证让它变窄。</p></section>`;
     }
     const running = ["screening", "running"].includes(p.status);
     return `<button class="back" data-scene="overview">← 研发</button><article class="card detail"><header><div class="title"><b>${esc(p.name)}</b><small>${esc(p.kind_name)} · 已投入 ${money(p.spent)}</small></div>${statusPill(p)}</header>${phaseTrack(p)}${
@@ -399,6 +420,12 @@
       .join("");
     return `<div class="np-empty"><b>${ROUTE_NAMES[route]}${taken ? "都在研或在售了" : "还没有能开始的"}</b>${others}</div>`;
   }
+  // 同领域对手：在售的抢走多少份额，在研的是谁
+  function rivalLine(c) {
+    const loss = Math.round((c.share_loss || 0) * 100);
+    const selling = loss ? `同领域对手在售，份额约 −${loss}%` : "同领域对手：没有在售的";
+    return selling + (c.announced_rivals.length ? ` · 在研：${c.announced_rivals.map(esc).join("、")}` : "");
+  }
   function catalogStatus(c) {
     if (c.occupied) return ["在研或在售", "mute"];
     if (!c.unlocked) return ["待解锁", "mute"];
@@ -453,7 +480,7 @@
       })
       .join("")}</div>${
       c
-        ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p><div class="checks">${c.requirements.map((r) => `<span class="${r.ok ? "ok" : "no"}">${r.ok ? "✓" : "○"} ${esc(r.text)}</span>`).join("")}</div><p class="meta-line">竞争压力 ${c.competition.toFixed(1)} / 3${c.announced_rivals.length ? " · 对手：" + c.announced_rivals.map(esc).join("、") : ""}${c.discovery?.reason ? " · " + esc(c.discovery.reason) : ""}${c.discovery?.mechanism != null ? ` · 叶清和看这条通路：机制偏移 ${c.discovery.mechanism > 0 ? "+" : ""}${c.discovery.mechanism}` : ""}</p>${gateBlock(c.gates)}<p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
+        ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p>${c.requirements.some((r) => !r.ok) ? `<div class="checks">${c.requirements.filter((r) => !r.ok).map((r) => `<span class="no">○ 还差：${esc(r.text)}</span>`).join("")}</div>` : ""}<p class="meta-line">${rivalLine(c)}${c.discovery?.reason ? " · " + esc(c.discovery.reason) : ""}${c.discovery?.mechanism != null ? ` · 叶清和看这条通路：机制偏移 ${c.discovery.mechanism > 0 ? "+" : ""}${c.discovery.mechanism}` : ""}</p>${gateBlock(c.gates)}<p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
             state.work_focuses,
           )
             .map(
@@ -610,6 +637,8 @@
     room,
     np,
     handover,
+    numbersOn,
+    toggleNumbers,
     waiting,
     firstRoute,
   };

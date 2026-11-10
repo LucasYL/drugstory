@@ -168,7 +168,7 @@
   function metrics(s) {
     const flow = s.weekly_profit + s.weekly_royalty - s.costs_per_week;
     q("#scene-metrics").innerHTML =
-      `<span class="m-date"><small>${esc(s.date)}</small><b>第 ${s.week} 周</b></span><span title="现金；括号里是扣掉已承诺支出后的可用现金"><small>现金</small><b>${money(s.cash)}</b>${s.committed > 0 ? `<em>可用 ${num(s.available_cash)}</em>` : ""}</span><span title="产品利润与分成减去工资、租金和在研费用"><small>每周</small><b class="${flow >= 0 ? "pos" : "neg"}">${flow >= 0 ? "+" : "−"}${num(Math.abs(flow))} 万</b></span><span><small>团队</small><b>${s.headcount}/${s.facility.capacity}</b></span><button class="m-grade" data-scene="rating" title="研究所评级：点开看五项分数"><small>${s.rating.final ? "任期评级" : "预计评级"}</small><b class="grade-${(s.rating.final || s.rating.projected).grade}">${(s.rating.final || s.rating.projected).grade}</b></button>`;
+      `<span class="m-date"><small>${esc(s.date)}</small><b>第 ${s.week} 周</b></span><span title="现金；「可用」是扣掉已安排的花费以后还能动用的"><small>现金</small><b>${money(s.cash)}</b>${s.committed > 0 ? `<em>可用 ${num(s.available_cash)}</em>` : ""}</span><span title="产品利润与分成减去工资、租金和在研费用"><small>每周</small><b class="${flow >= 0 ? "pos" : "neg"}">${flow >= 0 ? "+" : "−"}${num(Math.abs(flow))} 万</b></span><span title="含成员共 ${s.headcount} 人 · 研究所能容纳 ${s.facility.capacity} 人"><small>伙伴</small><b>${s.heroes.length}</b></span><button class="m-grade" data-scene="rating" title="研究所评级：点开看五项分数和怎么涨分"><small>${s.rating.final ? "任期评级" : s.rating.early ? "评级" : "预计评级"}</small><b class="grade-${s.rating.early ? "early" : (s.rating.final || s.rating.projected).grade}">${s.rating.early ? "起步" : (s.rating.final || s.rating.projected).grade}</b></button>`;
   }
   // 跳过几周时，同一个人的多批开发合成一条飘字，同一项目只显示最后一批数据
   function merged(events) {
@@ -584,6 +584,11 @@
     if (b.dataset.scene === "gallery") gallery();
     if (b.dataset.scene === "help") help();
     if (b.dataset.scene === "rating") showModal("rating");
+    if (b.dataset.scene === "numbers") {
+      P().toggleNumbers();
+      b.textContent = P().numbersOn() ? "隐藏数字" : "显示数字";
+      renderPanel(true);
+    }
     if (b.dataset.scene === "chapters") showModal("chapters");
     if (b.dataset.scene === "next") {
       forceNext = true;

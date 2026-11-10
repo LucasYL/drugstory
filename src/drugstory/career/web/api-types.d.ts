@@ -19,6 +19,9 @@ export type Evidence = {
   "low": number;
   "high": number;
   "observations": number;
+  "gate": number | null;
+  "gate_stage": string | null;
+  "verdict": "\u5f88\u53ef\u80fd\u8fc7" | "\u5927\u6982\u7387\u8fc7" | "\u53ef\u80fd\u8fc7" | "\u60ac" | "\u5f88\u96be\u8fc7" | "\u540e\u9762\u4e0d\u8003";
 };
 
 export type Belief = {
@@ -229,6 +232,17 @@ export type Rating = {
   "projected": RatingSummary;
   "final": RatingSummary | null;
   "patients": number;
+  "early": boolean;
+  "gap": {
+  "grade": "S" | "A" | "B" | "C" | "D";
+  "points": number;
+} | null;
+  "levers": ({
+  "dimension": string;
+  "text": string;
+  "gain": number;
+  "total_gain": number;
+})[];
 };
 
 export type Gate = {
@@ -347,6 +361,7 @@ export type GameState = {
 };
 } | null;
   "outlook"?: { [key: string]: JsonValue } | null;
+  "share_loss"?: number;
 })[];
   "revision": number;
   "token": string;

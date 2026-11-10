@@ -65,27 +65,89 @@ STATUS = {
 }
 
 
-def evidence(c, kind="innovative"):
+# 用一个词说清楚，数字放进悬停提示（点数，界面显示 ×10）
+MARGIN = 60
+
+
+def verdict(low, high, mean, gate):
+    """证据范围对门槛：很可能过 / 大概率过 / 可能过 / 悬 / 很难过。"""
+    if gate is None:
+        return "后面不考"
+    if low >= gate + MARGIN:
+        return "很可能过"
+    if low >= gate:
+        return "大概率过"
+    if high < gate:
+        return "很难过"
+    return "可能过" if mean >= gate else "悬"
+
+
+def result_word(value, limit):
+    """阶段结果离门槛多远。"""
+    m = value - limit
+    if m >= 200:
+        return "远超门槛"
+    if m >= MARGIN:
+        return "稳稳过线"
+    if m >= 0:
+        return "刚好过线"
+    if m >= -MARGIN:
+        return "差一点"
+    return "差得远"
+
+
+def gates_for(p):
+    """每项指标要对照的门槛：当前阶段有就用当前阶段的，没有就用剩下路径上最高的。"""
+    if p is None:
+        return {}
+    remaining = PATHS[p["kind"]][p["index"] :]
+    out = {}
+    for stat in STATS:
+        here = sc.limits(p, remaining[0]).get(stat) if remaining else None
+        if here is not None:
+            out[stat] = (pts(here), STAGES[remaining[0]]["name"])
+            continue
+        later = [(sc.limits(p, k)[stat], k) for k in remaining if stat in sc.limits(p, k)]
+        if later:
+            value, key = max(later)
+            out[stat] = (pts(value), STAGES[key]["name"])
+    return out
+
+
+def evidence(c, kind="innovative", p=None):
     names = (
         STATS
         if kind != "generic"
         else {"safety": "杂质与质量控制", "exposure": "等效性支持", "quality": "稳定性与放大"}
     )
-    return [
-        {
-            "key": stat,
-            "name": name,
-            "mean": pts(c["belief"][stat]["mean"]),
-            "low": pts(max(0, c["belief"][stat]["mean"] - 1.645 * math.sqrt(c["belief"][stat]["variance"]))),
-            "high": pts(c["belief"][stat]["mean"] + 1.645 * math.sqrt(c["belief"][stat]["variance"])),
-            "observations": c["belief"][stat]["observations"],
-        }
-        for stat, name in names.items()
-    ]
+    gates = gates_for(p)
+    rows = []
+    for stat, name in names.items():
+        b = c["belief"][stat]
+        low = pts(max(0, b["mean"] - 1.645 * math.sqrt(b["variance"])))
+        high = pts(b["mean"] + 1.645 * math.sqrt(b["variance"]))
+        mean = pts(b["mean"])
+        gate, stage = gates.get(stat, (None, None))
+        rows.append(
+            {
+                "key": stat,
+                "name": name,
+                "mean": mean,
+                "low": low,
+                "high": high,
+                "observations": b["observations"],
+                "gate": gate,
+                "gate_stage": stage,
+                "verdict": verdict(low, high, mean, gate),
+            }
+        )
+    return rows
 
 
 def shown_result(r):
-    return {**r, "values": pts_map(r["values"]), "limits": pts_map(r["limits"])}
+    values, limits = pts_map(r["values"]), pts_map(r["limits"])
+    words = {k: result_word(values[k], limits[k]) for k in values if k in limits}
+    return {**r, "values": values, "limits": limits, "words": words}
 
 
 def shown_profile(catalog):
@@ -152,7 +214,7 @@ def project_view(s, p):
             {
                 "id": c["id"],
                 "label": c["label"],
-                "evidence": evidence(c, p["kind"]),
+                "evidence": evidence(c, p["kind"], p if p["status"] in ACTIVE else None),
                 "optimized": c["optimized"],
                 "checks": c["checks"],
                 "marker": c["marker"],
@@ -357,6 +419,7 @@ def snapshot(s):
             "occupied": any(p["catalog"] == k and p["status"] in ACTIVE for p in s["projects"])
             or e.catalog_in_market(s, k),
             "outlook": e.market_outlook(s, k) if c["kind"] != "innovative" else None,
+            "share_loss": round(1 - 1 / (1 + 0.55 * competition.pressure(s, c["market"])), 2),
         }
         for k, c in CATALOG.items()
     ]

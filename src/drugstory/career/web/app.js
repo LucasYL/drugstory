@@ -84,7 +84,7 @@ async function send(name, args = {}) {
   }
 }
 function evidence(c) {
-  return `<div class="evidence-grid">${c.evidence.map((x) => `<div><span>${esc(x.name)}</span><strong>${x.low}–${x.high}</strong><small>${x.observations} 次观察 · 估计范围</small></div>`).join("")}</div>`;
+  return `<div class="evidence-grid">${c.evidence.map((x) => `<div><span>${esc(x.name)}</span><strong>${x.low}–${x.high}</strong><small>${esc(x.verdict || "")}${x.gate != null ? ` · 门槛 ${x.gate}` : ""} · ${x.observations} 次观察</small></div>`).join("")}</div>`;
 }
 function render() {
   if (window.DrugstorySceneUI) {
@@ -97,7 +97,7 @@ function render() {
     <section class="timebar"><div><div class="eyebrow">RESEARCH GUILD / 研究社养成</div><h1>${esc(s.date)} <small>第 ${s.week} 周</small></h1><p class="muted">${s.pending ? `${s.pending} 项等待决定；也可暂缓项目，经营其他业务。` : "时间由你推进。好研究，也包括及时识别不值得继续的候选。"}</p></div><div class="actions">${button("推进 1 周", "advance", { weeks: 1 }, "", !!s.pending || s.game_over)}${button("继续 4 周", "advance", { weeks: 4 }, "", !!s.pending || s.game_over)}${button("下一件事 →", "next_event", { batches: 0 }, "primary", !!s.pending || s.game_over)}</div></section>
     <section class="metrics" aria-label="公司概况">
       <div><span>现金</span><strong>${num(s.cash)} <small>万</small></strong><small>${s.runway === null ? "当前经营收支为正" : `按当前收支约 ${s.runway} 周`}</small></div>
-      <div><span>已承诺支出</span><strong>${num(s.committed)} <small>万</small></strong><small>可安排 ${money(s.available_cash)} · 不含未来工资</small></div>
+      <div><span>已安排的花费</span><strong>${num(s.committed)} <small>万</small></strong><small>可安排 ${money(s.available_cash)} · 不含未来工资</small></div>
       <div><span>研究团队</span><strong>${s.heroes.length} <small>位角色</small></strong><small>${s.headcount} / ${f.capacity} 人 · ${esc(f.name)}</small></div>
       <div><span>研究成果</span><strong>${Object.values(s.report.approvals).reduce((a, b) => a + b, 0)} <small>款自主产品</small></strong><small>创新 ${s.report.approvals.innovative} 款 · 授权 ${s.deals.length} 项</small></div>
       <div><span>专业积累</span><strong>${num(Object.values(s.knowledge).reduce((a, b) => a + b, 0))}</strong><small>最高阶位：${["", "见习", "精英", "大师", "传奇"][s.report.highest_rank]}</small></div>
@@ -172,7 +172,7 @@ function resultTable(r) {
   )
     .map(
       ([key, value]) =>
-        `<tr><td>${esc(state.stats[key])}</td><td>${num(value)}</td><td>≥ ${r.limits[key]}</td></tr>`,
+        `<tr><td>${esc(state.stats[key])}</td><td>${num(value)}${r.words?.[key] ? ` · ${esc(r.words[key])}` : ""}</td><td>≥ ${r.limits[key]}</td></tr>`,
     )
     .join(
       "",
@@ -231,7 +231,7 @@ function market() {
       .filter((d) => !d.partner)
       .map(
         (d) =>
-          `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周（已扣生产、市场与医学事务费用）</p>${d.exclusive_until ? `<p>${state.week >= d.exclusive_until ? "专利已到期，仿制药进场后销售会降到约三成" : `专利独占到${esc(d.patent_expires_label)}，之后仿制药进场`}</p>` : ""}<p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p><p>委托合规生产；供货与生命周期按产品规则结算。</p></article>`,
+          `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周（已扣生产、市场与医学事务费用）</p>${d.exclusive_until ? `<p>${state.week >= d.exclusive_until ? "专利已到期，仿制药进场后销售会降到约三成" : `专利独占到${esc(d.patent_expires_label)}，之后仿制药进场`}</p>` : ""}<p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p></article>`,
       )
       .join("") ||
     empty("第一款产品上市后，会在这里看到导入、现金回流与生命周期。")
