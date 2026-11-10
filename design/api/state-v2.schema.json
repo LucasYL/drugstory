@@ -1127,6 +1127,110 @@
               "$ref": "#/$defs/JsonValue"
             }
           }
+        },
+        "incident": {
+          "description": "最后一个阶段没过时的失败事件卡：出了什么事、谁最懂、能怎么办。",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "text",
+                "stat",
+                "expert",
+                "talent",
+                "options"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "stat": {
+                  "type": "string"
+                },
+                "expert": {
+                  "type": "string"
+                },
+                "talent": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "label",
+                      "command",
+                      "args",
+                      "weeks",
+                      "cost",
+                      "people",
+                      "note",
+                      "ok"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "talent",
+                          "expert",
+                          "rework",
+                          "switch",
+                          "stop"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "command": {
+                        "type": "string"
+                      },
+                      "args": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "$ref": "#/$defs/JsonValue"
+                        }
+                      },
+                      "weeks": {
+                        "type": "integer"
+                      },
+                      "cost": {
+                        "type": "number"
+                      },
+                      "people": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "note": {
+                        "type": "string"
+                      },
+                      "ok": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       },
       "required": [

@@ -1,0 +1,75 @@
+{
+  "groups": {
+    "build": ["formulation", "quality", "design", "optimize", "preclinical"],
+    "be": ["be"],
+    "clinical": ["I", "II", "III", "bridge", "confirm"],
+    "review": ["review"]
+  },
+  "causes": {
+    "build": {
+      "quality": [
+        {"title": "放大后晶型转变", "text": "小试一直是稳定的晶型，放到中试釜里却冒出了另一种。溶出跟着变了，批与批对不上。", "expert": "proc", "talent": "crystal"},
+        {"title": "批间含量波动", "text": "三批样品的含量一高一低一正常，单看每批都在范围里。合在一起看，工艺还没真正稳住。", "expert": "proc", "talent": "pill"},
+        {"title": "辅料换了批次", "text": "供应商换了一批辅料，粒径分布宽了一点。压片硬度和崩解时间都跟着漂了。", "expert": "proc", "talent": null}
+      ],
+      "safety": [
+        {"title": "基因毒杂质超限", "text": "一个合成中间体残留下来，结构上带警示基团。量不大，但这类杂质的限度很严。", "expert": "tox", "talent": "bubble"},
+        {"title": "储存中降解产物增加", "text": "加速试验第三个月，一个降解峰慢慢长高。要么换包材，要么调处方。", "expert": "tox", "talent": null},
+        {"title": "残留溶剂偏高", "text": "最后一步结晶用的溶剂没干燥干净。重新摸干燥条件，或者换一种溶剂。", "expert": "chem", "talent": null}
+      ],
+      "effect": [
+        {"title": "动物模型里药效变弱", "text": "换到更接近人的模型以后，效果比细胞实验差了一截。可能是靶点覆盖不够，也可能是模型本身。", "expert": "bio", "talent": "bridge"},
+        {"title": "结构改动丢了活性", "text": "为了改善成药性动了一个基团，活性跟着掉了。要在两者之间重新找平衡。", "expert": "chem", "talent": "alchemist"}
+      ],
+      "exposure": [
+        {"title": "口服吸收太低", "text": "动物血药浓度只有预期的一半。溶解度是第一嫌疑。", "expert": "proc", "talent": "crystal"},
+        {"title": "代谢太快", "text": "肝微粒体里半小时就降解掉大半。需要找到代谢位点挡一挡。", "expert": "chem", "talent": "forge"}
+      ]
+    },
+    "be": {
+      "exposure": [
+        {"title": "高脂餐后吸收偏低", "text": "空腹组等效，餐后组的峰浓度掉到了区间外。参比制剂对食物没那么敏感。", "expert": "clinical", "talent": "ruler"},
+        {"title": "溶出曲线在 pH 6.8 掉队", "text": "酸性条件下和参比一模一样，到了肠道的 pH 就慢了半拍。体内暴露跟着偏低。", "expert": "proc", "talent": "crystal"},
+        {"title": "参比制剂批次差异", "text": "这次买到的参比批次溶出特别快，把对照组的数字抬高了。换一批参比重新比。", "expert": "clinical", "talent": null}
+      ],
+      "quality": [
+        {"title": "试验批与申报批不一致", "text": "做等效用的那批和要申报的那批工艺参数差了一点。审评会问为什么。", "expert": "proc", "talent": "pill"}
+      ]
+    },
+    "clinical": {
+      "effect": [
+        {"title": "安慰剂组反应偏高", "text": "对照组的改善比历史数据多了一倍，药物组的优势被吃掉了。终点和中心管理都要再看。", "expert": "clinical", "talent": "curve"},
+        {"title": "入组人群太宽", "text": "真正可能获益的那部分人只占三成，其余人把平均效果拉平了。要找到能挑出他们的标志物。", "expert": "bio", "talent": "bridge"},
+        {"title": "剂量选低了", "text": "高剂量组趋势更好，但为了安全只推了低剂量。暴露量可能还没到起效的位置。", "expert": "clinical", "talent": null}
+      ],
+      "safety": [
+        {"title": "肝酶升高", "text": "几位受试者的转氨酶升到正常上限三倍以上。停药后能恢复，但需要说清楚机制和风险。", "expert": "tox", "talent": "judge"},
+        {"title": "QT 间期延长信号", "text": "心电图上 QT 间期有轻度延长，剂量越高越明显。要做专门的心脏安全评估。", "expert": "tox", "talent": "guardian"},
+        {"title": "输注反应", "text": "首次给药时有人出现发热和寒战。预处理方案和输注速度都可以调。", "expert": "clinical", "talent": null}
+      ],
+      "exposure": [
+        {"title": "个体差异太大", "text": "同一剂量下，血药浓度最高和最低差了十倍。可能和代谢酶的基因型有关。", "expert": "clinical", "talent": null},
+        {"title": "半衰期比预期短", "text": "人体清除比动物快得多，一天一次撑不到下一剂。要么改剂型，要么改给药频次。", "expert": "chem", "talent": "forge"},
+        {"title": "食物影响明显", "text": "饭后服用的暴露量是空腹的两倍多。说明书很难写，依从性也会出问题。", "expert": "clinical", "talent": "ruler"}
+      ],
+      "quality": [
+        {"title": "临床批次稳定性不足", "text": "试验中途发现临床用药批次的有关物质在增长。数据可用，但要补上工艺证据。", "expert": "proc", "talent": "pill"}
+      ]
+    },
+    "review": {
+      "quality": [
+        {"title": "现场核查发现记录缺口", "text": "核查员翻到两份批记录的签字日期对不上。不是造假，但要把整套记录补完整。", "expert": "proc", "talent": "judge"},
+        {"title": "稳定性数据不够长", "text": "长期稳定性只有九个月，审评要求至少十二个月。等数据，或者补充加速试验的论证。", "expert": "proc", "talent": null}
+      ],
+      "exposure": [
+        {"title": "审评对等效性有疑问", "text": "审评员认为个别受试者的数据剔除理由不充分。要重新论证统计方法。", "expert": "clinical", "talent": "ruler"}
+      ],
+      "safety": [
+        {"title": "审评要求补充安全性分析", "text": "审评员希望按亚组重新看不良事件。数据都在，要重新整理和解释。", "expert": "tox", "talent": "judge"}
+      ],
+      "effect": [
+        {"title": "审评质疑获益的临床意义", "text": "统计上显著，但改善幅度接近最小临床意义差值。需要补充患者报告结局来说明。", "expert": "clinical", "talent": "curve"}
+      ]
+    }
+  }
+}

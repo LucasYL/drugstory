@@ -2180,3 +2180,62 @@ button.quick small.talents { color: #b07a1c; }
 button.skill { border-color: #e7b766 !important; background: #fff8ea !important; }
 .active-skill { display: grid; gap: 3px; margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff8ea; }
 .active-skill small { color: var(--muted, #6b6b63); }
+
+/* 失败事件卡 */
+.incident {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bad-soft);
+  border-left: 3px solid var(--bad);
+}
+.incident-title {
+  display: block;
+  font-size: 15px;
+  color: var(--bad);
+}
+.incident p {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.incident > small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.incident-options {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.incident-options .option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+.incident-options .option.primary {
+  background: linear-gradient(135deg, #22ad96, #168e7a);
+  border-color: transparent;
+  color: #fff;
+}
+.incident-options .option small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.incident-options .option.danger b {
+  color: var(--bad);
+}
+.incident-options .option:disabled {
+  opacity: 0.55;
+}
+.incident-options .option.primary b,
+.incident-options .option.primary small {
+  color: #fff !important;
+}

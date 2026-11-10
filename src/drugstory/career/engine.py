@@ -16,6 +16,7 @@ from . import (
     goals,
     guide,
     honors,
+    incidents,
     patents,
     product_design,
     rating,
@@ -321,6 +322,32 @@ def rework(s, project: str, heroes: list):
     )
     p["deferred"] = False
     p["contributors"] = sorted(set(p["contributors"] + heroes))
+
+
+def rework_expert(s, project: str, hero: str):
+    """失败事件卡：请对口专业的人（或对口专长的角色）来补正，周期更短、补得更多。"""
+    p = find(s["projects"], project)
+    check(p["status"] == "problem" and p["repairs"] < 1, "没有可以补正的问题")
+    check(incidents.current(p) is not None, "这次失败没有事件卡，请按原方案补正")
+    free_team(s, [hero])
+    h = next(x for x in s["heroes"] if x["id"] == hero)
+    amount = incidents.gain(p, h)
+    check(amount > 0, "这位伙伴不对口：需要对口专长，或对口专业且能力 60")
+    cost = incidents.EXPERT["cost"]
+    available_money(s, cost)
+    i = p["incident"]
+    p.update(
+        status="running",
+        team=[hero],
+        left=incidents.EXPERT["weeks"],
+        cost_per_week=cost / incidents.EXPERT["weeks"],
+        experiment={"kind": "rework", "stat": i["stat"], "gain": amount},
+    )
+    p["deferred"] = False
+    p["contributors"] = sorted(set(p["contributors"] + [hero]))
+    if amount == incidents.TALENT_GAIN:
+        talents.trigger(s, i["talent"], f"「{i['title']}」：补正幅度 +12", [hero], p=p, stage=i["key"])
+    log(s, f"{p['name']}：请{h['name']}处理「{i['title']}」。")
 
 
 def launch(s, project: str, name: str = ""):
@@ -659,6 +686,7 @@ def finish_phase(s, p):
             p["reanalyzed"] = True
             talents.trigger(s, "curve", "重新分析：这次失败改为可补正", p["team"], 2, p=p, stage=key)
         p["status"] = "problem" if repairable and close and p["repairs"] < 1 else "failed"
+        incident = incidents.draw(s, p, result)
         refund = 0.0
         if p["status"] == "failed" and key == "II" and talents.has(s, "sprout") >= 2:
             refund = max(refund, p["execution"]["cost"] * 0.5)
@@ -673,7 +701,9 @@ def finish_phase(s, p):
                 minimum=2,
             )
             log(s, f"{p['name']}：按事先的约定退回 ¥{refund:,.0f} 万阶段费用。")
-        p["feedback"] = "本次未建立足够证据：" + "、".join(STATS[k] for k in failures)
+        p["feedback"] = f"{incident['title']}。{incident['text']}本次未建立足够证据：" + "、".join(
+            STATS[k] for k in failures
+        )
         p["feedback"] += (
             "。可补正一次，须改善实际工艺再验证。"
             if p["status"] == "problem"
@@ -773,8 +803,9 @@ def advance(s, weeks: int = 4):
                 if p["experiment"]["kind"] == "rework":
                     c = sc.selected(p)
                     stat = p["experiment"]["stat"]
-                    c["truth"][stat] = min(98, c["truth"][stat] + 6)
-                    c["belief"][stat]["mean"] += 6
+                    amount = p["experiment"].get("gain", incidents.REWORK["gain"])
+                    c["truth"][stat] = min(98, c["truth"][stat] + amount)
+                    c["belief"][stat]["mean"] += amount
                     p["repairs"] += 1
                     message = "工艺补正完成，下一次验证仍需实际投入，不能保证通过。"
                 else:
@@ -949,7 +980,9 @@ def autopilot_step(s):
                 # 补正或没过：交还给玩家决定
                 p["autopilot"] = ""
                 failed = "、".join(STATS[k] for k in p["results"][-1]["failures"]) if p["results"] else "本阶段"
-                log(s, f"{p['name']}需要你决定：{failed}没过。")
+                card = incidents.current(p)
+                why = f"「{card['title']}」，" if card else ""
+                log(s, f"{p['name']}需要你决定：{why}{failed}没过。")
         except ValueError as error:
             text = str(error)
             p["waiting"] = (
@@ -986,6 +1019,7 @@ COMMANDS = {
         defer,
         switch_candidate,
         rework,
+        rework_expert,
         launch,
         license_project,
         hire,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 
 from . import economy as e
+from . import incidents
 from . import science as sc
 from .content import CLINICAL, EXPERIMENTS, PATHS, PROFESSIONS, STAGES
 from .model import ability, busy, power
@@ -196,18 +197,30 @@ def quick(s, p):
     if p["status"] == "problem":
         if p["repairs"] >= 1:
             return None
-        options = [h for h in free_heroes(s) if h["profession"] in ("proc", "chem")]
-        team = [max(options, key=ability)["id"]] if options else []
-        args = {"project": p["id"], "heroes": team}
-        _, error = _try(s, "rework", args)
+        card = [o for o in incidents.options(s, p) if o["command"] in ("rework_expert", "rework")]
+        pick = next((o for o in card if o["ok"]), None)
+        if pick:
+            command, args, label, weeks, cost = (
+                pick["command"],
+                pick["args"],
+                pick["label"],
+                pick["weeks"],
+                pick["cost"],
+            )
+        else:
+            options = [h for h in free_heroes(s) if h["profession"] in ("proc", "chem")]
+            team = [max(options, key=ability)["id"]] if options else []
+            command, args, label = "rework", {"project": p["id"], "heroes": team}, "补正一次再验证"
+            weeks, cost = incidents.REWORK["weeks"], incidents.REWORK["cost"]
+        _, error = _try(s, command, args)
         return {
-            "command": "rework",
+            "command": command,
             "args": args,
-            "label": "补正一次再验证",
+            "label": label,
             "roles": ["proc", "chem"],
             "stage": STAGES[key]["name"],
-            "weeks": 8,
-            "cost": 100,
+            "weeks": weeks,
+            "cost": cost,
             "chance": None,
             "ok": error is None,
             "error": error,

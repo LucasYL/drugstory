@@ -110,6 +110,24 @@ export type Project = {
   "waiting"?: string | null;
   "talents_used"?: (string)[];
   "skills"?: ({ [key: string]: JsonValue })[];
+  "incident"?: null | {
+  "title": string;
+  "text": string;
+  "stat": string;
+  "expert": string;
+  "talent": string | null;
+  "options": ({
+  "kind": "talent" | "expert" | "rework" | "switch" | "stop";
+  "label": string;
+  "command": string;
+  "args": { [key: string]: JsonValue };
+  "weeks": number;
+  "cost": number;
+  "people": (string)[];
+  "note": string;
+  "ok": boolean;
+})[];
+};
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";

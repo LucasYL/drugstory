@@ -14,6 +14,7 @@ from . import (
     gates,
     guide,
     honors,
+    incidents,
     patents,
     product_design,
     rating,
@@ -503,6 +504,7 @@ def snapshot(s):
                 "advice": assist.advice(s, p),
                 "skills": skills.usable(s, p),
                 "gates": gates.view(s, p["catalog"], p),
+                "incident": incidents.view(s, p),
             }
             for p in s["projects"]
         ],

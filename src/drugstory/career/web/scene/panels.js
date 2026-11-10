@@ -286,11 +286,32 @@
       const review = p.key === "review";
       return `${resultBars(result)}${talentLine(p)}${quickButton(p)}<div class="act-row">${review ? "" : modalButton("调整方案", "phase", p.id, "small")}${p.quotes.length ? modalButton(`授权报价 · ${p.quotes.length}`, "license", p.id, "small accent") : ""}${review ? "" : cmd("先放着", "continue_project", { project: p.id }, "ghost small", false, "进入下一阶段的准备状态，稍后再开工")}${deferButton(p)}</div>${p.kind === "innovative" && ["preclinical", "II"].includes(p.key) && !p.quotes.length ? '<p class="hint-line">证据还不够形成授权报价。</p>' : ""}`;
     }
+    if (p.status === "problem" && p.incident)
+      return `${incidentCard(p)}${resultBars(result)}${talentLine(p)}`;
     if (p.status === "problem")
       return `${resultBars(result)}${talentLine(p)}${quickButton(p)}<div class="act-row">${p.index < 2 ? modalButton("换候选重做", "switch", p.id, "small") : ""}${modalButton("止损", "terminate", p.id, "ghost small danger")}</div>`;
     if (p.status === "failed")
-      return `${resultBars(result)}<p class="hint-line">研究记录和伙伴经验都保留。可以从新项目再出发。</p>`;
+      return `${incidentCard(p)}${resultBars(result)}<p class="hint-line">研究记录和伙伴经验都保留。可以从新项目再出发。</p>`;
     return "";
+  }
+
+  // 失败事件卡：出了什么事、谁最懂、能怎么办
+  function incidentCard(p) {
+    const i = p.incident;
+    if (!i) return "";
+    const first = i.options.find((o) => o.ok && ["talent", "expert", "rework"].includes(o.kind));
+    const option = (o) => {
+      const meta = [o.weeks ? `${o.weeks} 周` : "", o.cost ? money(o.cost) : "", o.people.join("、")]
+        .filter(Boolean)
+        .join(" · ");
+      const inner = `<b>${esc(o.label)}</b><small>${esc(meta)}</small><small class="who">${esc(o.note)}</small>`;
+      const cls = `option ${o === first ? "primary" : ""} ${o.kind === "stop" ? "ghost danger" : ""}`;
+      if (o.kind === "switch") return `<button class="${cls}" data-modal="switch" data-id="${p.id}" ${o.ok ? "" : "disabled"}>${inner}</button>`;
+      if (o.kind === "stop") return `<button class="${cls}" data-modal="terminate" data-id="${p.id}">${inner}</button>`;
+      return `<button class="${cls}" data-command="${o.command}" data-args="${args(o.args)}" ${o.ok ? "" : "disabled"}>${inner}</button>`;
+    };
+    const who = [`最懂的是${i.expert}`, i.talent ? `${i.talent}的专长对口` : ""].filter(Boolean).join("，");
+    return `<div class="incident"><b class="incident-title">${esc(i.title)}</b><p>${esc(i.text)}</p><small>${esc(i.stat)}没过。${esc(who)}。</small>${i.options.length ? `<div class="incident-options">${i.options.map(option).join("")}</div>` : ""}</div>`;
   }
 
   function decisionCard(p) {
@@ -302,7 +323,7 @@
         selecting: "候选资料到了。比较三张卡，选一个开始开发。",
         ready: p.question,
         result: p.key === "review" ? "审评通过。起个名字就能上市。" : "本阶段过关。下一步：" + (p.next_stage?.phase || "继续"),
-        problem: "差一点。可以补正一次再验证，不保证救回来。",
+        problem: p.incident ? "差一点。看看出了什么事，再决定怎么补。" : "差一点。可以补正一次再验证，不保证救回来。",
         checkpoint: "临床数据回来一半，决定后半程怎么走。",
       }[p.status] || p.feedback
     );

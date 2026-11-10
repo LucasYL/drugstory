@@ -6,8 +6,8 @@ import copy
 
 from . import economy as e
 from . import engine as g
+from . import incidents, skills
 from . import science as sc
-from . import skills
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, ROSTER, STATS
 from .model import ACTIVE, ability, busy, committed, new_game
 from .view import recommended_team
@@ -67,6 +67,11 @@ def choose(s, novice=False, remaining=960):
             else:
                 return g.execute(s, "continue_project", {"project": pid})
         if status == "problem":
+            for option in incidents.options(s, p):
+                if option["command"] == "rework_expert" and option["ok"]:
+                    result = attempt(s, "rework_expert", **option["args"])
+                    if result:
+                        return result
             ids = [
                 h["id"]
                 for h in s["heroes"]
