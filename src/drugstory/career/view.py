@@ -191,6 +191,18 @@ def whereabouts(s):
     return found
 
 
+def talent_names(s, notes):
+    """把阶段里起作用的专长写成「人名·专长名」。"""
+    names = {h["id"]: h["name"] for h in s["heroes"]}
+    out = []
+    for n in notes:
+        for hid in n["heroes"]:
+            label = f"{names.get(hid, hid)}·{talents.skill_name(n['key'])}"
+            if label not in out:
+                out.append(label)
+    return out
+
+
 def project_view(s, p):
     key = sc.stage_key(p)
     ids, mode = recommended_team(s, p)
@@ -251,6 +263,7 @@ def project_view(s, p):
             "ended",
         )
     } | {
+        "talents_used": talent_names(s, (p.get("execution") or {}).get("notes", [])),
         "autopilot": p.get("autopilot", ""),
         "pace": p.get("pace", "standard"),
         "waiting": p.get("waiting"),
@@ -374,6 +387,10 @@ def snapshot(s):
                 "potential": talents.potential(h),
                 "inherited": talents.inherited(h),
                 "inherit_to": engine.inherit_options(s, h["id"]),
+                "talent_uses": {
+                    "year": h.get("talent_uses", {}).get(str(s["week"] // 48 + 1), 0),
+                    "total": sum(h.get("talent_uses", {}).values()),
+                },
                 "retire_in": (
                     max(0, engine.LEGEND_YEARS * 48 - (s["week"] - h.get("joined", 0))) if h["tier"] == 4 else None
                 ),

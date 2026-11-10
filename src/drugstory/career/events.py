@@ -24,6 +24,7 @@ TEMPLATES = {
     "growth_ready": "{title}",
     "goals_offered": "研究大会之后的新目标：{titles}。选一个当作今年的事。",
     "goal_completed": "完成今年的目标「{title}」，奖励 ¥{cash} 万。",
+    "talent_triggered": "{hero}「{name}」：{text}",
     "term_ended": "任期结束：研究所评级 {grade}「{title}」，结局「{ending}」。",
     "cash_changed": "本次安排资金变化 ¥{amount:,.1f} 万。",
     "notice": "{text}",

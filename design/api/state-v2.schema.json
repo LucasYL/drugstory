@@ -655,6 +655,7 @@
             "growth_ready",
             "goals_offered",
             "goal_completed",
+            "talent_triggered",
             "cash_changed",
             "notice"
           ]
@@ -1109,6 +1110,13 @@
             }
           ],
           "description": "交给团队的项目在等什么（人或现金）。"
+        },
+        "talents_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "这一阶段起作用的专长：「人名·专长名」。"
         }
       },
       "required": [
@@ -1337,6 +1345,22 @@
         },
         "weekly_salary": {
           "type": "number"
+        },
+        "talent_uses": {
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "year",
+            "total"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -1541,6 +1565,12 @@
             }
           ],
           "description": "成功机会先说高中低"
+        },
+        "talents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

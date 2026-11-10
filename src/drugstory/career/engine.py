@@ -202,6 +202,8 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
     execution = sc.plan_phase(s, p, heroes, plan, mode)
     available_money(s, execution["cost"])
     p.setdefault("adjust", {})[key] = execution["adjust"]
+    for item in execution.get("notes", []):
+        talents.trigger(s, item["key"], item["text"], heroes, item["minimum"], p=p, stage=key)
     p.update(
         status="running",
         team=heroes,
@@ -248,6 +250,8 @@ def experiment(s, project: str, method: str, stat: str, heroes: list):
     free_team(s, heroes)
     plan = sc.experiment_plan(s, p, method, stat, heroes)
     available_money(s, plan["cost"])
+    if method == "validate" and talents.has(s, "bubble", heroes):
+        talents.trigger(s, "bubble", "复核费用减半，每项能多做一次", heroes, p=p, stage="validate")
     p.update(
         status="running", experiment=plan, team=heroes, left=plan["weeks"], cost_per_week=plan["cost"] / plan["weeks"]
     )
@@ -332,6 +336,10 @@ def launch(s, project: str, name: str = ""):
     d = e.make_product(s, p, name=name.strip() or p["name"])
     finish_case(s, p)
     chronicle.add(s, "launch", f"{d['name']}上市（{KINDS[p['kind']]}）", p["contributors"])
+    if talents.has(s, "architect"):
+        talents.trigger(s, "architect", "自主产品毛利 +6%", p=p, stage="launch")
+    if talents.has(s, "crystal") >= 2:
+        talents.trigger(s, "crystal", "自主产品毛利 +3%", minimum=2, p=p, stage="launch")
     events.emit(
         s,
         "product_launched",
@@ -642,10 +650,12 @@ def finish_phase(s, p):
         # 雷振东「排雷」：I 期只因安全不过，可以补一次研究
         if key == "I" and failures == ["safety"] and talents.has(s, "shield", p["team"]):
             repairable = close = True
+            talents.trigger(s, "shield", "I 期安全没过，可以补一次研究", p["team"], p=p, stage=key)
         # 奥马尔觉醒：每个项目有一次临床失败可以重新分析
         if key in CLINICAL and talents.has(s, "curve", p["team"]) >= 2 and not p.get("reanalyzed"):
             repairable = close = True
             p["reanalyzed"] = True
+            talents.trigger(s, "curve", "重新分析：这次失败改为可补正", p["team"], 2, p=p, stage=key)
         p["status"] = "problem" if repairable and close and p["repairs"] < 1 else "failed"
         refund = 0.0
         if p["status"] == "failed" and key == "II" and talents.has(s, "sprout") >= 2:
@@ -654,6 +664,12 @@ def finish_phase(s, p):
             refund = max(refund, p["execution"]["cost"] * 0.4)
         if refund:
             earn(s, refund, "refunds")
+            talents.trigger(
+                s,
+                "sprout" if key == "II" and talents.has(s, "sprout") >= 2 else "wizard",
+                f"按约定退回 ¥{refund:,.0f} 万",
+                minimum=2,
+            )
             log(s, f"{p['name']}：按事先的约定退回 ¥{refund:,.0f} 万阶段费用。")
         p["feedback"] = "本次未建立足够证据：" + "、".join(STATS[k] for k in failures)
         p["feedback"] += (

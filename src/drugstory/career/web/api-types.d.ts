@@ -5,7 +5,7 @@ export type Event = {
   "version": 1;
   "id": number;
   "week": number;
-  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "chapter_completed" | "bounty_offered" | "bounty_completed" | "growth_ready" | "goals_offered" | "goal_completed" | "cash_changed" | "notice";
+  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "chapter_completed" | "bounty_offered" | "bounty_completed" | "growth_ready" | "goals_offered" | "goal_completed" | "talent_triggered" | "cash_changed" | "notice";
   "actors": (string)[];
   "project": string | null;
   "room": RoomId | null;
@@ -108,6 +108,7 @@ export type Project = {
   "autopilot"?: "" | "standard" | "rush" | "craft";
   "pace"?: "standard" | "rush" | "craft";
   "waiting"?: string | null;
+  "talents_used"?: (string)[];
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -150,6 +151,10 @@ export type Hero = {
   "activity": "make" | "test" | "service" | "study" | "idle";
   "busy": string | null;
   "weekly_salary": number;
+  "talent_uses"?: {
+  "year": number;
+  "total": number;
+};
 };
 
 export type Patent = {
@@ -184,6 +189,7 @@ export type QuickAction = {
   "ok": boolean;
   "error": string | null;
   "level": "\u9ad8" | "\u4e2d" | "\u4f4e" | null;
+  "talents"?: (string)[];
 };
 
 export type Assist = {

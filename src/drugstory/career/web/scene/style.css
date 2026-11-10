@@ -2169,3 +2169,7 @@ h4.area { margin: 12px 0 6px; font-size: 13px; color: var(--muted, #6b6b63); }
 .goal-card small { color: var(--muted, #6b6b63); }
 .goal-card button { margin-top: 4px; }
 .goals-card { display: grid; gap: 8px; }
+
+/* v0.13 · 专长看得见 */
+button.quick small.talents { color: #b07a1c; }
+.hint-line.talents { color: #b07a1c; }

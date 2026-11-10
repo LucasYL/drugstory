@@ -385,6 +385,9 @@ def finish_job(s, job):
         return
     if job["kind"] == "service":
         earn(s, job["reward"], "services")
+        if talents.has(s, "pill", job["heroes"]):
+            extra = job["reward"] - job["reward"] / 1.3
+            talents.trigger(s, "pill", f"服务回款 +30%（多 ¥{extra:,.0f} 万）", job["heroes"])
         s["services_done"] += 1
         gain_work(s, job["heroes"], "service-" + job["profession"], 4)
         if s["first_income"] is None:

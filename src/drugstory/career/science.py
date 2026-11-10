@@ -99,6 +99,14 @@ def generate_candidates(s, p):
     extra = 1 if talents.has(s, "scout", p["team"]) >= 2 else 0
     lessons = min(12, 4 * failures_on_target(s, p)) if kind == "innovative" and talents.has(s, "wizard") else 0
     narrow = 0.7 if talents.has(s, "sprout", p["team"]) else 1.0
+    if narrow < 1:
+        talents.trigger(s, "sprout", "候选获益的证据范围缩小 30%", p["team"], p=p, stage="screening")
+    if extra:
+        talents.trigger(s, "scout", "多找到一个候选", p["team"], 2, p=p, stage="screening")
+    if lessons:
+        talents.trigger(s, "wizard", f"同靶点失败过：候选获益 +{lessons * 10}", p=p, stage="screening")
+    if spec.get("combo_tier") == -1 and combo_tier(s, spec, p["team"]) == 0:
+        talents.trigger(s, "alchemist", "这对组合按「一般」处理", p["team"], p=p, stage="screening")
     styles += [(f"备用线索 {i + 1}", {}) for i in range(extra)]
     for i, (label, offsets) in enumerate(styles):
         c = {
@@ -148,8 +156,8 @@ def limits(p, key):
 
 
 def skill_effects(s, p, ids, key, partner=False):
-    """团队专长对本阶段的影响：工期倍率与减免、各指标噪声倍率、门槛调整。"""
-    fx = {"weeks": 1.0, "minus": 0, "noise": {}, "limits": {}}
+    """团队专长对本阶段的影响：工期倍率与减免、各指标噪声倍率、门槛调整，以及谁的哪项专长起了作用（notes）。"""
+    fx = {"weeks": 1.0, "minus": 0, "noise": {}, "limits": {}, "notes": []}
     hard = gates.effects(s, p, key, partner)
     fx["weeks"] *= hard["weeks"]
     fx["limits"].update(hard["limits"])
@@ -162,36 +170,67 @@ def skill_effects(s, p, ids, key, partner=False):
         for stat in stats:
             fx["noise"][stat] = fx["noise"].get(stat, 1.0) * factor
 
+    def note(skill, text, minimum=1):
+        who = [h["id"] for h in talents.holders(s, skill, ids, minimum)]
+        if who:
+            fx["notes"].append({"key": skill, "heroes": who, "minimum": minimum, "text": text})
+
     stats = list(STAGES[key]["limits"])
     if key == "optimize" and talents.has(s, "beaker", ids):
         fx["weeks"] *= 0.75
+        note("beaker", "候选优化工期 −25%")
     if key == "III" and talents.has(s, "strategist", ids):
         fx["weeks"] *= 0.7
+        note("strategist", "III 期工期 −30%")
     if key == "II" and talents.has(s, "ruler", ids) >= 2:
         fx["minus"] += 2
-    if talents.has(s, "bubble", ids) >= 2:
+        note("ruler", "II 期工期 −2 周", 2)
+    if talents.has(s, "bubble", ids) >= 2 and "safety" in stats:
         noise(["safety"], 0.85)
+        note("bubble", "安全读数噪声 −15%", 2)
     if key == "preclinical" and talents.has(s, "shield", ids) >= 2:
         noise(stats, 0.7)
+        note("shield", "临床前读数噪声 −30%", 2)
     if key == "review" and talents.has(s, "judge", ids):
         noise(stats, 0.5)
+        note("judge", "审评读数噪声减半")
     if talents.has(s, "crystal", ids):
         noise(["quality"], 0.5)
+        if "quality" in stats:
+            note("crystal", "工艺稳定读数噪声减半")
     if key == "quality" and talents.has(s, "pill", ids) >= 2:
         noise(stats, 0.5)
+        note("pill", "质量阶段读数噪声减半", 2)
     if key in CLINICAL:
         if talents.has(s, "ruler", ids):
             noise(stats, 0.92)
+            note("ruler", "临床读数噪声 −8%")
         if talents.has(s, "curve", ids):
             noise(stats, 0.85)
+            note("curve", "临床读数噪声 −15%")
     if key == "III" and talents.has(s, "oracle", ids):
         noise(stats, 0.85)
+        note("oracle", "III 期读数噪声 −15%")
     if any(h["id"] in ids and h.get("prodigy") and h["rank"] == 1 for h in s["heroes"]):
         noise(stats, 1.1)
+        fx["notes"].append(
+            {"key": "prodigy", "heroes": ["prodigy"], "minimum": 1, "text": "还没晋升，太冒失：读数噪声 +10%"}
+        )
     if key == "I" and talents.has(s, "guardian", ids) and not gates.applies(p["catalog"]):
         fx["limits"]["safety"] = fx["limits"].get("safety", 0) - 4
+        note("guardian", "I 期安全门槛 −40")
     if key == "confirm" and talents.has(s, "forge", ids):
         fx["limits"]["effect"] = fx["limits"].get("effect", 0) - 6
+        note("forge", "价值确认的获益门槛 −60")
+    # 开发阶段的专长：改变开发量（数字见 development.packages）
+    if key == "optimize" and talents.has(s, "catalyst", ids):
+        note("catalyst", "候选优化时工艺稳定 +40")
+    if key == "design" and talents.has(s, "catalyst", ids) >= 2:
+        note("catalyst", "改良设计时工艺稳定再 +60", 2)
+    if key == "formulation" and talents.has(s, "pill", ids):
+        note("pill", "处方阶段工艺稳定 +40")
+    if key == "optimize" and talents.has(s, "beaker", ids) >= 2:
+        note("beaker", "冲刺时开发量 +30%", 2)
     return fx
 
 
@@ -249,6 +288,7 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         "category": d["category"],
         "work": development.packages(s, p, ids, key) if p.get("chosen") is not None else [],
         "adjust": fx["limits"],
+        "notes": fx["notes"],
     }
     if p.get("chosen") is not None:
         preview = development.projected(p, key, result["work"])
@@ -378,6 +418,7 @@ def finish_experiment(s, p):
             # 沈墨言「影像标志物」：用影像找到的获益人群效果翻倍
             c["subgroup"] *= 2
             c["imaging"] = True
+            talents.trigger(s, "bridge", "影像找到的获益人群，效果翻倍", p["team"], p=p, stage="marker")
         sigma = max(3, 9 - skill / 15)
         sample = c["subgroup"] + rand(s, p["id"], "marker").gauss(0, sigma)
         b = c["marker"]

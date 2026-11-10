@@ -1111,6 +1111,14 @@
             e.data.passed === false ? state.bad : state.good,
           );
         if (e.data.passed !== false) e.actors.forEach((id) => celebrate(id));
+      } else if (e.type === "talent_triggered") {
+        // 专长起作用：人物头顶飘出专长名
+        const at = where();
+        if (at) popup(at, `★ ${e.data.name}`, state.accent);
+        e.actors.forEach((id) => {
+          const a = state.actors.get(id);
+          if (a) sparkle(a, state.accent);
+        });
       } else if (e.type === "service_completed") {
         const at = where();
         if (at) popup(at, `+¥${e.data.reward} 万`, state.good);

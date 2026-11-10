@@ -236,10 +236,13 @@ def quick(s, p):
     command = "continue_and_run" if p["status"] == "result" else "run_phase"
     args = {"project": p["id"], "heroes": team, "plan": plan, "mode": mode}
     simulated, error = _try(s, command, args)
-    plan_view = {"weeks": None, "cost": None, "chance": None, "level": None}
+    plan_view = {"weeks": None, "cost": None, "chance": None, "level": None, "talents": []}
     if simulated is not None:
         execution = next(q for q in simulated["projects"] if q["id"] == p["id"])["execution"]
+        from .view import talent_names
+
         plan_view = {
+            "talents": talent_names(s, execution.get("notes", [])),
             "weeks": execution["weeks"],
             "cost": execution["cost"],
             "chance": chance_range(execution["probability"]),

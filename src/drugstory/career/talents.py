@@ -51,6 +51,41 @@ def trait(key):
     }
 
 
+def holders(s, key, ids=None, minimum=1):
+    """团队（ids）或全公司里，这项专长达到 minimum 级的人。"""
+    return [h for h in s["heroes"] if (ids is None or h["id"] in ids) and level(h, key) >= minimum]
+
+
+def skill_name(key):
+    return (EXTRA.get(key) or ABILITIES[key])["name"]
+
+
+def trigger(s, key, text, ids=None, minimum=1, p=None, stage=None):
+    """专长生效时发 talent_triggered 事件，让场景飘字、日志记一笔、人物卡计数。
+
+    同一人、同一专长在同一项目的同一阶段只报一次。只记录已经发生的事，不改变任何规则结果。
+    """
+    from .events import emit
+
+    for h in holders(s, key, ids, minimum):
+        if p is not None:
+            tag = f"{h['id']}:{key}:{stage}"
+            seen = p.setdefault("talent_seen", [])
+            if tag in seen:
+                continue
+            seen.append(tag)
+        year = str(s["week"] // 48 + 1)
+        uses = h.setdefault("talent_uses", {})
+        uses[year] = uses.get(year, 0) + 1
+        emit(
+            s,
+            "talent_triggered",
+            actors=[h["id"]],
+            project=p["id"] if p is not None else None,
+            data={"hero": h["name"], "key": key, "name": skill_name(key), "text": text},
+        )
+
+
 def inherited(h):
     out = []
     for key in h.get("inherited", []):
