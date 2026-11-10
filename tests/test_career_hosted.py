@@ -63,8 +63,8 @@ def test_hosted_game_assets_and_shared_save(tmp_path):
         thread.join()
 
 
-def test_hosted_v8_saves_continue_in_v11_files_across_restarts(tmp_path):
-    """线上服务每次都用同一个 --save-path 启动：v8 原档不改写，重启后接着 v11 的进度。"""
+def test_hosted_v8_saves_continue_in_new_files_across_restarts(tmp_path):
+    """线上服务每次都用同一个 --save-path 启动：v8 原档不改写，重启后接着新文件的进度。"""
     from drugstory.career.model import dumps, new_game
 
     def v8(seed):
@@ -92,15 +92,15 @@ def test_hosted_v8_saves_continue_in_v11_files_across_restarts(tmp_path):
 
     first, handler = start()
     peer = accounts(handler)[base64.b64encode(b"peer:pw")]
-    assert first.path.name == "hosted-v11.json" and peer.path == tmp_path / "hosted-accounts" / "peer-v11.json"
+    assert first.path.name == "hosted-v12.json" and peer.path == tmp_path / "hosted-accounts" / "peer-v12.json"
     assert peer.state["seed"] == 4, "其他账号读回自己的 v8 进度，不是新开一局"
     first.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     peer.execute({"name": "advance", "args": {"weeks": 1}, "revision": 0})
 
     second, handler = start()
     peer = accounts(handler)[base64.b64encode(b"peer:pw")]
-    assert second.state["week"] == 4 and peer.state["week"] == 1, "重启后接着 v11 存档"
+    assert second.state["week"] == 4 and peer.state["week"] == 1, "重启后接着新存档"
     second.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     assert GameSession(save).state["week"] == 8
     assert (save.read_text(), peer_save.read_text()) == originals, "v8 原档不被改写"
-    assert not (tmp_path / "hosted-v11-v11.json").exists()
+    assert not (tmp_path / "hosted-v12-v12.json").exists()

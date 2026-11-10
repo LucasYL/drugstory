@@ -200,6 +200,9 @@ def settle_bounties(s):
             earn(s, b["reward"], "bounties")
             s["reputation"] += 5
             s.setdefault("bounties_done", []).append(b["id"])
+            from . import chronicle
+
+            chronicle.add(s, "bounty", f"完成患者组织的委托：「{b['disease']}」")
             emit(s, "bounty_completed", data={"disease": b["disease"], "reward": b["reward"]})
         elif s["week"] > b["deadline"]:
             b["status"] = "expired"
@@ -224,6 +227,9 @@ def update(s):
         if c["reward"]:
             earn(s, c["reward"], "chapters")
         s["reputation"] += 2 * stars
+        from . import chronicle
+
+        chronicle.add(s, "chapter", f"完成第 {s['chapter'] + 1} 章「{c['name']}」，{stars} 星")
         emit(s, "chapter_completed", data={"name": c["name"], "stars": stars, "reward": c["reward"]})
         s["chapter"] += 1
 

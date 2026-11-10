@@ -168,6 +168,7 @@ def make_product(s, p, partner=False, name=None):
         "last_revenue": 0.0,
         "last_profit": 0.0,
         "benefit": round(benefit, 2),
+        "history": [],
     }
     if benefit_design == "quality":
         product["margin"] = min(0.85, product["margin"] + 0.03)
@@ -261,6 +262,10 @@ def market_step(s):
         d["total_revenue"] += revenue
         d["total_profit"] += profit
         d["patients"] = d.get("patients", 0) + rating.weekly_patients(d, revenue)
+        if s["week"] % 4 == 0 and (d["active"] or revenue):
+            # 每月一个点，最多 20 年，产品页画销售曲线用
+            d.setdefault("history", []).append(round(revenue, 1))
+            del d["history"][:-240]
         if d["partner"]:
             deal = next(x for x in s["deals"] if x["project"] == d["project"])
             royalty = revenue * deal["royalty"]
@@ -360,6 +365,8 @@ def finish_job(s, job):
         pupil["mentored"].append(job["heroes"][0])
         log(s, f"{pupil['name']}完成导师课题，专业经验增加；还需要自己的项目履历。")
     elif job["kind"] == "inherit":
+        from . import chronicle
+
         teacher, pupil = (next(h for h in s["heroes"] if h["id"] == k) for k in job["heroes"])
         pupil.setdefault("inherited", []).append(job["skill"])
         s.setdefault("inheritances", []).append(
@@ -367,6 +374,7 @@ def finish_job(s, job):
         )
         pupil["xp"] += 10
         log(s, f"{teacher['name']}完成传承：{pupil['name']}学会了「{talents.inherited(pupil)[-1]['name']}」。")
+        chronicle.add(s, "inherit", f"{teacher['name']}把专长传给了{pupil['name']}", job["heroes"])
     elif job["kind"] == "connect":
         s["connections"].append(job["target"])
         gain_work(s, job["heroes"], "collaboration-" + job["target"], 6)

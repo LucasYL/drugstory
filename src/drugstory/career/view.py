@@ -434,6 +434,7 @@ def snapshot(s):
         "negative_months": s["negative_months"],
         "career_done": s["career_done"],
         "pending": sum(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]),
+        "chronicle_count": len(s.get("chronicle", [])),
     }
 
 

@@ -10,6 +10,7 @@ import re
 import secrets
 import tempfile
 import threading
+import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,11 +19,11 @@ from urllib.parse import urlsplit
 from drugstory.career import api, engine
 from drugstory.career.content import SCENARIOS
 from drugstory.career.model import dumps as to_json
-from drugstory.career.model import load, new_game
+from drugstory.career.model import load, new_game, resolve_save, save_base
 from drugstory.career.view import phase_preview, snapshot
 
 ASSETS = Path(__file__).with_name("web")
-DEFAULT_SAVE = Path("saves/scene-autosave-v11.json")
+DEFAULT_SAVE = Path("saves/scene-autosave.json")
 
 
 class Conflict(ValueError):
@@ -46,29 +47,69 @@ def atomic_write(path: Path, text: str) -> None:
 
 
 class GameSession:
-    def __init__(self, save_path: Path, seed=42, load_path=None, scenario="foundation", difficulty="standard", term=20):
-        self.path = self.origin = save_path
+    def __init__(
+        self,
+        save_path: Path,
+        seed=42,
+        load_path=None,
+        scenario="foundation",
+        difficulty="standard",
+        term=20,
+        playlog: Path | None = None,
+    ):
+        # 新进度写到哪里、从哪里接着玩，统一按 model.resolve_save：旧版本的存档只读不改。
+        self.origin = save_base(save_path)
+        found, self.path = resolve_save(save_path)
+        self.source = load_path or found
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
         self.revision = 0
         self.requests = {}
-        source = load_path or (save_path if save_path.exists() else None)
-        self.state = load(source) if source else new_game(seed, scenario, difficulty, term)
-        self.migrated = self.state.pop("migrated_from", None) == 8
-        if self.migrated and Path(source).resolve() == save_path.resolve():
-            # 不把 v8 存档覆盖成 v9：旧版本还要能读它。新进度写到旁边的新文件；
-            # 那个文件已经存在时说明上次已经另存过，接着它继续，不再回到 v8 的旧进度。
-            self.path = save_path.with_name(f"{save_path.stem}-v11.json")
-            if self.path.exists():
-                self.state = load(self.path)
+        self.playlog = playlog
+        self.state = load(self.source) if self.source else new_game(seed, scenario, difficulty, term)
+        self.upgraded_from = self.state.pop("migrated_from", None)
         snapshot(self.state)
         self.saved_at = None
+
+    def record(self, command, ok, error, started):
+        """游玩记录：只写在服务器本地，不进存档。"""
+        if not self.playlog:
+            return
+        args = command.get("args") if isinstance(command.get("args"), dict) else {}
+        line = {
+            "t": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "week": self.state["week"],
+            "name": command.get("name"),
+            "args": {k: args[k] for k in ("project", "character", "catalog") if k in args},
+            "ok": ok,
+            "error": error,
+            "revision": self.revision,
+            "ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+        try:
+            self.playlog.parent.mkdir(parents=True, exist_ok=True)
+            with self.playlog.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(line, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
 
     def view(self):
         with self.lock:
             return {**snapshot(self.state), "revision": self.revision, "token": self.token, "saved_at": self.saved_at}
 
     def execute(self, command):
+        started = time.perf_counter()
+        try:
+            result = self._execute(command)
+        except (ValueError, TypeError, KeyError, OSError) as e:
+            with self.lock:
+                self.record(command, False, str(e), started)
+            raise
+        with self.lock:
+            self.record(command, True, None, started)
+        return result
+
+    def _execute(self, command):
         with self.lock:
             request_id = command.get("request_id")
             if request_id is not None:
@@ -98,7 +139,12 @@ class GameSession:
 
 
 def create_server(
-    session: GameSession, port: int = 8885, *, public_url: str = "", credentials: str = ""
+    session: GameSession,
+    port: int = 8885,
+    *,
+    public_url: str = "",
+    credentials: str = "",
+    playlog_dir: Path | None = None,
 ) -> ThreadingHTTPServer:
     public = urlsplit(public_url)
     prefix = public.path.rstrip("/")
@@ -137,6 +183,8 @@ def create_server(
                     difficulty=session.state["difficulty"],
                     term=session.state["term"],
                 )
+            if playlog_dir:
+                account.playlog = playlog_dir / f"{username}.jsonl"
             accounts[base64.b64encode(line.encode("ascii"))] = account
 
     class Handler(BaseHTTPRequestHandler):
@@ -282,7 +330,7 @@ def create_server(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.11")
+    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.12")
     parser.add_argument("--port", type=int, default=8885)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
@@ -292,17 +340,23 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     parser.add_argument("--public-url", default="", help="HTTPS 反代入口，例如 https://example.com/game/")
     parser.add_argument("--auth-file", type=Path, help="线上登录文件，每行一个 用户名:密码。首个账号使用指定存档。")
+    parser.add_argument("--playlog", type=Path, help="本地游玩记录（JSON Lines），只写在本机，不进存档")
+    parser.add_argument("--playlog-dir", type=Path, help="线上模式：每个账号一份游玩记录，写到这个目录")
     args = parser.parse_args(argv)
     try:
-        session = GameSession(args.save_path, args.seed, args.load, args.scenario, args.difficulty, args.term)
+        session = GameSession(
+            args.save_path, args.seed, args.load, args.scenario, args.difficulty, args.term, playlog=args.playlog
+        )
         credentials = args.auth_file.read_text().rstrip("\r\n") if args.auth_file else ""
-        server = create_server(session, args.port, public_url=args.public_url, credentials=credentials)
+        server = create_server(
+            session, args.port, public_url=args.public_url, credentials=credentials, playlog_dir=args.playlog_dir
+        )
     except (OSError, ValueError) as e:
         parser.exit(1, f"启动失败：{e}\n")
     print(f"新药物语：http://127.0.0.1:{server.server_port}", flush=True)
     print(f"每次操作自动保存到 {session.path.resolve()}；按 Ctrl+C 关闭服务。", flush=True)
-    if session.path != session.origin:
-        print("已读入 v0.10 的 v8 存档；原文件不会被改写，新进度保存在上面这个文件。", flush=True)
+    if session.upgraded_from:
+        print(f"已读入旧版存档 {session.source}；原文件不会被改写，新进度保存在上面这个文件。", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

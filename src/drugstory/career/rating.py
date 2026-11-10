@@ -184,6 +184,9 @@ def finish_term(s):
         "early": bool(s["game_over"] and not ended),
         "highlights": highlights(s),
     }
+    from . import chronicle
+
+    chronicle.add(s, "term", f"任期结束：评级 {result['grade']}「{result['title']}」，结局「{result['ending']}」")
     emit(
         s,
         "term_ended",

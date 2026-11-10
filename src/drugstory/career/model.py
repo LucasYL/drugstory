@@ -10,8 +10,11 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 9
-READABLE = (8, 9)
+VERSION = 10
+READABLE = (8, 9, 10)
+# 每个存档格式由哪一版游戏写入：v8 是原文件（没有后缀），之后每升一次格式，新进度另存到带后缀的文件，
+# 旧文件一个字节都不改，旧版本游戏还能接着读它。
+SUFFIX = {8: "", 9: "-v11", 10: "-v12"}
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
@@ -214,6 +217,8 @@ def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
         "chapter_log": [],
         "bounties": [],
         "bounties_done": [],
+        "tips_seen": [],
+        "chronicle": [],
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -243,11 +248,14 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") in READABLE,
-            "研究所版读取 v8、v9 存档；v7 请在 8883、v6 请在 8881 继续游玩",
+            "研究所版读取 v8–v10 存档；v7 请在 8883、v6 请在 8881 继续游玩",
         )
         s.pop("migrated_from", None)  # 只标记「这次读入时刚升级」，不随存档延续
-        if s["version"] == 8:
-            migrate_v8(s)
+        original = s["version"]
+        while s["version"] < VERSION:
+            MIGRATIONS[s["version"]](s)
+        if original < VERSION:
+            s["migrated_from"] = original
         check(type(s["week"]) is int and s["week"] >= 0, "存档时间不正确")
         check(type(s["seed"]) is int and s["scenario"] in SCENARIOS, "开局数据不正确")
         check(type(s["facility"]) is int and 0 <= s["facility"] < len(FACILITIES), "场地数据不正确")
@@ -264,8 +272,7 @@ def migrate_v8(s):
     """在内存副本里补齐 v9 字段；不写回原文件（服务端会另存到新路径）。"""
     from .rating import PATIENTS_PER_WAN
 
-    s["version"] = VERSION
-    s["migrated_from"] = 8
+    s["version"] = 9
     s.setdefault("term", 20)
     s.setdefault("final", None)
     s.setdefault("nominations", [])
@@ -285,5 +292,56 @@ def migrate_v8(s):
         festival.pop("entry", None)
 
 
+def migrate_v9(s):
+    """v0.12：成长提示记录、编年史、项目的自动推进与节奏、产品销售历史。"""
+    s["version"] = 10
+    s.setdefault("tips_seen", [])
+    s.setdefault("chronicle", [])
+    for p in s["projects"]:
+        p.setdefault("autopilot", "")
+        p.setdefault("pace", "standard")
+    for d in s["products"]:
+        d.setdefault("history", [])
+
+
+MIGRATIONS = {8: migrate_v8, 9: migrate_v9}
+
+
 def load(path: Path):
     return loads(path.read_text())
+
+
+def save_base(path: Path) -> Path:
+    """去掉文件名里各版本的后缀（-v11、-v12），得到这一份存档的基础名字。"""
+    for suffix in sorted({v for v in SUFFIX.values() if v}, key=len, reverse=True):
+        if path.stem.endswith(suffix):
+            return path.with_name(path.stem[: -len(suffix)] + path.suffix)
+    return path
+
+
+def _versioned(base: Path, version: int) -> Path:
+    return base.with_name(base.stem + SUFFIX[version] + base.suffix)
+
+
+def _peek_version(path: Path):
+    try:
+        data = json.loads(path.read_text())
+        return data.get("version") if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def resolve_save(path: Path) -> tuple[Path | None, Path]:
+    """返回 (从哪里读, 往哪里写)。
+
+    按「本版文件 → 较旧版本的文件 → 原文件」的顺序找第一个存在的存档。它就是本版本格式时写回它自己；
+    否则读它、写到本版本的新文件，旧文件不动。都不存在时是新局：写到调用者给的路径；
+    那个路径带旧版后缀（例如 -v11）时改写到本版本的文件。
+    """
+    base = save_base(path)
+    current = _versioned(base, VERSION)
+    candidates = [_versioned(base, v) for v in sorted(SUFFIX, reverse=True)]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate, candidate if _peek_version(candidate) == VERSION else current
+    return None, path if path in (base, current) else current

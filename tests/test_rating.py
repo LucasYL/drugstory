@@ -84,9 +84,9 @@ def test_v8_saves_load_without_rewriting_the_original(tmp_path):
     old.write_text(json.dumps(s, ensure_ascii=False))
     original = old.read_text()
     migrated = load(old)
-    assert migrated["version"] == 9 and migrated["term"] == 20 and migrated["migrated_from"] == 8
+    assert migrated["version"] == 10 and migrated["term"] == 20 and migrated["migrated_from"] == 8
     session = GameSession(old)
-    assert session.path != old and session.path.name == "scene-autosave-v11.json"
+    assert session.path != old and session.path.name == "scene-autosave-v12.json"
     session.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     assert old.read_text() == original, "v8 原文件不被改写"
     assert loads(session.path.read_text())["week"] == 4

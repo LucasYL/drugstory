@@ -413,6 +413,10 @@
         "bounty_history"
       ],
       "additionalProperties": false
+    },
+    "chronicle_count": {
+      "type": "integer",
+      "minimum": 0
     }
   },
   "required": [

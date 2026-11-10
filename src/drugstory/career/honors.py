@@ -399,6 +399,9 @@ def annual(s):
         s["awards"].append(
             {"year": year, "category": grand["key"], "name": grand["name"], "score": grand["score"], "prize": prize}
         )
+        from . import chronicle
+
+        chronicle.add(s, "award", f"获得第 {year} 届{grand['name']}")
         emit(
             s,
             "award_won",
@@ -417,7 +420,10 @@ def annual(s):
                 }
             )
             s["reputation"] += 20
+            from . import chronicle
             from .events import emit
+
+            chronicle.add(s, "legacy", f"获得终局荣誉「{goal['name']}」")
 
             emit(
                 s,

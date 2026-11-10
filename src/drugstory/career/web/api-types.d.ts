@@ -329,4 +329,5 @@ export type GameState = {
   "bounties": (JsonValue)[];
   "bounty_history": (JsonValue)[];
 };
+  "chronicle_count"?: number;
 };

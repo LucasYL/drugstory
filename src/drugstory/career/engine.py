@@ -8,6 +8,7 @@ import inspect
 from . import (
     challenge,
     chapters,
+    chronicle,
     development,
     events,
     gates,
@@ -22,7 +23,7 @@ from . import (
 )
 from . import economy as e
 from . import science as sc
-from .content import CATALOG, CLINICAL, FACILITIES, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
+from .content import CATALOG, CLINICAL, FACILITIES, KINDS, PATHS, PLANS, PROMOTION, RANKS, ROSTER, STAGES, STATS
 from .model import (
     ACTIVE,
     DECISIONS,
@@ -118,6 +119,8 @@ def start_project(s, catalog: str, heroes: list, design: str = "standard", work_
         "entered_I": None,
         "clinical_started": False,
         "experiment": None,
+        "autopilot": "",
+        "pace": "standard",
         "feedback": "正在筛选候选与整理参比资料。",
     }
     sc.generate_candidates(s, p)
@@ -301,6 +304,7 @@ def launch(s, project: str, name: str = ""):
     p["status"] = "approved"
     d = e.make_product(s, p, name=name.strip() or p["name"])
     finish_case(s, p)
+    chronicle.add(s, "launch", f"{d['name']}上市（{KINDS[p['kind']]}）", p["contributors"])
     events.emit(
         s,
         "product_launched",
@@ -383,6 +387,7 @@ def hire(s, character: str):
         recruit["joined"] = s["week"]
         s["heroes"].append(recruit)
     log(s, f"{RANKS[ROSTER[character]['tier']]}·{ROSTER[character]['name']}加入研究社。")
+    chronicle.add(s, "hire", f"{ROSTER[character]['name']}加入研究所", [character])
 
 
 def dismiss(s, character: str):
@@ -461,6 +466,7 @@ def retirements(s):
         if served >= LEGEND_YEARS * 48 and h["id"] not in occupied:
             h["employed"] = False
             h["retired"] = True
+            chronicle.add(s, "retire", f"{h['name']}退休", [h["id"]])
             log(s, f"{h['name']}正式退休。研究所会记得这{LEGEND_YEARS}年。")
 
 
@@ -500,6 +506,7 @@ def promote(s, character: str):
     available_money(s, cost)
     spend(s, cost, "promotion")
     h["rank"] += 1
+    chronicle.add(s, "promote", f"{h['name']}晋升为{RANKS[h['rank']]}", [character])
     events.emit(s, "character_promoted", actors=[character], data={"name": h["name"], "rank": RANKS[h["rank"]]})
 
 
@@ -567,6 +574,7 @@ def upgrade(s):
     available_money(s, c["cost"])
     spend(s, c["cost"], "facility")
     s["facility"] += 1
+    chronicle.add(s, "facility", f"搬进{c['name']}")
     events.emit(s, "facility_upgraded", data={"name": c["name"], "level": s["facility"], "rent": c["rent"]})
 
 
@@ -628,6 +636,8 @@ def finish_phase(s, p):
         )
         if p["status"] == "failed":
             finish_case(s, p)
+            if p["kind"] == "innovative" and key in ("I", "II", "III"):
+                chronicle.add(s, "setback", f"{p['name']}在{STAGES[key]['name']}未获支持", p["team"])
         log(s, p["name"] + "：" + p["feedback"])
     p["cost_per_week"] = 0
 
@@ -663,6 +673,7 @@ def partner_step(s):
         if key == "review":
             d.update(status="approved", remaining_cost=0, cost_per_week=0)
             e.make_product(s, p, partner=True)
+            chronicle.add(s, "launch", f"{p['name']}由合作方推动获批上市")
             s["reputation"] += 5
             log(s, f"授权产品 {p['name']}获批，成功里程碑到账，开始按销售额收取分成。")
         else:
