@@ -4,7 +4,19 @@ from __future__ import annotations
 
 import math
 
-from . import challenge, competition, development, events, honors, patents, product_design, rating, stories, talents
+from . import (
+    challenge,
+    competition,
+    development,
+    events,
+    gates,
+    honors,
+    patents,
+    product_design,
+    rating,
+    stories,
+    talents,
+)
 from .content import (
     CATALOG,
     COMMERCIAL,
@@ -155,7 +167,7 @@ def make_product(s, p, partner=False, name=None):
         "design": p.get("design", "standard"),
         "market": spec["market"],
         "launched": s["week"],
-        "peak": spec["peak"] * benefit * reach,
+        "peak": spec["peak"] * benefit * reach * gates.peak_factor(s, p, partner),
         "margin": min(
             0.82, {"generic": 0.46, "improved": 0.56, "innovative": 0.66}[p["kind"]] + (values["quality"] - 60) / 300
         ),

@@ -1,0 +1,438 @@
+{
+  "abeta": {
+    "title": "最后的难题",
+    "gates": [
+      {
+        "key": "bbb",
+        "name": "入脑",
+        "problem": "大分子过不了血脑屏障",
+        "missing": "II、III 期获益门槛 +150",
+        "full": [
+          "forge",
+          2,
+          "傅以宁（觉醒）· 脑穿梭递送"
+        ],
+        "partial": [
+          null,
+          0,
+          "选 ASO 鞘内给药：不用过屏障，但药物分布有限，获益门槛 +70，审评工艺稳定门槛 +80"
+        ],
+        "lock": "bbb",
+        "effects": [
+          {
+            "stages": [
+              "II",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 15,
+            "partial": 7,
+            "full": 0
+          },
+          {
+            "stages": [
+              "review"
+            ],
+            "type": "limit",
+            "stat": "quality",
+            "none": 0,
+            "partial": 8,
+            "full": 0
+          }
+        ]
+      },
+      {
+        "key": "population",
+        "name": "选对人",
+        "problem": "只有早期、有斑块的患者获益",
+        "missing": "II、III 期获益门槛 +120",
+        "full": [
+          "bridge",
+          1,
+          "沈墨言 · 影像标志物，配合分层入组"
+        ],
+        "partial": [
+          "star",
+          1,
+          "叶清和 · 机制直觉：门槛只 +70；沈墨言在但未分层入组时同样 +70"
+        ],
+        "focused": true,
+        "effects": [
+          {
+            "stages": [
+              "II",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 12,
+            "partial": 7,
+            "full": 0
+          }
+        ]
+      },
+      {
+        "key": "aria",
+        "name": "脑水肿",
+        "problem": "清除斑块时的脑水肿（ARIA）风险",
+        "missing": "I、III 期安全门槛 +180",
+        "full": [
+          "guardian",
+          1,
+          "孟长青 · 安全设计"
+        ],
+        "partial": [
+          "judge",
+          1,
+          "白若霜 · 预审：门槛只 +120"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "I",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "safety",
+            "none": 18,
+            "partial": 12,
+            "full": 0
+          }
+        ]
+      },
+      {
+        "key": "endpoint",
+        "name": "长终点",
+        "problem": "18 个月的认知终点",
+        "missing": "III 期噪声 ×2.4、工期 ×1.4",
+        "full": [
+          "oracle",
+          1,
+          "伊莎贝尔·罗哈斯 · 长程终点：噪声恢复"
+        ],
+        "partial": [
+          "strategist",
+          1,
+          "欧阳岚 · 多中心：工期恢复，噪声 ×1.8"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "noise",
+            "none": 2.4,
+            "partial": 1.8,
+            "full": 1.0
+          },
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "weeks",
+            "none": 1.4,
+            "partial": 1.0,
+            "full": 1.0
+          }
+        ]
+      }
+    ]
+  },
+  "kras": {
+    "title": "难治疾病 · 搭档关",
+    "gates": [
+      {
+        "key": "pocket",
+        "name": "抓住关闭态口袋",
+        "problem": "KRAS G12C 只在关闭态露出一个浅口袋",
+        "missing": "II、III 期获益门槛 +160",
+        "full": [
+          "alchemist",
+          1,
+          "伊莲娜·沃尔科娃 · 不可能的分子"
+        ],
+        "partial": [
+          "wizard",
+          1,
+          "司马衡 · 失败地图：门槛只 +90"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "II",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 16,
+            "partial": 9,
+            "full": 0
+          }
+        ]
+      },
+      {
+        "key": "resistance",
+        "name": "耐药突变",
+        "problem": "用药几个月后肿瘤出现新的突变",
+        "missing": "III 期获益门槛 +100，噪声 ×1.6",
+        "full": [
+          "bridge",
+          1,
+          "沈墨言 · 找对突变人群，配合分层入组"
+        ],
+        "partial": [
+          "star",
+          1,
+          "叶清和 · 机制直觉：门槛 +50、噪声 ×1.3"
+        ],
+        "focused": true,
+        "effects": [
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 10,
+            "partial": 5,
+            "full": 0
+          },
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "noise",
+            "none": 1.6,
+            "partial": 1.3,
+            "full": 1.0
+          }
+        ]
+      },
+      {
+        "key": "combo",
+        "name": "联用安全",
+        "problem": "要和化疗或免疫药联用，毒性叠加",
+        "missing": "I、III 期安全门槛 +140",
+        "full": [
+          "guardian",
+          1,
+          "孟长青 · 安全设计"
+        ],
+        "partial": [
+          "shield",
+          1,
+          "雷振东 · 排雷：门槛只 +70"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "I",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "safety",
+            "none": 14,
+            "partial": 7,
+            "full": 0
+          }
+        ]
+      }
+    ]
+  },
+  "hbv": {
+    "title": "难治疾病 · 搭档关",
+    "gates": [
+      {
+        "key": "cccdna",
+        "name": "清除 cccDNA",
+        "problem": "病毒的 cccDNA 藏在肝细胞核里，小分子打不到",
+        "missing": "II、III 期获益门槛 +240",
+        "full": [
+          "star",
+          1,
+          "siRNA 或 ASO，且立项筛选时叶清和在职"
+        ],
+        "partial": [
+          null,
+          0,
+          "siRNA 或 ASO：门槛只 +180；小分子：缺人也解决不了"
+        ],
+        "lock": "cccdna",
+        "effects": [
+          {
+            "stages": [
+              "II",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 24,
+            "partial": 18,
+            "full": 0
+          }
+        ]
+      },
+      {
+        "key": "cure",
+        "name": "功能性治愈终点",
+        "problem": "要证明停药后病毒不反弹",
+        "missing": "III 期噪声 ×2.8",
+        "full": [
+          "oracle",
+          1,
+          "伊莎贝尔·罗哈斯 · 长程终点"
+        ],
+        "partial": [
+          "curve",
+          1,
+          "奥马尔·哈达德 · 中心核查：噪声 ×2.2"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "noise",
+            "none": 2.8,
+            "partial": 2.2,
+            "full": 1.0
+          }
+        ]
+      },
+      {
+        "key": "liver",
+        "name": "肝毒性",
+        "problem": "清除病毒时肝酶会升高",
+        "missing": "临床前、I 期安全门槛 +180",
+        "full": [
+          "judge",
+          1,
+          "白若霜 · 预审"
+        ],
+        "partial": [
+          "bubble",
+          1,
+          "娜迪亚·拉赫曼 · 再核一遍：门槛只 +120"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "preclinical",
+              "I"
+            ],
+            "type": "limit",
+            "stat": "safety",
+            "none": 18,
+            "partial": 12,
+            "full": 0
+          }
+        ]
+      }
+    ]
+  },
+  "lpa": {
+    "title": "难治疾病 · 搭档关",
+    "gates": [
+      {
+        "key": "outcome",
+        "name": "心血管结局试验",
+        "problem": "要证明真的少了心梗和中风",
+        "missing": "III 期工期 ×1.5、噪声 ×3.8",
+        "full": [
+          "oracle",
+          1,
+          "伊莎贝尔·罗哈斯 · 长程终点"
+        ],
+        "partial": [
+          "strategist",
+          1,
+          "欧阳岚 · 多中心：工期恢复、噪声 ×2.8"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "weeks",
+            "none": 1.5,
+            "partial": 1.0,
+            "full": 1.0
+          },
+          {
+            "stages": [
+              "III"
+            ],
+            "type": "noise",
+            "none": 3.8,
+            "partial": 2.8,
+            "full": 1.0
+          }
+        ]
+      },
+      {
+        "key": "dosing",
+        "name": "半年一针",
+        "problem": "长期用药，患者要的是少打针",
+        "missing": "审评工艺门槛 +260，上市需求 ×0.8",
+        "full": [
+          "forge",
+          1,
+          "傅以宁 · 长效递送"
+        ],
+        "partial": [
+          "crystal",
+          1,
+          "江屿 · 晶型筛选：门槛 +170、需求 ×0.9"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "review"
+            ],
+            "type": "limit",
+            "stat": "quality",
+            "none": 26,
+            "partial": 17,
+            "full": 0
+          },
+          {
+            "type": "peak",
+            "none": 0.8,
+            "partial": 0.9,
+            "full": 1.0
+          }
+        ]
+      },
+      {
+        "key": "people",
+        "name": "找对人群",
+        "problem": "只有 Lp(a) 很高的人才明显获益",
+        "missing": "II、III 期获益门槛 +260",
+        "full": [
+          "bridge",
+          1,
+          "沈墨言 · 影像标志物"
+        ],
+        "partial": [
+          "ruler",
+          1,
+          "米可 · 期中嗅觉：门槛只 +180"
+        ],
+        "effects": [
+          {
+            "stages": [
+              "II",
+              "III"
+            ],
+            "type": "limit",
+            "stat": "effect",
+            "none": 26,
+            "partial": 18,
+            "full": 0
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1932,12 +1932,7 @@
       "description": "阿尔茨海默四道关之一：公开规则与当前研究所的解决情况。",
       "properties": {
         "key": {
-          "enum": [
-            "bbb",
-            "population",
-            "aria",
-            "endpoint"
-          ]
+          "type": "string"
         },
         "name": {
           "type": "string"
@@ -1966,6 +1961,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "title": {
+          "type": "string"
         }
       },
       "required": [

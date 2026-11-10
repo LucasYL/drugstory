@@ -254,7 +254,7 @@ export type Rating = {
 };
 
 export type Gate = {
-  "key": "bbb" | "population" | "aria" | "endpoint";
+  "key": string;
   "name": string;
   "problem": string;
   "missing": string;
@@ -262,6 +262,7 @@ export type Gate = {
   "partial": string;
   "state": "full" | "partial" | "none";
   "people": (string)[];
+  "title"?: string;
 };
 
 export type GuideItem = {

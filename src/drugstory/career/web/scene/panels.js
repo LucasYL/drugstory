@@ -195,11 +195,12 @@
     const used = q.talents?.length ? `<small class="who talents">用上：${esc(q.talents.join("、"))}</small>` : "";
     return `<button class="quick" data-command="${q.command}" data-args="${args(q.args)}"><b>${esc(q.label)}</b><small>${esc(meta)}</small>${team ? `<small class="who">${esc(team)}</small>` : ""}${used}</button>${cashNote(q)}`;
   }
-  // 最后的难题：阿尔茨海默的四道关，谁能过一目了然
+  // 难病的搭档关（阿尔茨海默是最后的难题），谁能过一目了然
   function gateBlock(list) {
     if (!list) return "";
     const label = { full: "已解决", partial: "部分解决", none: "缺人" };
-    return `<div class="gates"><b>最后的难题 · 四道关</b>${list
+    const nums = ["", "一", "两", "三", "四", "五"];
+    return `<div class="gates"><b>${esc(list[0].title)} · ${nums[list.length] || list.length}道关</b>${list
       .map(
         (g) =>
           `<div class="gate ${g.state}"><span class="pill">${label[g.state]}</span><span><b>${esc(g.name)}</b> ${esc(g.problem)}<small>${g.state === "full" ? "" : `缺了：${esc(g.missing)}。`}${g.people.length ? `研究所里：${g.people.map(esc).join("、")}` : `完全解决：${esc(g.full)}；部分：${esc(g.partial)}`}</small></span></div>`,
@@ -483,7 +484,8 @@
           `<h4 class="area">${esc(area)}</h4><div class="disease-cards">${list
             .map((t) => {
               const st = diseaseStatus(t);
-              return `<button class="disease-card ${st.open ? "" : "locked"}" data-np-disease="${t.key}"><b>${esc(t.disease)}</b><small>难度 ${star(t.difficulty_stars)} · 市场 ${star(t.market_stars)}</small><em>「${esc(t.quote)}」</em><span class="pill ${st.cls}">${esc(st.text)}</span></button>`;
+              const hard = t.routes.some((r) => state.catalog.find((c) => c.key === r.key)?.gates);
+              return `<button class="disease-card ${st.open ? "" : "locked"}" data-np-disease="${t.key}"><b>${esc(t.disease)}${hard ? ' <span class="pill wait">有搭档关</span>' : ""}</b><small>难度 ${star(t.difficulty_stars)} · 市场 ${star(t.market_stars)}</small><em>「${esc(t.quote)}」</em><span class="pill ${st.cls}">${esc(st.text)}</span></button>`;
             })
             .join("")}</div>`,
       )

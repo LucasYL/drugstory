@@ -16,7 +16,7 @@ from tests.test_career import complete_phase, ready
 def breakthrough():
     s = ready("innovative", seed=4, strong=True)
     p = s["projects"][0]
-    p["catalog"] = "n_resistance"
+    p["catalog"] = "n_reset"  # 难治但没有搭档关：这里测的是奖项，不是搭档关
     for hero in s["heroes"]:
         hero["rank"] = 3
         hero["training"] = 30

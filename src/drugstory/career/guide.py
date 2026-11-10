@@ -439,7 +439,7 @@ def chapter_items(s):
     elif name == "最后的难题":
         rows = gates.view(s, "n_abeta__mab") or []
         holders = set()
-        for g in gates.GATES.values():
+        for g in gates.CHALLENGES["abeta"]["gates"]:
             for spec in (g["full"], g["partial"]):
                 if spec[0] and spec[0] in ROSTER:
                     holders.add(spec[0])
