@@ -1,10 +1,26 @@
-# 当前技术方案 · v0.10
+# 当前技术方案 · v0.12
 
 ## 单一规则引擎
 
 入口为 career：CLI、网页、回放和模拟共用 engine.execute。旧 MVP engine/ui/sim/content 与对应 186 项测试从当前树移除，完整历史保存在已存在的 v0.3.0 tag；没有将删除的测试算成通过。规则重构在独立 checkout、端口、存档完成。
 
 状态版本仍为 8，可读取 v0.8、v0.9 的复制存档；v7 及更早存档明确拒绝，不隐式迁移。v0.10 默认端口 8885、存档 `saves/scene-autosave.json`（与 v0.9 相同，同时运行时给旧版换端口）。execute 深复制、验证、变更；服务先原子存盘再替换内存，保存失败不生效。固定种子与操作记录可重放。快照与预览不改变原状态，不抽新随机数。
+
+## v0.12 的变化
+
+**存档 v10。** `model.MIGRATIONS` 依次把 v8、v9 迁到 v10，只在内存里补字段：`tips_seen`、`chronicle`、项目的 `autopilot` / `pace`、产品的 `history`。`model.resolve_save(path)` 决定读哪个文件、写哪个文件：按「`-v12` → `-v11` → 原文件」找第一个存在的存档，已是 v10 就写回自己，否则新进度写到 `-v12`。网页、CLI、线上多账号都走它，旧文件一个字节都不改。
+
+**会让时间停下的项目。** 统一用 `model.blocking(p)`：待决定、没暂缓、也没交给团队自动推进。`advance`、`next_event`、快照的 `pending` 都用它。
+
+**交给团队。** `start_project(..., autopilot)` 和 `set_autopilot`。`engine.autopilot_step` 在每周的项目循环之后运行，直接调用 `choose_candidate`、`continue_project`、`run_phase`、`launch`；这些函数都先检查后修改，失败时状态不变，只写 `waiting`。候选按 `assist.autopilot_candidate` 选，只看公开信念。方案（`pace`）开工时定下，接手不改变它。
+
+**成长建议。** `guide.suggestions` 只读，进快照 `guide`（最多三条）。带命令的建议用 `guide.blocker` 按引擎的前提条件直接检查，不在副本上试执行（20 年存档复制一次要几毫秒）；`tests/test_guide.py` 用真实引擎核对。`guide.moments` 给引擎用：第一次出现的成长机会记进 `tips_seen` 并发 `growth_ready`，`next_event` 在那一周停下。
+
+**快照新增。** `guide`、`chronicle_count`；项目的 `autopilot`、`pace`、`waiting`；证据的 `gate`、`gate_stage`、`verdict`；结果的 `words`；评级的 `early`、`gap`、`levers`；目录行的 `outlook`、`autopilot`、`share_loss`。`/api/content` 新增 `targets`（疾病卡与主流路线，只给药物类型，不给适配档位）。20 年存档快照约 9–13 毫秒。
+
+**游玩记录。** `--playlog` / `--playlog-dir` 让服务每个操作追加一行 JSON（时间、周、命令、成败、耗时），不进存档；`scripts/playlog-report.py` 汇总。
+
+**场景。** `#sheet` 是手机上的决定面板；成员用 `art.js` 的新画法；`panels.js` 的新项目页分为疾病卡、主流路线、自由组合三层。
 
 ## 公共接口
 
