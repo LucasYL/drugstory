@@ -551,6 +551,16 @@
       P().np.route = b.dataset.npRoute;
       renderPanel(true);
     }
+    if (b.dataset.npDisease !== undefined) {
+      P().np.disease = b.dataset.npDisease || null;
+      P().np.pick = null;
+      renderPanel(true);
+    }
+    if (b.dataset.npCustom !== undefined) {
+      P().np.custom = b.dataset.npCustom !== "0";
+      P().np.pick = null;
+      renderPanel(true);
+    }
     if (b.dataset.npPick) {
       P().np.pick = b.dataset.npPick;
       renderPanel(true);

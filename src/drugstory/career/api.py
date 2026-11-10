@@ -1,6 +1,23 @@
 """Version 2 public transport: static content (rooms, cast, catalog) once, dynamic state on each action."""
 
-from .content import CATALOG, EXPERIMENTS, KINDS, PROFESSIONS, ROOMS, ROSTER, SCENARIOS, STAGES, STATS
+from .content import (
+    CATALOG,
+    CATALOG_BY_PAIR,
+    COMBINATIONS,
+    DISEASES,
+    EXPERIMENTS,
+    KINDS,
+    MODALITIES,
+    PATHS,
+    PROFESSIONS,
+    ROOMS,
+    ROSTER,
+    ROUTES,
+    SCENARIOS,
+    STAGES,
+    STATS,
+    stars,
+)
 from .development import FOCUSES
 from .units import SCALE
 from .view import shown_profile
@@ -21,6 +38,41 @@ CATALOG_FIELDS = (
 )
 
 
+def targets():
+    """疾病卡与主流路线（静态）。只给药物类型，不给适配档位。"""
+    weeks = sum(STAGES[k]["weeks"] for k in PATHS["innovative"])
+    base = sum(STAGES[k]["cost"] * (2 if k == "review" else 1) for k in PATHS["innovative"])
+    out = []
+    for t in COMBINATIONS["targets"]:
+        rows = []
+        for m in ROUTES[t["key"]]:
+            key = CATALOG_BY_PAIR[(t["key"], m)]
+            hard = CATALOG[key]["difficulty"]
+            rows.append(
+                {
+                    "modality": m,
+                    "name": MODALITIES[m]["name"],
+                    "key": key,
+                    "title": CATALOG[key]["name"],
+                    "years": round(weeks / 48),
+                    "cost": int(round(base * (1.2 if hard else 1), -2)),
+                }
+            )
+        out.append(
+            {
+                "key": t["key"],
+                "name": t["name"],
+                "disease": t["disease"],
+                "area": DISEASES[t["key"]]["area"],
+                "quote": DISEASES[t["key"]]["quote"],
+                "difficulty_stars": stars(t["difficulty"], (0.9, 1.0, 1.2, 1.4)),
+                "market_stars": t["market"],
+                "routes": rows,
+            }
+        )
+    return out
+
+
 def content():
     from .engine import catalog_requirements
     from .model import new_game
@@ -38,6 +90,7 @@ def content():
             for c in ROSTER.values()
         ],
         "scenarios": SCENARIOS,
+        "targets": targets(),
         "professions": PROFESSIONS,
         "stats": STATS,
         "experiments": EXPERIMENTS,

@@ -397,7 +397,7 @@
   }
 
   /* ---------- 新项目：选路线 → 点一张卡 → 开始 ---------- */
-  const np = { route: "generic", target: "", pick: null };
+  const np = { route: "generic", target: "", pick: null, disease: null, custom: false };
   const ROUTE_NAMES = { generic: "仿制药", improved: "改良药", innovative: "创新药" };
   const openItems = (route) => state.catalog.filter((c) => c.kind === route && c.unlocked && !c.occupied);
   function firstRoute() {
@@ -436,6 +436,60 @@
       ? ""
       : `<em class="fit fit${tier}">${{ "-2": "不适配", "-1": "较差", 0: "一般", 1: "适配", 2: "很适配" }[tier]}</em>`;
   }
+  // 疾病卡：领域分组，难度和市场用星，已攻克、委托中、还差什么
+  function diseaseStatus(t) {
+    const rows = t.routes.map((r) => state.catalog.find((c) => c.key === r.key)).filter(Boolean);
+    const cured = state.chapters?.map?.some((m) => m.disease === t.disease && m.cured);
+    const bounty = state.chapters?.bounties?.some((b) => b.disease === t.disease);
+    if (rows.some((c) => c.unlocked && !c.occupied))
+      return { cls: "good", text: cured ? "已攻克 ✓" : bounty ? "患者委托中 ✉" : "可开始", open: true };
+    if (rows.length && rows.every((c) => c.occupied)) return { cls: "mute", text: "在研或在售" };
+    const best = rows
+      .map((c) => c.requirements.filter((q) => !q.ok).map((q) => q.text))
+      .filter((m) => m.length)
+      .sort((a, b) => a.length - b.length)[0];
+    return { cls: "mute", text: best ? `还差：${best[0]}` : "待解锁" };
+  }
+  const star = (n) => "★".repeat(n) + "☆".repeat(Math.max(0, 5 - n));
+  function diseaseGrid() {
+    const groups = {};
+    for (const t of state.targets || []) (groups[t.area] ||= []).push(t);
+    return `${Object.entries(groups)
+      .map(
+        ([area, list]) =>
+          `<h4 class="area">${esc(area)}</h4><div class="disease-cards">${list
+            .map((t) => {
+              const st = diseaseStatus(t);
+              return `<button class="disease-card ${st.open ? "" : "locked"}" data-np-disease="${t.key}"><b>${esc(t.disease)}</b><small>难度 ${star(t.difficulty_stars)} · 市场 ${star(t.market_stars)}</small><em>「${esc(t.quote)}」</em><span class="pill ${st.cls}">${esc(st.text)}</span></button>`;
+            })
+            .join("")}</div>`,
+      )
+      .join("")}<button class="ghost small custom-link" data-np-custom>自己设计组合（靶点 × 药物类型，${Object.keys(state.notebook).length} / 288 已记录）</button>`;
+  }
+  function routeList(t, items) {
+    return `<button class="back" data-np-disease="">← 换一种病</button><div class="disease-head"><b>${esc(t.disease)}</b><small>${esc(t.name)} · ${esc(t.area)} · 难度 ${star(t.difficulty_stars)}</small><em>「${esc(t.quote)}」</em></div><p class="hint-line">研究界正在试的路线：</p><div class="cat-grid routes">${t.routes
+      .map((r) => {
+        const x = items.find((c) => c.key === r.key);
+        if (!x) return "";
+        const [label, cls] = catalogStatus(x);
+        return `<button class="cat route ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(r.name)}</b><small>约 ${r.years} 年 · ¥${num(r.cost)} 万起</small><span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
+      })
+      .join("")}</div><button class="ghost small custom-link" data-np-custom>自己设计组合</button>`;
+  }
+  function picker(items, disease) {
+    if (np.route === "innovative" && !np.custom) return disease ? routeList(disease, items) : diseaseGrid();
+    const back = np.route === "innovative" ? '<button class="back" data-np-custom="0">← 按疾病选</button>' : "";
+    return back + `${
+      np.route === "innovative"
+        ? `<label class="field">靶点<select data-np-target>${targets.map((t) => `<option ${t === np.target ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label><p class="hint-line">组合手记 ${Object.keys(state.notebook).length} / 288 · 筛选后会记下这个组合是否适配。</p>`
+        : ""
+    }<div class="cat-grid">${items
+      .map((x) => {
+        const [label, cls] = catalogStatus(x);
+        return `<button class="cat ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(np.route === "innovative" ? x.modality : x.name)}</b><small>${esc(x.indication)}</small>${x.occupied ? "" : outlookLine(x)}<span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
+      })
+      .join("")}</div>`;
+  }
   function newProject() {
     const targets = [
       ...new Set(
@@ -449,11 +503,16 @@
             (c) => c.target === t && c.unlocked && !c.occupied,
           ),
         ) || targets[0];
-    const items = state.catalog.filter(
-      (c) =>
-        c.kind === np.route &&
-        (np.route !== "innovative" || c.target === np.target),
-    );
+    // 创新药先选病，再从主流路线里选；288 格的自由组合收在「自己设计组合」里
+    const diseaseMode = np.route === "innovative" && !np.custom;
+    const disease = diseaseMode ? (state.targets || []).find((t) => t.key === np.disease) : null;
+    const items = diseaseMode
+      ? disease
+        ? disease.routes.map((r) => state.catalog.find((c) => c.key === r.key)).filter(Boolean)
+        : []
+      : state.catalog.filter(
+          (c) => c.kind === np.route && (np.route !== "innovative" || c.target === np.target),
+        );
     if (!items.some((c) => c.key === np.pick))
       np.pick = (items.find((c) => c.unlocked && !c.occupied) || items[0])?.key;
     const c = state.catalog.find((x) => x.key === np.pick);
@@ -469,16 +528,7 @@
         ([k, n, sub]) =>
           `<button data-np-route="${k}" aria-pressed="${np.route === k}"><b>${n}</b><small>${sub}</small></button>`,
       )
-      .join("")}</div>${routeNote(np.route, state.catalog.filter((c) => c.kind === np.route))}${
-      np.route === "innovative"
-        ? `<label class="field">靶点<select data-np-target>${targets.map((t) => `<option ${t === np.target ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label><p class="hint-line">组合手记 ${Object.keys(state.notebook).length} / 288 · 筛选后会记下这个组合是否适配。</p>`
-        : ""
-    }<div class="cat-grid">${items
-      .map((x) => {
-        const [label, cls] = catalogStatus(x);
-        return `<button class="cat ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(np.route === "innovative" ? x.modality : x.name)}</b><small>${esc(x.indication)}</small>${x.occupied ? "" : outlookLine(x)}<span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
-      })
-      .join("")}</div>${
+      .join("")}</div>${routeNote(np.route, state.catalog.filter((c) => c.kind === np.route))}${picker(items, disease)}${
       c
         ? `<form class="card np" data-np-form><header><div class="title"><b>${esc(c.name)}</b><small>${esc(c.indication)} · ${esc(c.modality)}</small></div></header><p>${esc(c.description)}</p>${c.requirements.some((r) => !r.ok) ? `<div class="checks">${c.requirements.filter((r) => !r.ok).map((r) => `<span class="no">○ 还差：${esc(r.text)}</span>`).join("")}</div>` : ""}<p class="meta-line">${rivalLine(c)}${c.discovery?.reason ? " · " + esc(c.discovery.reason) : ""}${c.discovery?.mechanism != null ? ` · 叶清和看这条通路：机制偏移 ${c.discovery.mechanism > 0 ? "+" : ""}${c.discovery.mechanism}` : ""}</p>${gateBlock(c.gates)}<p class="meta-line">筛选团队：${team.map(nameOf).join("、") || esc(busyNote({ roles: np.route === "innovative" ? ["bio", "chem"] : ["chem", "proc"], error: "没有空闲的对应专业伙伴" }))}</p><details class="more"><summary>更多设置</summary><label class="field">开发侧重<select name="work_focus">${Object.entries(
             state.work_focuses,

@@ -2119,3 +2119,19 @@ small.word.mute { color: var(--muted, #8a877e); font-weight: 400; }
 .levers { list-style: none; padding: 0; margin: 6px 0 12px; display: grid; gap: 6px; text-align: left; }
 .levers li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: #f4f1ea; }
 .levers small { color: var(--muted, #6b6b63); }
+
+/* v0.12 · 从病进入创新药 */
+h4.area { margin: 12px 0 6px; font-size: 13px; color: var(--muted, #6b6b63); }
+.disease-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.disease-card {
+  display: grid; gap: 3px; justify-items: start; text-align: left; padding: 9px 10px; border-radius: 10px;
+  border: 1px solid var(--line, #e3ded2); background: var(--card, #fff); cursor: pointer;
+}
+.disease-card b { font-size: 13px; }
+.disease-card small { font-size: 11px; color: #b07a1c; letter-spacing: 1px; }
+.disease-card em { font-style: normal; font-size: 11px; color: var(--muted, #6b6b63); line-height: 1.4; }
+.disease-card.locked { opacity: 0.7; }
+.disease-head { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: #f4f1ea; margin: 6px 0; }
+.disease-head small { color: #b07a1c; }
+.disease-head em { font-style: normal; font-size: 12px; color: var(--muted, #6b6b63); }
+.custom-link { margin: 10px 0 4px; width: 100%; }

@@ -79,9 +79,26 @@ for pair in COMBINATIONS["combinations"]:
 KINDS = dict(KINDS)
 BUILD = {key for key, d in STAGES.items() if d["category"] == "build"}
 
+# 从病进入创新药：每种病的领域、一句患者的话，以及「研究界正在试的路线」。
+# 主流路线只说是哪几种药物类型（适配档位 ≥ 1，没有就取档位 0），不公开档位本身；阿尔茨海默固定是单抗和 ASO。
+DISEASES = json.loads((DATA / "diseases.json").read_text())
+ROUTES = {}
+for _t in COMBINATIONS["targets"]:
+    _pairs = [x for x in COMBINATIONS["combinations"] if x["target_id"] == _t["key"]]
+    _good = [x["modality_id"] for x in _pairs if x["tier"] >= 1] or [x["modality_id"] for x in _pairs if x["tier"] == 0]
+    ROUTES[_t["key"]] = ["mab", "aso"] if _t["key"] == "abeta" else _good
+CATALOG_BY_PAIR = {(c["target_id"], c["modality_id"]): k for k, c in CATALOG.items() if c.get("target_id")}
+
+
+def stars(value, steps):
+    """把难度或市场换成 1–5 颗星。"""
+    return next((i + 1 for i, edge in enumerate(steps) if value <= edge), len(steps) + 1)
+
 
 def validate():
     assert len(ROSTER) == 21
+    assert set(DISEASES) == set(TARGETS) and all(v["area"] and v["quote"] for v in DISEASES.values())
+    assert all(ROUTES[t] and all((t, m) in CATALOG_BY_PAIR for m in ROUTES[t]) for t in TARGETS)
     assert len(COMBINATIONS["combinations"]) == 288
     assert len([c for c in CATALOG.values() if c["kind"] == "innovative"]) == 288
     for c in CATALOG.values():
