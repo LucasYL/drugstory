@@ -12,7 +12,7 @@
 
 ![v0.11：新画风的研究所，顶栏常驻预计评级](design/v11/preview-scene.png)
 
-[当前玩法](design/game-design.md) · [内容与角色](design/content.md) · [技术接口](design/tech.md) · [本版试玩记录](design/v11-playtest.md) · [本版方案](design/v11-proposal.md) · [本版评估与建议](design/review-v11.md) · [v0.10 记录](design/v10-playtest.md) · [GitHub Releases](https://github.com/LucasYL/drugstory/releases)
+[当前玩法](design/game-design.md) · [内容与角色](design/content.md) · [技术接口](design/tech.md) · [本版试玩记录](design/v11-playtest.md) · [本版方案](design/v11-proposal.md) · [本版评估与建议](design/review-v11.md) · [下一步实施方案](design/v12-plan.md) · [v0.10 记录](design/v10-playtest.md) · [GitHub Releases](https://github.com/LucasYL/drugstory/releases)
 
 ## 开始游玩
 
