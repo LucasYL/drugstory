@@ -272,7 +272,7 @@
       g.command && g.ok
         ? `data-command="${esc(g.command)}" data-args="${esc(JSON.stringify(g.args))}"`
         : g.kind === "project"
-          ? `data-np-open data-np-route="${esc(g.route || "")}"`
+          ? `data-np-open data-np-route="${esc(g.route || "")}"${g.catalog ? ` data-np-catalog="${esc(g.catalog)}"` : ""}`
           : g.hero
             ? `data-scene-hero="${esc(g.hero)}"`
             : g.tab
@@ -573,6 +573,11 @@
       // 没指定路线时，选第一条有可开始项目的路线（仿制 → 改良 → 创新）。
       P().np.pick = null;
       P().np.route = b.dataset.npRoute || P().firstRoute();
+      if (b.dataset.npCatalog) {
+        // 引导推荐了具体路线：直接打开那种病、选中那条路线
+        const c = state.catalog.find((x) => x.key === b.dataset.npCatalog);
+        Object.assign(P().np, { custom: false, disease: c?.target_id || null, pick: b.dataset.npCatalog });
+      }
       select({ type: "new" });
     } else if (b.dataset.npRoute) {
       P().np.route = b.dataset.npRoute;

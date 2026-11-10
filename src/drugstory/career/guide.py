@@ -12,7 +12,7 @@ from __future__ import annotations
 from . import assist, gates
 from . import economy as e
 from .content import CATALOG, FACILITIES, KINDS, PROMOTION, RANKS, ROSTER
-from .model import ability, busy, committed
+from .model import ACTIVE, ability, busy, committed
 
 RESERVE = 300  # 万：建议花钱时至少留下的周转金
 ROUTES = ("generic", "improved", "innovative")
@@ -40,8 +40,11 @@ def sustainable(s, cost, weekly=0.0, runway=RUNWAY):
     return after >= RESERVE and (rate <= 0 or after / rate >= runway)
 
 
-def _item(key, kind, title, text, *, chapter=False, command=None, args=None, route=None, hero=None, tab=None):
+def _item(
+    key, kind, title, text, *, chapter=False, command=None, args=None, route=None, hero=None, tab=None, catalog=None
+):
     return {
+        "catalog": catalog,
         "key": key,
         "kind": kind,
         "title": title,
@@ -74,6 +77,41 @@ def startable(s, kind, first=False):
             if first:
                 break
     return out
+
+
+def best_innovative(s, hard=False):
+    """引导推荐哪条创新药路线：只看公开信息。
+
+    跳过做失败或止损过的组合；组合手记里记过「适配」的优先，其次是主流路线；难度低、市场大的优先。
+    """
+    from .content import ROUTES as MAINSTREAM
+    from .content import TARGETS
+
+    tried = {p["catalog"] for p in s["projects"] if p["status"] in ("failed", "terminated")}
+
+    def score(key):
+        c = CATALOG[key]
+        note = s["notebook"].get(key)
+        known = note["tier"] if note else None
+        mainstream = c.get("modality_id") in MAINSTREAM.get(c.get("target_id"), [])
+        target = TARGETS.get(c.get("target_id"), {})
+        return (
+            known is not None and known >= 1,
+            known if known is not None else (0.5 if mainstream else -3),
+            -c.get("difficulty", 0),
+            -target.get("difficulty", 1),
+            target.get("market", 0),
+            key,
+        )
+
+    options = [
+        k
+        for k in startable(s, "innovative")
+        if (not hard or CATALOG[k].get("difficulty"))
+        and k not in tried
+        and (s["notebook"].get(k) or {}).get("tier", 0) >= 0
+    ]
+    return max(options, key=score) if options else None
 
 
 def _first_missing(s, kind):
@@ -123,19 +161,34 @@ def promote_items(s, chapter=False, reason="", professions=None, rank=None):
     return out
 
 
-def project_items(s, chapter=False, reason="", only=None):
-    """开始下一个项目：按「仿制 → 改良 → 创新」挑第一条有可开始项目的路线。"""
-    routes = [only] if only else list(ROUTES)
+def _in_flight(s, kinds):
+    return any(p["kind"] in kinds and p["status"] in ACTIVE for p in s["projects"])
+
+
+def project_items(s, chapter=False, reason="", only=None, hard=False):
+    """开始下一个项目：按「仿制 → 改良 → 创新」挑第一条有可开始项目的路线。
+
+    创新药同时只建议一个（在研时不再推第二个），并且要先有预算。
+    """
+    innovative_ok = can_afford_innovative(s) and not _in_flight(s, ("innovative",))
+    routes = [only] if only else [r for r in ROUTES if r != "innovative" or innovative_ok]
+    if only == "innovative" and not innovative_ok:
+        return []
     for kind in routes:
         if startable(s, kind, first=True):
             team = assist.screening_team(s, kind)
+            pick = best_innovative(s, hard) if kind == "innovative" else None
+            if kind == "innovative" and not pick:
+                continue
+            spec = CATALOG[pick] if pick else None
             item = _item(
                 f"project:{kind}",
                 "project",
-                f"开始一个{KINDS[kind]}项目",
+                f"开始一个{KINDS[kind]}项目" if not spec else f"试试{spec['indication']}：{spec['modality']}",
                 reason or BLURB[kind],
                 chapter=chapter,
                 route=kind,
+                catalog=pick,
             )
             if not team:
                 item.update(ok=False, error="没有空闲的对应专业伙伴")
@@ -231,11 +284,26 @@ def _recruitable(s, key):
     return all(ok for _, ok in e.recruit_requirements(s, key))
 
 
+def team_can_grow(s):
+    """团队跟着收入长：伙伴人数不超过「3 + 在售的自主产品数」。"""
+    selling = sum(1 for d in s["products"] if d["active"] and not d["partner"])
+    return sum(h["employed"] for h in s["heroes"]) < 3 + selling
+
+
+INNOVATIVE_BUDGET = 2000  # 万：一条创新药路线约 2,800 万、三年；先有这么多可用现金再开始
+
+
+def can_afford_innovative(s):
+    return _cash(s) >= INNOVATIVE_BUDGET + RESERVE or -burn(s) >= 20
+
+
 def hire_items(s, chapter=False, reason="", keys=None):
     from .engine import headcount
 
     owned = {h["profession"] for h in s["heroes"] if h["employed"]}
     room = headcount(s) + 3 <= FACILITIES[s["facility"]]["capacity"]
+    if not chapter and not team_can_grow(s):
+        return []
     out = []
     pool = keys or sorted(ROSTER, key=lambda k: (ROSTER[k]["profession"] in owned, ROSTER[k]["tier"], k))
     for key in pool:
@@ -346,15 +414,19 @@ def chapter_items(s):
             out += mentor_items(s, True, "第 2 章的星：完成一次带教")
     elif name == "第一款新药":
         if not any(p["kind"] == "innovative" and p["status"] not in ("failed", "terminated") for p in s["projects"]):
-            out += project_items(s, True, tag + "一款创新药通过 II 期", only="innovative")
-    elif name == "攻坚":
+            if can_afford_innovative(s):
+                out += project_items(s, True, tag + "一款创新药通过 II 期", only="innovative")
+            elif not any(p["status"] in ACTIVE for p in s["projects"]):
+                more = project_items(s, True, "先多一款药攒钱：创新药一条路约 ¥2,800 万、三年")
+                out += [x for x in more if x["route"] != "innovative"]
+    elif name == "攻坚" and can_afford_innovative(s):
         if s["facility"] < 2:
             out += upgrade_items(s, True, tag + "专业研究院")
         if not any(h["employed"] and h["rank"] >= 3 and h["profession"] in ("bio", "chem") for h in s["heroes"]):
             out += promote_items(s, True, tag + "一位生物或药化大师", professions=("bio", "chem"), rank=3)
         hard = [p for p in s["projects"] if p["kind"] == "innovative" and CATALOG[p["catalog"]].get("difficulty")]
         if not any(p["status"] not in ("failed", "terminated") for p in hard) and s["facility"] >= 2:
-            out += project_items(s, True, tag + "攻克一种难治疾病", only="innovative")
+            out += project_items(s, True, tag + "攻克一种难治疾病", only="innovative", hard=True)
     elif name == "最后的难题":
         rows = gates.view(s, "n_abeta__mab") or []
         holders = set()
@@ -373,14 +445,8 @@ def suggestions(s, limit=3):
     candidates = (
         chapter_items(s)
         + promote_items(s)
-        + (
-            project_items(s)
-            if not any(
-                p["status"] in ("screening", "selecting", "ready", "running", "checkpoint", "result", "problem")
-                for p in s["projects"]
-            )
-            else []
-        )
+        # 没有仿制药或改良药在做时就建议一个：老产品会退市，现金流要接上
+        + (project_items(s) if not _in_flight(s, ("generic", "improved")) else [])
         + personal_items(s)
         + hire_items(s)[:1]
         + service_items(s)

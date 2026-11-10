@@ -1998,6 +1998,17 @@
               "type": "null"
             }
           ]
+        },
+        "catalog": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "推荐的具体项目（创新药时给出一条路线）。"
         }
       },
       "required": [
@@ -2012,7 +2023,8 @@
         "hero",
         "tab",
         "ok",
-        "error"
+        "error",
+        "catalog"
       ],
       "additionalProperties": false
     }

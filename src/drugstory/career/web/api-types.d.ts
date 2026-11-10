@@ -269,6 +269,7 @@ export type GuideItem = {
   "tab": string | null;
   "ok": boolean;
   "error": string | null;
+  "catalog": string | null;
 };
 
 export type GameState = {
