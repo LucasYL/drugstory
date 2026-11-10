@@ -10,11 +10,11 @@ from pathlib import Path
 
 from .content import FACILITIES, PROFESSIONS, ROSTER, SCENARIOS
 
-VERSION = 10
-READABLE = (8, 9, 10)
+VERSION = 11
+READABLE = (8, 9, 10, 11)
 # 每个存档格式由哪一版游戏写入：v8 是原文件（没有后缀），之后每升一次格式，新进度另存到带后缀的文件，
 # 旧文件一个字节都不改，旧版本游戏还能接着读它。
-SUFFIX = {8: "", 9: "-v11", 10: "-v12"}
+SUFFIX = {8: "", 9: "-v11", 10: "-v12", 11: "-v13"}
 FORMAT = "drugstory-career"
 ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", "problem"}
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
@@ -224,6 +224,9 @@ def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
         "bounties_done": [],
         "tips_seen": [],
         "chronicle": [],
+        "year_goal": None,
+        "goal_history": [],
+        "goal_log": [],
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -253,7 +256,7 @@ def loads(text):
         s = json.loads(text)
         check(
             isinstance(s, dict) and s.get("format") == FORMAT and s.get("version") in READABLE,
-            "研究所版读取 v8–v10 存档；v7 请在 8883、v6 请在 8881 继续游玩",
+            "研究所版读取 v8–v11 存档；v7 请在 8883、v6 请在 8881 继续游玩",
         )
         s.pop("migrated_from", None)  # 只标记「这次读入时刚升级」，不随存档延续
         original = s["version"]
@@ -313,7 +316,15 @@ def migrate_v9(s):
     s["tips_seen"] += [key for key, _ in moments(s, s["tips_seen"]) if key not in s["tips_seen"]]
 
 
-MIGRATIONS = {8: migrate_v8, 9: migrate_v9}
+def migrate_v10(s):
+    """v0.13：年度目标。"""
+    s["version"] = 11
+    s.setdefault("year_goal", None)
+    s.setdefault("goal_history", [])
+    s.setdefault("goal_log", [])
+
+
+MIGRATIONS = {8: migrate_v8, 9: migrate_v9, 10: migrate_v10}
 
 
 def load(path: Path):

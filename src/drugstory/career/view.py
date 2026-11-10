@@ -23,6 +23,7 @@ from . import (
     trial_choices,
 )
 from . import economy as e
+from . import goals as yearly
 from . import science as sc
 from .content import (
     BUILD,
@@ -511,6 +512,7 @@ def snapshot(s):
         "pending": sum(blocking(p) for p in s["projects"]),
         "chronicle_count": len(s.get("chronicle", [])),
         "guide": guide.suggestions(s),
+        "year_goal": yearly.view(s),
     }
 
 

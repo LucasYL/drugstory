@@ -224,6 +224,7 @@ const categoryNames = {
   commercial: "市场与医学事务",
   equipment_upkeep: "设备运营",
   equipment: "设备升级",
+  goals: "年度目标奖励",
 };
 // 产品：在售的按当前利润排在前面，退市的收起来；每款画一条销售曲线（每月一个点）
 function sparkline(points) {

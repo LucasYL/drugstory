@@ -13,6 +13,7 @@ from . import (
     development,
     events,
     gates,
+    goals,
     guide,
     honors,
     patents,
@@ -938,6 +939,11 @@ def autopilot_step(s):
             )
 
 
+def pick_goal(s, goal: str):
+    """从研究大会给出的三个目标里选一个当作今年的事。"""
+    goals.pick(s, goal)
+
+
 def take_services(s, assignments: list):
     check(1 <= len(assignments) <= 3, "一次安排一至三个服务订单")
     for item in assignments:
@@ -978,6 +984,7 @@ COMMANDS = {
         continue_and_run,
         take_services,
         set_autopilot,
+        pick_goal,
     ]
 }
 
@@ -1033,6 +1040,7 @@ def execute(state, command, args=None):
         log(candidate, "公司路线目标达成！获得 100 经营分，可以继续培养团队、探索新项目。")
     honors.update(candidate)
     chapters.update(candidate)
+    goals.update(candidate)
     candidate["actions"].append({"week": state["week"], "command": command, "args": copy.deepcopy(args)})
     return candidate
 

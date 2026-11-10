@@ -434,6 +434,10 @@ def annual(s):
     s["festivals"].append({"year": year, "results": results})
     log(s, f"第 {year} 年研究大会结束。前往荣誉室查看入围、获奖与差距。")
     s["season"] = {"year": year + 1, "entry": None, "baseline": counters(s)}
+    from . import goals
+
+    goals.close_year(s)
+    goals.offer(s, year + 1)
     for r in s["rivals"]:
         r["year_points"] = 0
     update(s)

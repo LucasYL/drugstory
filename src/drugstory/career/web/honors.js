@@ -7,6 +7,7 @@ function honorsView() {
   const h = state.honors;
   return `<h2>让二十年，留下值得记住的事</h2><p class="muted">第一年只有观察与积累。第 2 年起不用报名：年末自动评所有类别，每年最多颁一个大奖，其余胜出的类别记为提名。对手的领先线每年提高；同一类第二次获奖奖金减半。</p>
   <h3>章节与疾病地图</h3><p>${state.chapters.current ? `第 ${state.chapters.current.index} 章「${esc(state.chapters.current.name)}」 · 目标：${esc(state.chapters.current.goal)}` : "五章都完成了"} · 已攻克 ${state.chapters.cured} 种疾病 ${modalButton("查看章节与地图", "chapters")}</p>
+  <h3>年度目标</h3>${goalNow() || (state.year_goal.offers.length ? "" : '<p class="muted">第 2 年起，每届研究大会之后给出三个目标，选一个当作今年的事。</p>')}${goalOffers()}${state.year_goal.history.length ? `<p class="muted">往年：${state.year_goal.history.map((h) => `第 ${h.year} 年${esc(h.title)}${h.done ? "✓" : "✗"}`).join("、")}</p>` : ""}
   <h3>研究所评级</h3><p>${state.rating.final ? `任期评级 <b>${state.rating.final.grade}</b>「${esc(state.rating.final.title)}」，已定格。` : `按当前进度预计 <b>${state.rating.projected.grade}</b>「${esc(state.rating.projected.title)}」 · ${state.rating.term} 年任期还剩 ${Math.ceil(state.rating.weeks_left / 48)} 年 · 已帮助 ${num(Math.round(state.rating.patients / 10000))} 万人次`} ${modalButton("查看五项分数", "rating")}</p>
   <h3>第 ${h.year} 届研究大会</h3><div class="card-grid">${h.categories.map((c) => `<article class="project-card"><h3>${esc(c.name)}</h3><p>${esc(c.description)}</p><p>本年成果分 <b>${c.score}</b> · 当前领先线 <b>${c.benchmark}</b></p><p class="muted">${esc(c.requirement)}</p><details><summary>本届对手</summary>${c.field.map((r) => `<p>${esc(r.name)} · ${r.score}</p>`).join("")}</details>${awardStatus(c)}</article>`).join("")}</div>
   <h3>终局挑战</h3><p>最高科学荣誉「星火生命科学大奖」是游戏中的诺贝尔级挑战，奖励经验证的突破与培养传承，不因一款药获批自动授予。</p>
@@ -49,7 +50,37 @@ function awardStatus(c) {
   if (c.score >= c.benchmark) return `<span class="badge good">目前领先${c.repeat ? " · 再次获奖奖金减半" : ""}</span>`;
   return `<span class="badge">还差 ${c.gap} 分</span>`;
 }
+// 年度目标：三选一的卡片，今年的进度，往年记录
+function goalReward(g) {
+  return [g.cash ? `¥${g.cash} 万` : "", g.reputation ? `声誉 +${g.reputation}` : ""].filter(Boolean).join(" · ");
+}
+function goalOffers() {
+  const y = state.year_goal;
+  if (!y?.offers?.length) return "";
+  return `<h3>第 ${y.year} 年想做到什么？</h3><p class="sub">选一个当作今年的事。完成有奖励，也算进评级的「行业声誉」；没完成不罚。</p><div class="goal-cards">${y.offers
+    .map(
+      (g) =>
+        `<article class="goal-card"><b>${esc(g.title)}</b><p>${esc(g.text)}</p><small>${esc(goalReward(g))}${g.year_end ? " · 年末判断" : ""}</small>${button("就它了", "pick_goal", { goal: g.key }, "primary")}</article>`,
+    )
+    .join("")}</div>`;
+}
+function goalNow() {
+  const y = state.year_goal,
+    g = y?.current;
+  if (!g) return "";
+  const prog = g.progress ? `（${Math.min(g.progress[0], g.progress[1])}/${g.progress[1]}）` : "";
+  return `<p><b>第 ${g.year} 年目标：${esc(g.title)}</b>${g.done ? ' <span class="badge good">已完成</span>' : prog} · ${esc(g.text)} · 奖励 ${esc(goalReward(g))}</p>`;
+}
+function goalsView() {
+  const y = state.year_goal;
+  const close = '<button class="modal-close" data-close aria-label="关闭弹窗">×</button>';
+  const history = y.history.length
+    ? `<h3>往年</h3>${y.history.map((h) => `<p>第 ${h.year} 年 · ${esc(h.title)} · ${h.done ? "完成" : "没完成"}</p>`).join("")}`
+    : "";
+  return `<div class="goals-card">${close}<h2 id="modal-title">年度目标</h2>${goalNow()}${goalOffers() || (y.current ? "" : '<p class="sub">第 2 年起，每届研究大会之后会给出三个目标。</p>')}${history}<button data-close>关闭</button></div>`;
+}
 function extensionModal(type, h, id) {
+  if (type === "goals") return goalsView();
   if (type === "ceremony") return ceremonyView();
   if (type === "rating") return ratingView();
   if (type === "chapters") return chaptersView(id === "done");
@@ -159,6 +190,7 @@ function ceremonyView() {
         nominated.map((a) => `<p>提名：${esc(a.name)} · 成果分 ${a.your_score}（每年只颁一个大奖）</p>`).join("") ||
       `<p>${grand.length ? "终局荣誉已永久记入奖杯室。年度专业奖仍可在后续年份继续挑战。" : explanation}</p>`
     }
+    ${goalOffers()}
     <details><summary>完整评选与差距</summary>
     ${last.results
       .map(

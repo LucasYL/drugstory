@@ -520,6 +520,13 @@
       "items": {
         "$ref": "#/$defs/GuideItem"
       }
+    },
+    "year_goal": {
+      "type": "object",
+      "description": "年度目标：今年选的目标、待选的三个、往年记录（只读）。",
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      }
     }
   },
   "required": [
@@ -646,6 +653,8 @@
             "bounty_offered",
             "bounty_completed",
             "growth_ready",
+            "goals_offered",
+            "goal_completed",
             "cash_changed",
             "notice"
           ]

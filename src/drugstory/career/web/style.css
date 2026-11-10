@@ -1672,3 +1672,6 @@ summary {
 /* v0.12 · 产品销售曲线、退市产品收起 */
 svg.spark { display: block; color: #1d9a85; margin: 4px 0; }
 details.gone > summary { cursor: pointer; color: #6b6b63; margin: 8px 0; }
+
+.goal-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.goal-card { display: grid; gap: 4px; padding: 10px; border-radius: 10px; border: 1px solid #e7b766; background: #fff8ea; }

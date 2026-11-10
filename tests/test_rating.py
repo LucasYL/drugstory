@@ -6,7 +6,7 @@ import pytest
 
 from drugstory.career import engine as g
 from drugstory.career import rating
-from drugstory.career.model import dumps, load, loads, new_game
+from drugstory.career.model import SUFFIX, VERSION, dumps, load, loads, new_game
 from drugstory.career.view import snapshot
 
 
@@ -84,9 +84,9 @@ def test_v8_saves_load_without_rewriting_the_original(tmp_path):
     old.write_text(json.dumps(s, ensure_ascii=False))
     original = old.read_text()
     migrated = load(old)
-    assert migrated["version"] == 10 and migrated["term"] == 20 and migrated["migrated_from"] == 8
+    assert migrated["version"] == VERSION and migrated["term"] == 20 and migrated["migrated_from"] == 8
     session = GameSession(old)
-    assert session.path != old and session.path.name == "scene-autosave-v12.json"
+    assert session.path != old and session.path.name == f"scene-autosave{SUFFIX[VERSION]}.json"
     session.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     assert old.read_text() == original, "v8 原文件不被改写"
     assert loads(session.path.read_text())["week"] == 4

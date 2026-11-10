@@ -2161,3 +2161,11 @@ h4.area { margin: 12px 0 6px; font-size: 13px; color: var(--muted, #6b6b63); }
   .scene-stage { height: 46vh !important; min-height: 300px !important; }
   .metrics-bar > span:nth-child(3), .metrics-bar > span:nth-child(4) { display: none; }
 }
+
+/* v0.13 · 年度目标 */
+.goal-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 12px; text-align: left; }
+.goal-card { display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 10px; border: 1px solid #e7b766; background: #fff8ea; }
+.goal-card p { margin: 0; font-size: 12.5px; }
+.goal-card small { color: var(--muted, #6b6b63); }
+.goal-card button { margin-top: 4px; }
+.goals-card { display: grid; gap: 8px; }

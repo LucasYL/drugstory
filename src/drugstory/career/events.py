@@ -22,6 +22,8 @@ TEMPLATES = {
     "bounty_offered": "患者组织来信：希望 {years} 年内看到治疗「{disease}」的药，完成可得 ¥{reward} 万。",
     "bounty_completed": "患者组织的委托完成：「{disease}」有药了！奖励 ¥{reward} 万已到账。",
     "growth_ready": "{title}",
+    "goals_offered": "研究大会之后的新目标：{titles}。选一个当作今年的事。",
+    "goal_completed": "完成今年的目标「{title}」，奖励 ¥{cash} 万。",
     "term_ended": "任期结束：研究所评级 {grade}「{title}」，结局「{ending}」。",
     "cash_changed": "本次安排资金变化 ¥{amount:,.1f} 万。",
     "notice": "{text}",

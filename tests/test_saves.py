@@ -4,8 +4,10 @@ import json
 
 import pytest
 
-from drugstory.career.model import VERSION, dumps, load, new_game, resolve_save
+from drugstory.career.model import SUFFIX, VERSION, dumps, load, new_game, resolve_save
 from drugstory.career.server import GameSession, create_server
+
+CUR = SUFFIX[VERSION]  # 本版本写的文件后缀
 
 
 def old_save(seed, version):
@@ -27,7 +29,7 @@ def test_only_v8_reads_original_and_writes_new_file(tmp_path):
     base.write_text(old_save(1, 8))
     before = base.read_bytes()
     session = GameSession(base)
-    assert session.path == tmp_path / "game-v12.json" and session.upgraded_from == 8
+    assert session.path == tmp_path / f"game{CUR}.json" and session.upgraded_from == 8
     assert session.state["version"] == VERSION and session.state["tips_seen"] == []
     session.execute({"name": "advance", "args": {"weeks": 1}, "revision": 0})
     assert base.read_bytes() == before
@@ -44,7 +46,7 @@ def test_v11_progress_wins_over_v8_and_both_stay_untouched(tmp_path):
     session.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     assert (base.read_bytes(), v11.read_bytes()) == originals
     again = GameSession(base)
-    assert again.source == tmp_path / "game-v12.json" and again.state["week"] == 4
+    assert again.source == tmp_path / f"game{CUR}.json" and again.state["week"] == 4
     assert again.path == again.source
 
 
@@ -52,8 +54,8 @@ def test_suffixed_path_does_not_stack_suffixes(tmp_path):
     v11 = tmp_path / "game-v11.json"
     v11.write_text(old_save(3, 9))
     found, write = resolve_save(v11)
-    assert found == v11 and write == tmp_path / "game-v12.json"
-    assert resolve_save(tmp_path / "fresh-v11.json") == (None, tmp_path / "fresh-v12.json")
+    assert found == v11 and write == tmp_path / f"game{CUR}.json"
+    assert resolve_save(tmp_path / "fresh-v11.json") == (None, tmp_path / f"fresh{CUR}.json")
     assert resolve_save(tmp_path / "fresh.json") == (None, tmp_path / "fresh.json")
 
 
@@ -76,7 +78,7 @@ def test_hosted_accounts_follow_the_same_rule(tmp_path):
         c.cell_contents for c in server.RequestHandlerClass.route.__closure__ if isinstance(c.cell_contents, dict)
     )
     peer = next(a for a in accounts.values() if a.state["seed"] == 5)
-    assert peer.path == peer_dir / "peer-v12.json"
+    assert peer.path == peer_dir / f"peer{CUR}.json"
 
 
 def test_playlog_records_actions(tmp_path):

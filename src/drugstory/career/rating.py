@@ -200,8 +200,11 @@ def _span(s):
 
 
 def _reputation_points(s):
+    from .goals import REPUTATION_POINTS
+
     return (
-        12 * len(s.get("awards", []))
+        REPUTATION_POINTS * len(s.get("goal_log", []))
+        + 12 * len(s.get("awards", []))
         + 4 * len(s.get("nominations", []))
         + 10 * len(s.get("bounties_done", []))
         + 15 * len(s.get("legacies", []))

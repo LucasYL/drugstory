@@ -216,6 +216,7 @@
     facility_upgraded: ["扩建落成", ""],
     phase_finished: ["阶段结果", ""],
     growth_ready: ["可以做了", "big"],
+    goal_completed: ["年度目标完成", "big"],
   };
   function toasts(recent) {
     const box = q("#scene-toasts");
@@ -228,7 +229,7 @@
         text = `${e.data.name} · +${money(e.data.reward)}`;
       if (e.type === "character_promoted")
         text = `${e.data.name} 晋升${e.data.rank}`;
-      if (e.type === "growth_ready") text = e.data.title;
+      if (e.type === "growth_ready" || e.type === "goal_completed") text = e.data.title;
       if (e.type === "phase_finished")
         text = `${e.data.name} · ${e.data.stage}${e.data.passed ? "通过" : "未通过"}`;
       const el = document.createElement("div");
@@ -256,11 +257,18 @@
       return `<button data-scene-project="${resumable.id}" class="g-wait"><b>${esc(resumable.name)}</b><span>${resumable.quick.command === "launch" ? "可以上市了" : "人空出来了，可以开工"}</span></button>`;
     if (!s.projects.length)
       return '<button data-np-open data-np-route="generic" class="g-go"><b>第一步</b><span>点这里，开始第一个项目（推荐「稳压片」）</span></button>';
+    // 年度目标：还没选就提醒去选；选了就显示进度
+    const y = s.year_goal;
+    if (y?.offers?.length)
+      return `<button data-modal="goals" class="g-chapter"><b>选一个今年的目标</b><span>${y.offers.map((g) => esc(g.title)).join(" / ")}</span></button>`;
     // 成长建议：跟着章节走，按钮直接执行（晋阶、扩建、邀请……）
     const tip = (s.guide || []).find((g) => g.ok || g.chapter);
     if (tip && (tip.ok || !want)) return guideButton(tip, tip.chapter ? "g-chapter" : "g-tip");
     if (!want && !s.pending)
       return `<button data-speed="1" class="g-go"><b>▶ 开始</b><span>按 1× 让时间走起来；有决定会自动停</span></button>`;
+    const goal = s.year_goal?.current;
+    if (goal && !goal.done)
+      return `<button data-modal="goals" class="g-tip"><b>今年目标：${esc(goal.title)}${goal.progress ? `（${Math.min(goal.progress[0], goal.progress[1])}/${goal.progress[1]}）` : ""}</b><span>${esc(goal.text)}</span></button>`;
     const ch = s.chapters.current;
     if (ch)
       return `<button data-scene="chapters" class="g-chapter"><b>第 ${ch.index} 章 · ${esc(ch.name)}</b><span>目标：${esc(ch.goal)}${ch.reward ? ` · 奖励 ¥${ch.reward} 万` : ""}</span></button>`;

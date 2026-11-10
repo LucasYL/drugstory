@@ -6,6 +6,7 @@ import threading
 from contextlib import closing
 from http.client import HTTPConnection
 
+from drugstory.career.model import SUFFIX, VERSION
 from drugstory.career.server import GameSession, create_server
 
 
@@ -92,7 +93,10 @@ def test_hosted_v8_saves_continue_in_new_files_across_restarts(tmp_path):
 
     first, handler = start()
     peer = accounts(handler)[base64.b64encode(b"peer:pw")]
-    assert first.path.name == "hosted-v12.json" and peer.path == tmp_path / "hosted-accounts" / "peer-v12.json"
+    assert (
+        first.path.name == f"hosted{SUFFIX[VERSION]}.json"
+        and peer.path == tmp_path / "hosted-accounts" / f"peer{SUFFIX[VERSION]}.json"
+    )
     assert peer.state["seed"] == 4, "其他账号读回自己的 v8 进度，不是新开一局"
     first.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     peer.execute({"name": "advance", "args": {"weeks": 1}, "revision": 0})
@@ -103,4 +107,4 @@ def test_hosted_v8_saves_continue_in_new_files_across_restarts(tmp_path):
     second.execute({"name": "advance", "args": {"weeks": 4}, "revision": 0})
     assert GameSession(save).state["week"] == 8
     assert (save.read_text(), peer_save.read_text()) == originals, "v8 原档不被改写"
-    assert not (tmp_path / "hosted-v12-v12.json").exists()
+    assert not (tmp_path / f"hosted{SUFFIX[VERSION]}{SUFFIX[VERSION]}.json").exists()
