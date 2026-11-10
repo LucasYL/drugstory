@@ -412,6 +412,15 @@ def chapter_items(s):
             out += upgrade_items(s, True, "第 2 章的星：搬进联合研发所", optional=True)
         if not any(h["mentored"] for h in s["heroes"]):
             out += mentor_items(s, True, "第 2 章的星：完成一次带教")
+    elif name == "新的实验室":
+        if s["facility"] < 1:
+            out += upgrade_items(s, True, tag + "搬进联合研发所")
+        if not _in_flight(s, ("improved", "innovative")):
+            out += project_items(s, True, tag + "一款改良药或创新药通过临床前", only="improved") or project_items(
+                s, True, tag + "一款改良药或创新药通过临床前", only="innovative"
+            )
+        if sum(h["employed"] for h in s["heroes"]) < 4:
+            out += hire_items(s, True, "第 3 章的星：团队有 4 位伙伴")[:1]
     elif name == "第一款新药":
         if not any(p["kind"] == "innovative" and p["status"] not in ("failed", "terminated") for p in s["projects"]):
             if can_afford_innovative(s):

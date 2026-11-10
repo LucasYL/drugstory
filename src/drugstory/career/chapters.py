@@ -1,4 +1,4 @@
-"""阶段目标：五个章节、疾病地图和患者组织委托。
+"""阶段目标：六个章节、疾病地图和患者组织委托。
 
 章节只决定提示和奖励，不锁住玩家：提前做到后面的事照样算。所有判断只读已经发生的公开结果。
 委托按种子和时间确定，不读候选真值；没完成没有惩罚。
@@ -61,8 +61,22 @@ CHAPTERS = [
         "text": "行业开始注意到你们。创新药的路已经铺开，对手也在看着。",
     },
     {
+        "name": "新的实验室",
+        "when": "第 3–5 年",
+        "goal": (
+            "搬进联合研发所，并有一款改良药或创新药通过临床前",
+            lambda s: s["facility"] >= 1 and (_passed(s, "preclinical", "improved") or _passed(s, "preclinical")),
+        ),
+        "stars": [
+            ("团队有 4 位伙伴", lambda s: sum(h["employed"] for h in s["heroes"]) >= 4),
+            ("一位伙伴完成个人课题", lambda s: any(h.get("personal") for h in s["heroes"])),
+        ],
+        "reward": 900,
+        "text": "地方大了，能做的事也多了。下一步，做一款真正属于你们的新药。",
+    },
+    {
         "name": "第一款新药",
-        "when": "第 4–8 年",
+        "when": "第 5–8 年",
         "goal": ("一款创新药通过 II 期", lambda s: _passed(s, "II")),
         "stars": [
             ("一款创新药获批", lambda s: any(d["kind"] == "innovative" for d in _approved(s))),

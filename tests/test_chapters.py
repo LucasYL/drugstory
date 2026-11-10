@@ -55,3 +55,38 @@ def test_bounties_arrive_every_two_years_and_pay_when_the_disease_gets_a_drug():
     chapters.settle_bounties(s)
     assert s["bounties"][0]["status"] == "done" and s["income"]["bounties"] == b["reward"]
     assert s["bounties_done"] == [b["id"]]
+
+
+def test_v10_saves_keep_their_chapter_after_the_new_one_is_inserted():
+    """v0.13 在第 2、3 章之间插入「新的实验室」：已到原第 3 章的存档仍停在「第一款新药」，新章算作跳过。"""
+    import json
+
+    from drugstory.career.chapters import CHAPTERS, view
+    from drugstory.career.model import dumps, loads, new_game
+
+    s = json.loads(dumps(new_game(1)))
+    s["version"] = 10
+    for key in ("year_goal", "goal_history", "goal_log"):
+        s.pop(key)
+    s["chapter"] = 2  # v0.12 的第 3 章「第一款新药」
+    migrated = loads(json.dumps(s))
+    assert CHAPTERS[migrated["chapter"]]["name"] == "第一款新药"
+    assert view(migrated)["current"]["index"] == 4
+    s["chapter"] = 1  # 还在「第一位专家」的存档不动
+    assert loads(json.dumps(s))["chapter"] == 1
+
+
+def test_new_lab_chapter_comes_between_expert_and_first_new_drug():
+    from drugstory.career import chapters
+    from drugstory.career.model import new_game
+
+    names = [c["name"] for c in chapters.CHAPTERS]
+    assert names.index("第一位专家") + 1 == names.index("新的实验室") == names.index("第一款新药") - 1
+    s = new_game(1)
+    s["chapter"] = names.index("新的实验室")
+    s["facility"] = 1
+    s["projects"].append(
+        {"kind": "improved", "status": "running", "results": [{"key": "preclinical", "passed": True, "week": 0}]}
+    )
+    chapters.update(s)
+    assert s["chapter_log"][-1]["name"] == "新的实验室" and s["chapter"] == names.index("第一款新药")

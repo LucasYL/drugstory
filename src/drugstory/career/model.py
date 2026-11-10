@@ -317,11 +317,14 @@ def migrate_v9(s):
 
 
 def migrate_v10(s):
-    """v0.13：年度目标。"""
+    """v0.13：年度目标；插入第 3 章「新的实验室」。"""
     s["version"] = 11
     s.setdefault("year_goal", None)
     s.setdefault("goal_history", [])
     s.setdefault("goal_log", [])
+    # 第 3 章「新的实验室」是新插入的：已经走到原第 3 章及以后的存档，下标后移一位，新章算作跳过（不补奖励）
+    if s.get("chapter", 0) >= 2:
+        s["chapter"] += 1
 
 
 MIGRATIONS = {8: migrate_v8, 9: migrate_v9, 10: migrate_v10}

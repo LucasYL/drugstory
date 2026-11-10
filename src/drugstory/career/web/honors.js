@@ -6,7 +6,7 @@ function competitionView() {
 function honorsView() {
   const h = state.honors;
   return `<h2>让二十年，留下值得记住的事</h2><p class="muted">第一年只有观察与积累。第 2 年起不用报名：年末自动评所有类别，每年最多颁一个大奖，其余胜出的类别记为提名。对手的领先线每年提高；同一类第二次获奖奖金减半。</p>
-  <h3>章节与疾病地图</h3><p>${state.chapters.current ? `第 ${state.chapters.current.index} 章「${esc(state.chapters.current.name)}」 · 目标：${esc(state.chapters.current.goal)}` : "五章都完成了"} · 已攻克 ${state.chapters.cured} 种疾病 ${modalButton("查看章节与地图", "chapters")}</p>
+  <h3>章节与疾病地图</h3><p>${state.chapters.current ? `第 ${state.chapters.current.index} 章「${esc(state.chapters.current.name)}」 · 目标：${esc(state.chapters.current.goal)}` : "所有章节都完成了"} · 已攻克 ${state.chapters.cured} 种疾病 ${modalButton("查看章节与地图", "chapters")}</p>
   <h3>年度目标</h3>${goalNow() || (state.year_goal.offers.length ? "" : '<p class="muted">第 2 年起，每届研究大会之后给出三个目标，选一个当作今年的事。</p>')}${goalOffers()}${state.year_goal.history.length ? `<p class="muted">往年：${state.year_goal.history.map((h) => `第 ${h.year} 年${esc(h.title)}${h.done ? "✓" : "✗"}`).join("、")}</p>` : ""}
   <h3>研究所评级</h3><p>${state.rating.final ? `任期评级 <b>${state.rating.final.grade}</b>「${esc(state.rating.final.title)}」，已定格。` : `按当前进度预计 <b>${state.rating.projected.grade}</b>「${esc(state.rating.projected.title)}」 · ${state.rating.term} 年任期还剩 ${Math.ceil(state.rating.weeks_left / 48)} 年 · 已帮助 ${num(Math.round(state.rating.patients / 10000))} 万人次`} ${modalButton("查看五项分数", "rating")}</p>
   <h3>第 ${h.year} 届研究大会</h3><div class="card-grid">${h.categories.map((c) => `<article class="project-card"><h3>${esc(c.name)}</h3><p>${esc(c.description)}</p><p>本年成果分 <b>${c.score}</b> · 当前领先线 <b>${c.benchmark}</b></p><p class="muted">${esc(c.requirement)}</p><details><summary>本届对手</summary>${c.field.map((r) => `<p>${esc(r.name)} · ${r.score}</p>`).join("")}</details>${awardStatus(c)}</article>`).join("")}</div>
@@ -106,7 +106,7 @@ function chaptersView(celebrate) {
       : `<h2 id="modal-title">研究所的路</h2>`;
   const cur = c.current
     ? `<section class="chapter-now"><p class="sub">第 ${c.current.index} / ${c.total} 章 · ${esc(c.current.when)}</p><h3>${esc(c.current.name)}</h3><p>${esc(c.current.text)}</p><p><b>目标：${esc(c.current.goal)}</b>${c.current.reward ? ` · 完成奖励 ¥${c.current.reward} 万` : ""}</p><p>${c.current.stars.map((x) => `${x.ok ? "★" : "☆"} ${esc(x.text)}`).join("<br>")}</p></section>`
-    : "<p>五章都完成了。剩下的时间，按你自己的想法经营。</p>";
+    : "<p>所有章节都完成了。剩下的时间，按你自己的想法经营。</p>";
   const tiers = ["common", "novel", "hard", "final"];
   const map = tiers
     .map((t) => {
