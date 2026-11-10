@@ -2072,3 +2072,19 @@ canvas.mini {
 .g-chapter b {
   color: #9a6214;
 }
+
+/* v0.12 · 接下来可以做 */
+.next-steps { display: grid; gap: 6px; margin: 4px 0 12px; }
+.next-step {
+  display: grid; text-align: left; gap: 2px; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--line, #e3ded2); background: var(--card, #fff); cursor: pointer;
+}
+.next-step b { font-size: 13px; }
+.next-step span { font-size: 12px; color: var(--muted, #6b6b63); }
+.next-step.chapter { border-color: #e7b766; background: #fff8ea; }
+.next-step.blocked { opacity: 0.75; cursor: help; }
+.np-empty {
+  display: grid; gap: 6px; padding: 10px 12px; margin: 6px 0 10px; border-radius: 10px;
+  background: #f4f1ea; font-size: 13px;
+}
+.np-empty small { color: var(--muted, #6b6b63); }

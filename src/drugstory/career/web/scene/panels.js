@@ -282,7 +282,15 @@
       (w.length
         ? ""
         : `<div class="empty"><p>研究台空着。</p><button class="primary" data-np-open>${state.projects.length ? "开始下一个项目" : "开始第一个项目"}</button><small>${state.products.length ? "产品在卖，可以挑一条更难的路线，或者先培养伙伴。" : "也可以先接技术服务赚周转金。"}</small></div>`)
-    }${deals.length ? `<div class="sec-head"><h3>合作方开发中</h3></div>${deals.map((d) => `<div class="run-row static"><span class="dot test"></span><span class="grow"><b>${esc(state.projects.find((p) => p.id === d.project)?.name || "")}</b><small>${esc(d.partner)} · 还需 ${d.left} 周</small></span></div>`).join("")}` : ""}${past.length ? `<details class="past"><summary>已结束 · ${past.length}</summary>${past.slice().reverse().map(pastRow).join("")}</details>` : ""}${money_line()}`;
+    }${nextSteps(running.length || w.length)}${deals.length ? `<div class="sec-head"><h3>合作方开发中</h3></div>${deals.map((d) => `<div class="run-row static"><span class="dot test"></span><span class="grow"><b>${esc(state.projects.find((p) => p.id === d.project)?.name || "")}</b><small>${esc(d.partner)} · 还需 ${d.left} 周</small></span></div>`).join("")}` : ""}${past.length ? `<details class="past"><summary>已结束 · ${past.length}</summary>${past.slice().reverse().map(pastRow).join("")}</details>` : ""}${money_line()}`;
+  }
+  // 接下来可以做：成长建议（晋阶、扩建、邀请、个人课题……），和左上角引导同源
+  function nextSteps(busyDesk) {
+    const items = (state.guide || []).filter((g) => busyDesk || g.kind !== "project");
+    if (!items.length) return "";
+    return `<div class="sec-head"><h3>接下来可以做</h3></div><div class="next-steps">${items
+      .map((g) => window.DrugstorySceneUI.guideButton(g, `next-step ${g.chapter ? "chapter" : ""} ${g.ok ? "" : "blocked"}`))
+      .join("")}</div>`;
   }
   function money_line() {
     const s = state;
@@ -333,6 +341,28 @@
 
   /* ---------- 新项目：选路线 → 点一张卡 → 开始 ---------- */
   const np = { route: "generic", target: "", pick: null };
+  const ROUTE_NAMES = { generic: "仿制药", improved: "改良药", innovative: "创新药" };
+  const openItems = (route) => state.catalog.filter((c) => c.kind === route && c.unlocked && !c.occupied);
+  function firstRoute() {
+    return ["generic", "improved", "innovative"].find((r) => openItems(r).length) || "generic";
+  }
+  // 当前路线没有能开始的项目时，说清楚为什么，并指向别的路线
+  function routeNote(route, items) {
+    if (openItems(route).length) return "";
+    const taken = items.length && items.every((c) => c.occupied || !c.unlocked) && items.some((c) => c.occupied);
+    const others = ["generic", "improved", "innovative"]
+      .filter((r) => r !== route)
+      .map((r) => {
+        const n = openItems(r).length;
+        if (n) return `<button class="small" data-np-route="${r}">去看${ROUTE_NAMES[r]} · ${n} 个可开始</button>`;
+        const c = state.catalog.find((x) => x.kind === r && !x.occupied);
+        const miss = c?.requirements.filter((q) => !q.ok).map((q) => q.text) || [];
+        return miss.length ? `<small>${ROUTE_NAMES[r]}还差：${miss.map(esc).join("、")}</small>` : "";
+      })
+      .filter(Boolean)
+      .join("");
+    return `<div class="np-empty"><b>${ROUTE_NAMES[route]}${taken ? "都在研或在售了" : "还没有能开始的"}</b>${others}</div>`;
+  }
   function catalogStatus(c) {
     if (c.occupied) return ["在研或在售", "mute"];
     if (!c.unlocked) return ["待解锁", "mute"];
@@ -376,7 +406,7 @@
         ([k, n, sub]) =>
           `<button data-np-route="${k}" aria-pressed="${np.route === k}"><b>${n}</b><small>${sub}</small></button>`,
       )
-      .join("")}</div>${
+      .join("")}</div>${routeNote(np.route, state.catalog.filter((c) => c.kind === np.route))}${
       np.route === "innovative"
         ? `<label class="field">靶点<select data-np-target>${targets.map((t) => `<option ${t === np.target ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label><p class="hint-line">组合手记 ${Object.keys(state.notebook).length} / 288 · 筛选后会记下这个组合是否适配。</p>`
         : ""
@@ -537,5 +567,6 @@
     room,
     np,
     waiting,
+    firstRoute,
   };
 })();

@@ -6,12 +6,14 @@ import copy
 import inspect
 
 from . import (
+    assist,
     challenge,
     chapters,
     chronicle,
     development,
     events,
     gates,
+    guide,
     honors,
     patents,
     product_design,
@@ -28,10 +30,12 @@ from .model import (
     ACTIVE,
     DECISIONS,
     RANK_CAP,
+    blocking,
     ability,
     available_money,
     busy,
     check,
+    committed,
     earn,
     find,
     free_team,
@@ -77,7 +81,29 @@ def catalog_requirements(s, key):
     return checks
 
 
-def start_project(s, catalog: str, heroes: list, design: str = "standard", work_focus: str = "balanced"):
+AUTOPILOT = ("standard", "rush", "craft")
+AUTOPILOT_RESERVE = 300  # 万：交给团队的项目开工前至少留下的周转金
+
+
+def autopilot_ready(s):
+    """第一款仿制药亲手做一遍；之后的仿制药可以交给团队。"""
+    return any(d["kind"] == "generic" and not d["partner"] for d in s["products"])
+
+
+def start_project(
+    s,
+    catalog: str,
+    heroes: list,
+    design: str = "standard",
+    work_focus: str = "balanced",
+    autopilot: str = "",
+):
+    check(autopilot in ("", *AUTOPILOT), "请选择交给团队的方式：标准、加急或精工")
+    if autopilot:
+        check(catalog in CATALOG and CATALOG[catalog]["kind"] == "generic", "目前只有仿制药可以交给团队做完")
+        check(autopilot_ready(s), "第一款仿制药请一步步做一遍，之后就可以交给团队")
+        if autopilot == "craft":
+            design = "validated"
     check(work_focus in development.FOCUSES, "请选择开发重心")
     check(design in ("standard", "validated"), "请选择产品验证路线")
     check(design == "standard" or product_design.profile(catalog), "该方案没有专项产品验证路线")
@@ -119,8 +145,8 @@ def start_project(s, catalog: str, heroes: list, design: str = "standard", work_
         "entered_I": None,
         "clinical_started": False,
         "experiment": None,
-        "autopilot": "",
-        "pace": "standard",
+        "autopilot": autopilot,
+        "pace": autopilot or "standard",
         "feedback": "正在筛选候选与整理参比资料。",
     }
     sc.generate_candidates(s, p)
@@ -685,7 +711,7 @@ def partner_step(s):
 def advance(s, weeks: int = 4):
     check(type(weeks) is int and weeks in (1, 4, 48), "可推进 1 周、4 周或下一件事")
     check(
-        not any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]),
+        not any(blocking(p) for p in s["projects"]),
         "先处理或暂缓待决定项目，再推进时间",
     )
     for _ in range(weeks):
@@ -739,6 +765,7 @@ def advance(s, weeks: int = 4):
                 log(s, p["name"] + "：" + message)
             else:
                 finish_phase(s, p)
+        autopilot_step(s)
         partner_step(s)
         patents.tick(s)
         e.market_step(s)
@@ -757,9 +784,19 @@ def advance(s, weeks: int = 4):
             s["career_done"] = True
         if s["week"] % 4 == 0:
             retirements(s)
+        growth(s)
         rating.finish_term(s)
-        if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
+        if s["game_over"] or any(blocking(p) for p in s["projects"]):
             break
+
+
+def growth(s):
+    """第一次出现的成长机会（可以晋阶、买得起扩建、新伙伴愿意来……）记下并提示一次。"""
+    seen = s.setdefault("tips_seen", [])
+    for key, data in guide.moments(s, seen):
+        if key not in seen:
+            seen.append(key)
+            events.emit(s, "growth_ready", data={"key": key, **data})
 
 
 def next_event(s, batches: int = 1):
@@ -786,7 +823,9 @@ def next_event(s, batches: int = 1):
             ev["id"] > prior_event and ev["type"] in ("work_completed", "evidence_received") for ev in s["events"]
         ):
             break
-        if s["game_over"] or any(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]):
+        if any(ev["id"] > prior_event and ev["type"] == "growth_ready" for ev in s["events"]):
+            break  # 第一次出现的成长机会：停下来让玩家看到
+        if s["game_over"] or any(blocking(p) for p in s["projects"]):
             break
         if not batches and solvent and s["cash"] < 0:
             # 现金转负：停下来，让玩家在三个月期限内应对
@@ -838,6 +877,67 @@ def continue_and_run(s, project: str, heroes: list, plan: str = "standard", mode
     run_phase(s, project, heroes, plan, mode)
 
 
+def set_autopilot(s, project: str, mode: str):
+    """交给团队自动推进，或者接手自己做决定（mode 为空）。方案（加急、精工）开工时已定，不随之改变。"""
+    p = find(s["projects"], project)
+    check(p["status"] in ACTIVE, "项目已经结束")
+    if mode:
+        check(mode in AUTOPILOT and p["kind"] == "generic", "目前只有仿制药可以交给团队做完")
+        check(autopilot_ready(s), "第一款仿制药请一步步做一遍，之后就可以交给团队")
+        check(p["status"] in ("ready", "result", "selecting", "screening", "running"), "补正或止损的决定请自己做")
+    p["autopilot"] = mode
+    p.pop("waiting", None)
+    if not mode:
+        p["deferred"] = False
+    log(s, f"{p['name']}{'交给团队自动推进' if mode else '由你接手，之后的决定自己做'}。")
+
+
+def _who_is_busy(s, key):
+    occupied = busy(s)
+    names = [
+        f"{h['name']}在忙"
+        for h in s["heroes"]
+        if h["employed"] and h["profession"] in STAGES[key]["roles"] and h["id"] in occupied
+    ]
+    return "等人：" + ("、".join(names) if names else "没有空闲的对应专业伙伴")
+
+
+def autopilot_step(s):
+    """交给团队的项目：按公开证据和推荐团队自动走下一步；做不了就等，遇到补正交还给玩家。
+
+    直接调用命令函数，所以这些函数都必须先检查后修改（见 tests/test_autopilot.py）。
+    """
+    for p in s["projects"]:
+        if not p.get("autopilot") or p["status"] not in DECISIONS:
+            continue
+        p.pop("waiting", None)
+        try:
+            if p["status"] == "selecting":
+                choose_candidate(s, p["id"], assist.autopilot_candidate(p))
+            if p["status"] == "result" and p["results"][-1]["passed"]:
+                if sc.stage_key(p) == "review":
+                    launch(s, p["id"], p["name"])
+                    continue
+                continue_project(s, p["id"])
+            if p["status"] == "ready":
+                team, mode = assist.recommended_team(s, p)
+                cost = sc.plan_phase(s, p, team, "standard", mode)["cost"]
+                if s["cash"] - committed(s) - cost < AUTOPILOT_RESERVE:
+                    p["waiting"] = f"等现金：需要可用 ¥{cost + AUTOPILOT_RESERVE:,.0f} 万"
+                    continue
+                run_phase(s, p["id"], team, "standard", mode)
+            elif p["status"] in ("problem", "result", "checkpoint"):
+                # 补正或没过：交还给玩家决定
+                p["autopilot"] = ""
+                failed = "、".join(STATS[k] for k in p["results"][-1]["failures"]) if p["results"] else "本阶段"
+                log(s, f"{p['name']}需要你决定：{failed}没过。")
+        except ValueError as error:
+            text = str(error)
+            p["waiting"] = (
+                f"等现金：{text}" if "现金" in text or "需要至少" in text else _who_is_busy(s, sc.stage_key(p))
+            )
+
+
 def take_services(s, assignments: list):
     check(1 <= len(assignments) <= 3, "一次安排一至三个服务订单")
     for item in assignments:
@@ -877,6 +977,7 @@ COMMANDS = {
         trial_decision,
         continue_and_run,
         take_services,
+        set_autopilot,
     ]
 }
 

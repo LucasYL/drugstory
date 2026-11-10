@@ -5,7 +5,7 @@ export type Event = {
   "version": 1;
   "id": number;
   "week": number;
-  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "chapter_completed" | "bounty_offered" | "bounty_completed" | "cash_changed" | "notice";
+  "type": "work_completed" | "evidence_received" | "phase_started" | "phase_finished" | "character_promoted" | "personal_completed" | "equipment_upgraded" | "facility_upgraded" | "product_launched" | "service_completed" | "deal_signed" | "patent_filed" | "patent_granted" | "patent_expired" | "milestone_reached" | "award_won" | "legacy_reached" | "term_ended" | "chapter_completed" | "bounty_offered" | "bounty_completed" | "growth_ready" | "cash_changed" | "notice";
   "actors": (string)[];
   "project": string | null;
   "room": RoomId | null;
@@ -102,6 +102,9 @@ export type Project = {
   "quick": QuickAction | null;
   "advice": (Advice)[];
   "gates": (Gate)[] | null;
+  "autopilot"?: "" | "standard" | "rush" | "craft";
+  "pace"?: "standard" | "rush" | "craft";
+  "waiting"?: string | null;
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -239,6 +242,21 @@ export type Gate = {
   "people": (string)[];
 };
 
+export type GuideItem = {
+  "key": string;
+  "kind": string;
+  "title": string;
+  "text": string;
+  "chapter": boolean;
+  "command": string | null;
+  "args": JsonValue;
+  "route": string | null;
+  "hero": string | null;
+  "tab": string | null;
+  "ok": boolean;
+  "error": string | null;
+};
+
 export type GameState = {
   "version": string;
   "api_version": 2;
@@ -330,4 +348,5 @@ export type GameState = {
   "bounty_history": (JsonValue)[];
 };
   "chronicle_count"?: number;
+  "guide"?: (GuideItem)[];
 };

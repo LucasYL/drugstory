@@ -20,6 +20,11 @@ ACTIVE = {"screening", "selecting", "ready", "running", "checkpoint", "result", 
 DECISIONS = {"selecting", "ready", "result", "problem", "checkpoint"}
 
 
+def blocking(p):
+    """会让时间停下等玩家的项目：待决定、没暂缓、也没交给团队自动推进。"""
+    return p["status"] in DECISIONS and not p.get("deferred") and not p.get("autopilot")
+
+
 def check(condition, message):
     if not condition:
         raise ValueError(message)

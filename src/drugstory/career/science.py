@@ -10,6 +10,9 @@ from .content import BUILD, CATALOG, CLINICAL, EXPERIMENTS, PATHS, PLANS, STAGES
 from .model import ability, check, hero, power, rand
 
 FINAL = ("failed", "terminated")
+# 仿制药「加急」：开发与等效性阶段赶工期，费用更高、读数更粗
+RUSH = {"time": 0.75, "cost": 1.35, "noise": 1.1}
+RUSH_STAGES = ("formulation", "quality", "be")
 
 NORMAL = NormalDist()
 STAT_ROLE = {"effect": "bio", "safety": "tox", "exposure": "chem", "quality": "proc"}
@@ -200,8 +203,11 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
     members = sum(min(hero(s, h)["members"], 2 + hero(s, h)["rank"]) for h in ids)
     speed = 1 + min(0.45, members / max(1, len(ids)) * 0.10)
     fx = skill_effects(s, p, ids, key, partner)
-    weeks = max(4, math.ceil(d["weeks"] * strategy["time"] * fx["weeks"] / speed) - fx["minus"])
-    cost = d["cost"] * strategy["cost"] * (1.3 if cro and not partner else 1)
+    rush = p.get("pace") == "rush" and key in RUSH_STAGES
+    weeks = max(
+        4, math.ceil(d["weeks"] * strategy["time"] * fx["weeks"] * (RUSH["time"] if rush else 1) / speed) - fx["minus"]
+    )
+    cost = d["cost"] * strategy["cost"] * (1.3 if cro and not partner else 1) * (RUSH["cost"] if rush else 1)
     if p["kind"] == "innovative":
         cost *= 1.2 if CATALOG[p["catalog"]]["difficulty"] else 1
     if key == "review" and p["kind"] != "generic":
@@ -225,7 +231,7 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
         else:
             endpoint_skill = 0.7 * specialist + 0.3 * skill
         noise_by_stat[stat] = d["noise"] * strategy["noise"] * max(0.65, 1.2 - endpoint_skill / 160)
-        noise_by_stat[stat] *= fx["noise"].get(stat, 1.0)
+        noise_by_stat[stat] *= fx["noise"].get(stat, 1.0) * (RUSH["noise"] if rush else 1)
     if enhanced:
         noise_by_stat = {stat: value * 0.8 for stat, value in noise_by_stat.items()}
     noise = sum(noise_by_stat.values()) / len(noise_by_stat)

@@ -158,11 +158,18 @@ def step(s):
         log(s, f"竞争情报：{r['name']}{r['last_update']}。市场份额会变化，临床标准不变。")
 
 
-def pressure(s, market):
+# 先发优势：对手在我方产品之后才上市，先占住的医院和渠道不容易丢，它的影响只按这个比例算
+FIRST_MOVER = 0.6
+
+
+def pressure(s, market, since=None):
+    """同市场对手的竞争强度（0–3）。since 是我方产品的上市周，比它晚上市的对手产品按 FIRST_MOVER 计。"""
     total = 0
     for r in s["rivals"]:
         active = [d for d in r.get("portfolio", []) if d["active"] and d["market"] == market]
-        total += sum(d["strength"] for d in active)
+        total += sum(
+            d["strength"] * (FIRST_MOVER if since is not None and d.get("launched", 0) > since else 1) for d in active
+        )
         # Historical test/import records can have a single public active product.
         if not r.get("portfolio") and r["active"] and r["market"] == market:
             total += 1

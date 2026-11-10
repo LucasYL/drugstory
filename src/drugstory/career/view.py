@@ -12,6 +12,7 @@ from . import (
     development,
     engine,
     gates,
+    guide,
     honors,
     patents,
     product_design,
@@ -43,7 +44,7 @@ from .content import (
     STATS,
     TERMS,
 )
-from .model import ACTIVE, DECISIONS, ability, busy, check, committed, date, make_hero, payroll
+from .model import ACTIVE, DECISIONS, ability, blocking, busy, check, committed, date, make_hero, payroll
 from .units import pts, pts_map
 
 recommended_team = assist.recommended_team
@@ -187,6 +188,9 @@ def project_view(s, p):
             "ended",
         )
     } | {
+        "autopilot": p.get("autopilot", ""),
+        "pace": p.get("pace", "standard"),
+        "waiting": p.get("waiting"),
         "scene": project_scene(p, key),
         "kind_name": KINDS[p["kind"]],
         "results": [shown_result(r) for r in p["results"]],
@@ -433,8 +437,9 @@ def snapshot(s):
         "game_over": s["game_over"],
         "negative_months": s["negative_months"],
         "career_done": s["career_done"],
-        "pending": sum(p["status"] in DECISIONS and not p.get("deferred") for p in s["projects"]),
+        "pending": sum(blocking(p) for p in s["projects"]),
         "chronicle_count": len(s.get("chronicle", [])),
+        "guide": guide.suggestions(s),
     }
 
 

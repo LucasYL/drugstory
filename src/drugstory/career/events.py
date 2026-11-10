@@ -21,6 +21,7 @@ TEMPLATES = {
     "chapter_completed": "章节完成：「{name}」，{stars} 星，奖励 ¥{reward} 万。",
     "bounty_offered": "患者组织来信：希望 {years} 年内看到治疗「{disease}」的药，完成可得 ¥{reward} 万。",
     "bounty_completed": "患者组织的委托完成：「{disease}」有药了！奖励 ¥{reward} 万已到账。",
+    "growth_ready": "{title}",
     "term_ended": "任期结束：研究所评级 {grade}「{title}」，结局「{ending}」。",
     "cash_changed": "本次安排资金变化 ¥{amount:,.1f} 万。",
     "notice": "{text}",

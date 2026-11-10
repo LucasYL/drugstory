@@ -29,6 +29,26 @@ def level(probability):
     return "高" if probability >= 0.65 else "中" if probability >= 0.35 else "低"
 
 
+def _low(c, stat):
+    b = c["belief"][stat]
+    return b["mean"] - 1.645 * b["variance"] ** 0.5
+
+
+def steady_candidate(p):
+    """界面上的「稳妥」：所有指标下限中最小的那个最高的候选。只看公开估计。"""
+    return max(p["candidates"], key=lambda c: (min(_low(c, k) for k in c["belief"]), -c["id"]))["id"]
+
+
+def autopilot_candidate(p):
+    """交给团队时怎么选候选：精工看关键阶段那一项指标的下限，其他方案选「稳妥」。"""
+    from . import product_design
+
+    profile = product_design.profile(p["catalog"])
+    if p.get("pace") == "craft" and profile:
+        return max(p["candidates"], key=lambda c: (_low(c, profile["stat"]), -c["id"]))["id"]
+    return steady_candidate(p)
+
+
 def free_heroes(s):
     occupied = busy(s)
     return [h for h in s["heroes"] if h["employed"] and h["id"] not in occupied]

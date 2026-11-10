@@ -122,7 +122,7 @@ function render() {
       .join(
         "",
       )}</nav><div id="view">${{ pipeline: pipeline, characters: characters, services: services, market: market, competition: competitionView, honors: honorsView, journal: journal }[activeTab]()}</div></section>
-    <aside><section class="side-note"><h2>给社长的便签</h2><p>${hint()}</p><h3>现金流 / 每周</h3><p>工资 ${money(s.payroll)}<br>工资、租金与在研支出 ${money(s.costs_per_week)}<br>自有产品利润 ${money(s.weekly_profit)}<br>授权销售分成 ${money(s.weekly_royalty)}</p><small>当前现金流不包含未来新阶段、服务交付和条件里程碑。临床估计基于已有证据，不能保证后续成功。</small></section><h2>研究社日志</h2><ol class="journal-list">${s.journal
+    <aside><section class="side-note"><h2>给社长的便签</h2><p>${hint()}</p>${(s.guide || []).length ? `<h3>接下来可以做</h3>${s.guide.map((g) => `<p><b>${esc(g.title)}</b> · ${esc(g.text)}${g.command && g.ok ? " " + button("就这么做", g.command, g.args, "primary") : g.ok ? "" : ` <small class="muted">${esc(g.error || "")}</small>`}</p>`).join("")}` : ""}<h3>现金流 / 每周</h3><p>工资 ${money(s.payroll)}<br>工资、租金与在研支出 ${money(s.costs_per_week)}<br>自有产品利润 ${money(s.weekly_profit)}<br>授权销售分成 ${money(s.weekly_royalty)}</p><small>当前现金流不包含未来新阶段、服务交付和条件里程碑。临床估计基于已有证据，不能保证后续成功。</small></section><h2>研究社日志</h2><ol class="journal-list">${s.journal
       .slice(-12)
       .reverse()
       .map(

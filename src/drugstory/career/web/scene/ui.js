@@ -141,6 +141,8 @@
     }
     lastPendingKey = waitingKey;
     forceNext = false;
+    // 第一次出现的成长机会：停一下，让玩家看到引导条上的按钮
+    if (want && recent.some((e) => e.type === "growth_ready")) pause();
     // 现金转负时自动暂停，给玩家三个月的应对时间
     if (s.cash < 0 && lastCash !== null && lastCash >= 0 && want) {
       pause();
@@ -212,6 +214,7 @@
     term_ended: ["任期结束", "big"],
     facility_upgraded: ["扩建落成", ""],
     phase_finished: ["阶段结果", ""],
+    growth_ready: ["可以做了", "big"],
   };
   function toasts(recent) {
     const box = q("#scene-toasts");
@@ -224,6 +227,7 @@
         text = `${e.data.name} · +${money(e.data.reward)}`;
       if (e.type === "character_promoted")
         text = `${e.data.name} 晋升${e.data.rank}`;
+      if (e.type === "growth_ready") text = e.data.title;
       if (e.type === "phase_finished")
         text = `${e.data.name} · ${e.data.stage}${e.data.passed ? "通过" : "未通过"}`;
       const el = document.createElement("div");
@@ -250,16 +254,32 @@
     if (resumable)
       return `<button data-scene-project="${resumable.id}" class="g-wait"><b>${esc(resumable.name)}</b><span>${resumable.quick.command === "launch" ? "可以上市了" : "人空出来了，可以开工"}</span></button>`;
     if (!s.projects.length)
-      return '<button data-np-open class="g-go"><b>第一步</b><span>点这里，开始第一个项目（推荐「稳压片」）</span></button>';
-    const idle = s.heroes.filter((h) => !h.busy);
+      return '<button data-np-open data-np-route="generic" class="g-go"><b>第一步</b><span>点这里，开始第一个项目（推荐「稳压片」）</span></button>';
+    // 成长建议：跟着章节走，按钮直接执行（晋阶、扩建、邀请……）
+    const tip = (s.guide || []).find((g) => g.ok || g.chapter);
+    if (tip && (tip.ok || !want)) return guideButton(tip, tip.chapter ? "g-chapter" : "g-tip");
     if (!want && !s.pending)
       return `<button data-speed="1" class="g-go"><b>▶ 开始</b><span>按 1× 让时间走起来；有决定会自动停</span></button>`;
-    if (idle.length && Object.values(s.assist.services).some((v) => v.hero))
-      return `<button data-tab="services" class="g-tip"><b>${idle.length} 位伙伴空闲</b><span>可以接技术服务赚周转金</span></button>`;
     const ch = s.chapters.current;
     if (ch)
       return `<button data-scene="chapters" class="g-chapter"><b>第 ${ch.index} 章 · ${esc(ch.name)}</b><span>目标：${esc(ch.goal)}${ch.reward ? ` · 奖励 ¥${ch.reward} 万` : ""}</span></button>`;
     return "";
+  }
+  // 一条成长建议变成一个按钮：有命令就直接执行，否则打开对应的地方
+  function guideButton(g, cls) {
+    const attrs =
+      g.command && g.ok
+        ? `data-command="${esc(g.command)}" data-args="${esc(JSON.stringify(g.args))}"`
+        : g.kind === "project"
+          ? `data-np-open data-np-route="${esc(g.route || "")}"`
+          : g.hero
+            ? `data-scene-hero="${esc(g.hero)}"`
+            : g.tab
+              ? `data-tab="${esc(g.tab)}"`
+              : g.command === "upgrade"
+                ? 'data-tab="characters"'
+                : "";
+    return `<button class="${cls}" ${attrs} title="${esc(g.ok ? "" : g.error || "")}"><b>${esc(g.title)}</b><span>${esc(g.text)}</span></button>`;
   }
   function roomSummary(id) {
     const team = state.heroes.filter(
@@ -526,10 +546,11 @@
     if (b.dataset.cast) cast(b.dataset.cast);
     if (b.dataset.npOpen !== undefined) {
       // 重新打开时重挑第一个可开始的品种：上次选中的那个多半已经在研或在售，开始按钮会是灰的。
+      // 没指定路线时，选第一条有可开始项目的路线（仿制 → 改良 → 创新）。
       P().np.pick = null;
+      P().np.route = b.dataset.npRoute || P().firstRoute();
       select({ type: "new" });
-    }
-    if (b.dataset.npRoute) {
+    } else if (b.dataset.npRoute) {
       P().np.route = b.dataset.npRoute;
       renderPanel(true);
     }
@@ -637,5 +658,5 @@
     } else return;
     q("#scene-goal").innerHTML = guide(state);
   });
-  window.DrugstorySceneUI = { render, pause };
+  window.DrugstorySceneUI = { render, pause, guideButton };
 })();

@@ -32,7 +32,7 @@ function options(argv) {
   await page.goto(`http://127.0.0.1:${o.port}/scene`);
   await page.waitForTimeout(1500);
   const seen = new Set();
-  const counts = { quick: 0, pick: 0, start: 0, guide: 0, next: 0, modal: 0 };
+  const counts = { quick: 0, choice: 0, pick: 0, start: 0, guide: 0, next: 0, modal: 0 };
   let shots = 0,
     week = 0,
     stuck = 0,
@@ -58,6 +58,7 @@ function options(argv) {
         modal: modal?.open ? text(modal).slice(0, 600) : "",
         card: text(card).slice(0, 400),
         quick: [...document.querySelectorAll("aside.side button.quick:not([disabled])")].filter(vis).length,
+        choice: [...document.querySelectorAll("aside.side button.choice:not([disabled])")].filter(vis).length,
         pick: [...document.querySelectorAll("aside.side button")].filter((b) => vis(b) && b.textContent.trim() === "选这个").length,
         empty: vis(document.querySelector("aside.side .empty button[data-np-open]")),
         guide: vis(document.querySelector("#scene-goal button[data-command]")) ? text(document.querySelector("#scene-goal")) : "",
@@ -83,6 +84,12 @@ function options(argv) {
       if (log("QUICK", st.card)) await shoot("quick");
       await page.locator("aside.side button.quick:not([disabled])").first().click();
       counts.quick++;
+    } else if (st.choice) {
+      // 临床期中：点界面倾向的那一边（primary），没有倾向就按既定方案继续
+      if (log("CHOICE", st.card)) await shoot("choice");
+      const lean = page.locator("aside.side button.choice.primary");
+      await ((await lean.count()) ? lean.first() : page.locator("aside.side button.choice").first()).click();
+      counts.choice++;
     } else if (st.pick) {
       if (log("PICK", st.card)) await shoot("pick");
       const primary = page.locator('aside.side button.primary:has-text("选这个")');

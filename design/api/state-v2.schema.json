@@ -417,6 +417,12 @@
     "chronicle_count": {
       "type": "integer",
       "minimum": 0
+    },
+    "guide": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/GuideItem"
+      }
     }
   },
   "required": [
@@ -542,6 +548,7 @@
             "chapter_completed",
             "bounty_offered",
             "bounty_completed",
+            "growth_ready",
             "cash_changed",
             "notice"
           ]
@@ -934,6 +941,34 @@
               "type": "null"
             }
           ]
+        },
+        "autopilot": {
+          "enum": [
+            "",
+            "standard",
+            "rush",
+            "craft"
+          ],
+          "description": "交给团队自动推进的方式；空表示自己做决定。"
+        },
+        "pace": {
+          "enum": [
+            "standard",
+            "rush",
+            "craft"
+          ],
+          "description": "开工时定下的方案：标准、加急或精工。"
+        },
+        "waiting": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "交给团队的项目在等什么（人或现金）。"
         }
       },
       "required": [
@@ -1692,6 +1727,98 @@
         "partial",
         "state",
         "people"
+      ],
+      "additionalProperties": false
+    },
+    "GuideItem": {
+      "type": "object",
+      "description": "成长建议：跟着章节走的下一步（只读）。",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "chapter": {
+          "type": "boolean"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "args": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hero": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tab": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "key",
+        "kind",
+        "title",
+        "text",
+        "chapter",
+        "command",
+        "args",
+        "route",
+        "hero",
+        "tab",
+        "ok",
+        "error"
       ],
       "additionalProperties": false
     }

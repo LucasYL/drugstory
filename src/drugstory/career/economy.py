@@ -204,7 +204,7 @@ def base_sales(s, d):
         curve = min(1, (age + 1) / ramp) * patents.erosion(s, d)
     else:
         curve = min(1, (age + 1) / ramp) * max(0.2, 1 - max(0, age - life * 0.65) / (life * 0.5))
-    competitors = competition.pressure(s, d["market"])
+    competitors = competition.pressure(s, d["market"], since=d["launched"])
     siblings = sum(
         1
         for x in s["products"]
