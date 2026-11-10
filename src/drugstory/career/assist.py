@@ -49,6 +49,51 @@ def autopilot_candidate(p):
     return steady_candidate(p)
 
 
+REWARD_NOTES = {
+    "supply": "双来源供货，不再有供货折减",
+    "quality": "制造毛利 +3%",
+    "stability": "能多卖一年",
+    "adherence": "导入更快、峰值 +8%",
+    "tolerability": "峰值 +10%",
+}
+
+
+def autopilot_estimate(s, key, mode):
+    """交给团队时的大致周数和费用：筛选、四个阶段、上市准备。按推荐团队的成员加成估算，标「约」。"""
+    import math
+
+    from . import product_design
+    from .content import CATALOG
+
+    profile = product_design.profile(key)
+    # 按现有团队估算，忙着的人也算（等他们空出来就由他们做）
+    team = []
+    for profession in ("chem", "proc"):
+        options = [h for h in s["heroes"] if h["employed"] and h["profession"] == profession]
+        if options:
+            team.append(max(options, key=ability))
+    members = [min(h["members"], 2 + h["rank"]) for h in team]
+    speed = 1 + min(0.45, (sum(members) / len(members) if members else 0) * 0.10)
+    clinical = any(h["employed"] and h["profession"] == "clinical" for h in s["heroes"])
+    weeks, cost = 8, 70.0
+    for stage in PATHS[CATALOG[key]["kind"]]:
+        spec = STAGES[stage]
+        cro = stage in CLINICAL and not clinical
+        rush = mode == "rush" and stage in sc.RUSH_STAGES
+        w = math.ceil(spec["weeks"] * (sc.RUSH["time"] if rush else 1) / (1 if cro else speed))
+        c = spec["cost"] * (1.3 if cro else 1) * (sc.RUSH["cost"] if rush else 1)
+        if mode == "craft" and profile and profile["stage"] == stage:
+            w, c = w + sc.ENHANCED["weeks"], c * sc.ENHANCED["cost"]
+        weeks, cost = weeks + w, cost + c
+    cost += 80
+    note = {
+        "standard": "普通门槛，按部就班",
+        "rush": "早几周上市，对手晚到时份额更稳；读数粗一些，失败机会略高",
+        "craft": f"{profile['title']}门槛更高，过了就{REWARD_NOTES.get(profile['reward'], '')}" if profile else "",
+    }[mode]
+    return {"weeks": weeks, "cost": round(cost), "note": note}
+
+
 def free_heroes(s):
     occupied = busy(s)
     return [h for h in s["heroes"] if h["employed"] and h["id"] not in occupied]

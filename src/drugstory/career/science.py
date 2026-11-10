@@ -11,8 +11,10 @@ from .model import ability, check, hero, power, rand
 
 FINAL = ("failed", "terminated")
 # 仿制药「加急」：开发与等效性阶段赶工期，费用更高、读数更粗
-RUSH = {"time": 0.75, "cost": 1.35, "noise": 1.1}
+RUSH = {"time": 0.7, "cost": 1.2, "noise": 1.1}
 RUSH_STAGES = ("formulation", "quality", "be")
+# 强化验证（精工）：关键阶段门槛更高、费用和工期增加，读数更准，通过后拿到产品奖励
+ENHANCED = {"cost": 1.25, "weeks": 2}
 
 NORMAL = NormalDist()
 STAT_ROLE = {"effect": "bio", "safety": "tox", "exposure": "chem", "quality": "proc"}
@@ -215,8 +217,8 @@ def plan_phase(s, p, ids, plan="standard", mode="internal", key=None, partner=Fa
     profile = product_design.profile(p["catalog"])
     enhanced = bool(profile and profile["stage"] == key and p.get("design") == "validated")
     if enhanced:
-        cost *= 1.25
-        weeks += 2
+        cost *= ENHANCED["cost"]
+        weeks += ENHANCED["weeks"]
     # Each endpoint benefits from its own specialist. Clinical operations and
     # scientific interpretation complement each other; unrelated stars cannot
     # replace a missing specialty merely by having the highest number.

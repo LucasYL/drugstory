@@ -302,6 +302,99 @@
                 "type": "null"
               }
             ]
+          },
+          "autopilot": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "standard": {
+                    "type": "object",
+                    "properties": {
+                      "weeks": {
+                        "type": "integer"
+                      },
+                      "cost": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "weeks",
+                      "cost",
+                      "note"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "rush": {
+                    "type": "object",
+                    "properties": {
+                      "weeks": {
+                        "type": "integer"
+                      },
+                      "cost": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "weeks",
+                      "cost",
+                      "note"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "craft": {
+                    "type": "object",
+                    "properties": {
+                      "weeks": {
+                        "type": "integer"
+                      },
+                      "cost": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "weeks",
+                      "cost",
+                      "note"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "standard",
+                  "rush",
+                  "craft"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "交给团队时三种方案的大致周数与费用（只给可开始的仿制药）。"
+          },
+          "outlook": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/$defs/JsonValue"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "选品卡：每周利润区间、能卖几年、对手在售与在研（公开数据）。"
           }
         },
         "required": [

@@ -15,6 +15,8 @@ CATALOG_FIELDS = (
     "occupied",
     "discovery",
     "gates",
+    "outlook",
+    "autopilot",
 )
 
 

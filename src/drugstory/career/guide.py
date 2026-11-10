@@ -33,11 +33,11 @@ def burn(s):
     return e.costs_per_week(s) - profit - royalty
 
 
-def sustainable(s, cost, weekly=0.0):
-    """花掉 cost、每周多出 weekly 的开销以后，现金还能不能撑过 RUNWAY 周。"""
+def sustainable(s, cost, weekly=0.0, runway=RUNWAY):
+    """花掉 cost、每周多出 weekly 的开销以后，现金还能不能撑过 runway 周。"""
     after = _cash(s) - cost
     rate = burn(s) + weekly
-    return after >= RESERVE and (rate <= 0 or after / rate >= RUNWAY)
+    return after >= RESERVE and (rate <= 0 or after / rate >= runway)
 
 
 def _item(key, kind, title, text, *, chapter=False, command=None, args=None, route=None, hero=None, tab=None):
@@ -156,11 +156,15 @@ def project_items(s, chapter=False, reason="", only=None):
     return [item]
 
 
-def upgrade_items(s, chapter=False, reason=""):
+def upgrade_items(s, chapter=False, reason="", optional=False):
+    """optional：只是章节的星（锦上添花），要求撑两年而不是一年。"""
     if s["facility"] >= len(FACILITIES) - 1:
         return []
     nxt = FACILITIES[s["facility"] + 1]
-    if not sustainable(s, nxt["cost"], nxt["rent"] - FACILITIES[s["facility"]]["rent"]):
+    runway = RUNWAY * 2 if optional else RUNWAY
+    if not sustainable(s, nxt["cost"], nxt["rent"] - FACILITIES[s["facility"]]["rent"], runway):
+        if optional:
+            return []
         if not chapter:
             return []
         item = _item(
@@ -337,7 +341,7 @@ def chapter_items(s):
         ):
             out += project_items(s, True, tag + "两款药上市")
         if s["facility"] < 1:
-            out += upgrade_items(s, True, "第 2 章的星：搬进联合研发所")
+            out += upgrade_items(s, True, "第 2 章的星：搬进联合研发所", optional=True)
         if not any(h["mentored"] for h in s["heroes"]):
             out += mentor_items(s, True, "第 2 章的星：完成一次带教")
     elif name == "第一款新药":

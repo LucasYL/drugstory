@@ -183,6 +183,50 @@ def make_product(s, p, partner=False, name=None):
     return product
 
 
+# 选品时能比较的公开先验：同类药质量的均值与标准差（来自候选生成的均值），换算成毛利区间
+QUALITY_PRIOR = {"generic": (77, 10), "improved": (74, 11)}
+BASE_MARGIN = {"generic": 0.46, "improved": 0.56, "innovative": 0.66}
+
+
+def market_outlook(s, key):
+    """选品卡上能比较的东西：每周利润区间、能卖几年、对手在售与在研。只用公开数据，不读候选。"""
+    spec = CATALOG[key]
+    kind = spec["kind"]
+    if kind not in QUALITY_PRIOR:
+        return None
+    market = spec["market"]
+    pressure = competition.pressure(s, market)
+    own = sum(
+        1
+        for d in s["products"]
+        if d["active"] and d["market"] == market and d["production"] != "suspended" and d["catalog"] != key
+    )
+    share = 1 / (1 + 0.55 * pressure + 0.4 * own)
+    mean, sd = QUALITY_PRIOR[kind]
+    benefit = 1 if kind == "generic" else max(0.65, min(1.45, 0.85 + (70 - 65) / 70))
+    commercial = COMMERCIAL[kind]
+
+    def profit(quality):
+        margin = min(0.82, BASE_MARGIN[kind] + (quality - 60) / 300)
+        return spec["peak"] * benefit * share * (margin - commercial)
+
+    life = {"generic": 576, "improved": 432}[kind]
+    return {
+        "weekly_profit": [round(profit(mean - sd), 1), round(profit(mean + sd), 1)],
+        "years": round(life / 48),
+        "share_loss": round(1 - 1 / (1 + 0.55 * pressure), 2),
+        "rivals_selling": sum(
+            1 for r in s["rivals"] for d in r.get("portfolio", []) if d["active"] and d["market"] == market
+        ),
+        "rivals_coming": [
+            {"name": r["name"], "eta_low": r["eta_low"], "eta_high": r["eta_high"]}
+            for r in s["rivals"]
+            if r["status"] == "developing" and r["pipeline_market"] == market
+        ],
+        "own_selling": own,
+    }
+
+
 def production_lines(s):
     return sum(
         {"generic": 1, "improved": 1, "innovative": 2}[d["kind"]]

@@ -329,6 +329,24 @@ export type GameState = {
   "mechanism"?: number;
 } | null;
   "gates": (Gate)[] | null;
+  "autopilot"?: {
+  "standard": {
+  "weeks": number;
+  "cost": number;
+  "note": string;
+};
+  "rush": {
+  "weeks": number;
+  "cost": number;
+  "note": string;
+};
+  "craft": {
+  "weeks": number;
+  "cost": number;
+  "note": string;
+};
+} | null;
+  "outlook"?: { [key: string]: JsonValue } | null;
 })[];
   "revision": number;
   "token": string;

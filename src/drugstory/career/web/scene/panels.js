@@ -9,8 +9,10 @@
   const args = (value) => esc(JSON.stringify(value));
   const cmd = (text, name, a, cls = "", disabled = false, title = "") =>
     `<button class="${cls}" data-command="${name}" data-args="${args(a)}" ${disabled ? "disabled" : ""} ${title ? `title="${esc(title)}"` : ""}>${text}</button>`;
+  // 等玩家决定的项目；交给团队自动推进的不算
   const waiting = () =>
-    state.projects.filter((p) => p.active && DECIDE.includes(p.status));
+    state.projects.filter((p) => p.active && DECIDE.includes(p.status) && !p.autopilot);
+  const PACE = { standard: "标准", rush: "加急", craft: "精工" };
   const tone = (p) =>
     ({
       selecting: "wait",
@@ -265,7 +267,9 @@
   }
   function runRow(p) {
     const total = p.scene.total || 1;
-    return `<button class="run-row" data-scene-project="${p.id}"><span class="dot ${p.scene.activity}"></span><span class="grow"><b>${esc(p.name)}</b><small>${esc(p.running_experiment ? "专项研究" : p.status === "screening" ? "候选筛选" : p.phase)}${p.scene.executor === "cro" ? " · CRO" : ""}</small><span class="progress"><i style="width:${Math.round((p.scene.elapsed / total) * 100)}%"></i></span></span><span class="left">${p.left} 周</span></button>`;
+    const auto = p.autopilot ? `团队自主推进 · ${PACE[p.pace] || ""} · ` : "";
+    const what = p.waiting || (p.running_experiment ? "专项研究" : p.status === "screening" ? "候选筛选" : p.phase);
+    return `<button class="run-row ${p.waiting ? "waiting" : ""}" data-scene-project="${p.id}"><span class="dot ${p.scene.activity}"></span><span class="grow"><b>${esc(p.name)}</b><small>${esc(auto + what)}${p.scene.executor === "cro" ? " · CRO" : ""}</small><span class="progress"><i style="width:${Math.round((p.scene.elapsed / total) * 100)}%"></i></span></span><span class="left">${p.left} 周</span></button>`;
   }
   function pastRow(p) {
     return `<button class="past-row" data-scene-project="${p.id}"><b>${esc(p.name)}</b>${statusPill(p)}</button>`;
@@ -325,7 +329,7 @@
       p.status === "licensed"
         ? '<p class="hint-line">已授权给合作方，后续里程碑和分成在「产品」里看。</p>'
         : ""
-    }${evidenceBlock}${p.readings.length || p.work.length ? `<details class="block"><summary>分批数据与开发量</summary>${workList(p.work)}${p.readings
+    }${autopilotBlock(p)}${evidenceBlock}${p.readings.length || p.work.length ? `<details class="block"><summary>分批数据与开发量</summary>${workList(p.work)}${p.readings
       .slice(-8)
       .reverse()
       .map(
@@ -337,6 +341,38 @@
             .join(" / ")}</p>`,
       )
       .join("")}</details>` : ""}${productNote(p)}${p.active && !DECIDE.includes(p.status) ? "" : ""}${p.active ? `<div class="act-row end">${modalButton("终止研究", "terminate", p.id, "ghost small danger")}</div>` : ""}</article>`;
+  }
+
+  // 交给团队 / 接手
+  function autopilotBlock(p) {
+    if (!p.active || p.kind !== "generic") return "";
+    if (p.autopilot)
+      return `<div class="autopilot-box"><b>团队自主推进 · ${esc(PACE[p.pace] || "")}</b><small>${esc(p.waiting || "会自动选候选、开工、上市；遇到补正会停下来交给你。")}</small>${cmd("我来接手", "set_autopilot", { project: p.id, mode: "" }, "small")}</div>`;
+    const ready = state.products.some((d) => d.kind === "generic" && !d.partner);
+    if (!ready || !["ready", "result", "selecting", "screening", "running"].includes(p.status)) return "";
+    return `<div class="act-row">${cmd("交给团队做完", "set_autopilot", { project: p.id, mode: p.pace || "standard" }, "small", false, "之后的选候选、开工、上市都由团队按推荐方案做")}</div>`;
+  }
+  function outlookLine(c) {
+    const o = c.outlook;
+    if (!o) return "";
+    const coming = o.rivals_coming.map((r) => `${esc(r.name)}约第 ${r.eta_low}–${r.eta_high} 周上市`).join("、");
+    return `<small class="outlook">每周利润约 ¥${Math.round(o.weekly_profit[0])}–${Math.round(o.weekly_profit[1])} 万 · 能卖约 ${o.years} 年</small>${o.rivals_selling || coming ? `<small class="outlook rival">${o.rivals_selling ? `对手在售 ${o.rivals_selling} 家` : ""}${o.rivals_selling && coming ? " · " : ""}${coming}</small>` : ""}`;
+  }
+  // 仿制药：选怎么做（标准 / 加急 / 精工），主按钮交给团队
+  const handover = { mode: "standard" };
+  function handoverBlock(c) {
+    if (c.kind !== "generic") return "";
+    if (!c.autopilot)
+      return c.unlocked && !c.occupied && !state.products.some((d) => d.kind === "generic" && !d.partner)
+        ? '<p class="hint-line">第一款仿制药亲手做一遍，之后可以交给团队做完。</p>'
+        : "";
+    const plan = c.autopilot[handover.mode];
+    return `<fieldset class="seg pace" aria-label="怎么做">${Object.entries(PACE)
+      .map(
+        ([k, n]) =>
+          `<label class="${handover.mode === k ? "on" : ""}"><input type="radio" name="autopilot" value="${k}" ${handover.mode === k ? "checked" : ""} data-pace="${k}"><b>${n}</b><small>约 ${c.autopilot[k].weeks} 周 · ${money(c.autopilot[k].cost)}</small></label>`,
+      )
+      .join("")}</fieldset><p class="hint-line">${esc(plan.note)}</p>`;
   }
 
   /* ---------- 新项目：选路线 → 点一张卡 → 开始 ---------- */
@@ -413,7 +449,7 @@
     }<div class="cat-grid">${items
       .map((x) => {
         const [label, cls] = catalogStatus(x);
-        return `<button class="cat ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(np.route === "innovative" ? x.modality : x.name)}</b><small>${esc(x.indication)}</small><span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
+        return `<button class="cat ${x.key === np.pick ? "on" : ""}" data-np-pick="${x.key}"><b>${esc(np.route === "innovative" ? x.modality : x.name)}</b><small>${esc(x.indication)}</small>${x.occupied ? "" : outlookLine(x)}<span class="pill ${cls}">${label}</span>${stars(x.discovery?.tier)}</button>`;
       })
       .join("")}</div>${
       c
@@ -433,17 +469,24 @@
             )
             .join(
               "",
-            )}</fieldset></details><button class="quick" type="submit" ${canStart ? "" : "disabled"}><b>开始筛选</b><small>8 周 · ¥70 万 · 先找三个候选</small></button></form>`
+            )}</fieldset></details>${handoverBlock(c)}${
+              c.autopilot
+                ? `<button class="quick" type="submit" ${canStart ? "" : "disabled"}><b>交给团队 · ${PACE[handover.mode]}</b><small>约 ${c.autopilot[handover.mode].weeks} 周 · ${money(c.autopilot[handover.mode].cost)} · 自动做到上市</small></button><button class="ghost small" type="submit" data-manual ${canStart ? "" : "disabled"}>我来一步步做</button>`
+                : `<button class="quick" type="submit" ${canStart ? "" : "disabled"}><b>开始筛选</b><small>8 周 · ¥70 万 · 先找三个候选</small></button>`
+            }</form>`
         : ""
     }`;
   }
-  function newProjectArgs(form) {
+  function newProjectArgs(form, submitter) {
     const data = new FormData(form);
+    const c = state.catalog.find((x) => x.key === np.pick);
+    const auto = c?.autopilot && !submitter?.hasAttribute("data-manual") ? data.get("autopilot") || "standard" : "";
     return {
       catalog: np.pick,
       heroes: data.getAll("heroes"),
       design: data.get("design") || "standard",
       work_focus: data.get("work_focus") || "balanced",
+      ...(auto ? { autopilot: auto } : {}),
     };
   }
 
@@ -566,6 +609,7 @@
     hero,
     room,
     np,
+    handover,
     waiting,
     firstRoute,
   };

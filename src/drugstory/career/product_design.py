@@ -24,8 +24,9 @@ def profile(catalog):
 
 
 def adjust_limits(p, key, limits):
+    """选了强化验证（精工）才面对更高的门槛：风险换奖励。标准开发按普通门槛。"""
     spec = profile(p["catalog"])
-    if spec and spec["stage"] == key:
+    if spec and spec["stage"] == key and p.get("design") == "validated":
         limits[spec["stat"]] = max(limits.get(spec["stat"], 0), spec["limit"])
     return limits
 

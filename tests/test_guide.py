@@ -49,7 +49,7 @@ def test_doable_suggestions_really_succeed(seed, weeks):
             continue
         if item["ok"]:
             g.execute(s, item["command"], item["args"])
-        else:
+        elif not item["error"].startswith("先攒"):  # 「先攒一攒」是建议等一等，不是引擎拒绝
             with pytest.raises(ValueError):
                 g.execute(s, item["command"], item["args"])
 

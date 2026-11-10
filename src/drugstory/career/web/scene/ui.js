@@ -385,13 +385,8 @@
     renderer.setInsets(54, q(".dock").offsetHeight + 16);
     for (const p of active) {
       const el = projects.querySelector(`[data-scene-project="${p.id}"]`);
-      const deciding = [
-        "selecting",
-        "ready",
-        "result",
-        "problem",
-        "checkpoint",
-      ].includes(p.status);
+      const deciding =
+        !p.autopilot && ["selecting", "ready", "result", "problem", "checkpoint"].includes(p.status);
       el.querySelector("b").textContent = p.name;
       el.querySelector("small").textContent = deciding
         ? p.deferred
@@ -399,7 +394,9 @@
             ? "可以开工"
             : "已暂缓"
           : "等你决定"
-        : `${p.status === "screening" ? "筛选" : p.phase} · 剩 ${p.left} 周`;
+        : p.autopilot && p.waiting
+          ? p.waiting
+          : `${p.autopilot ? "自主 · " : ""}${p.status === "screening" ? "筛选" : p.phase} · 剩 ${p.left} 周`;
       el.classList.toggle("deciding", deciding && !p.deferred);
       el.querySelector(".progress i").style.width =
         `${Math.round((p.scene.elapsed / (p.scene.total || 1)) * 100)}%`;
@@ -613,6 +610,10 @@
     }
   });
   document.addEventListener("change", (e) => {
+    if (e.target.matches("[data-pace]")) {
+      P().handover.mode = e.target.value;
+      renderPanel(true);
+    }
     if (e.target.matches("[data-np-target]")) {
       P().np.target = e.target.value;
       P().np.pick = null;
@@ -627,7 +628,7 @@
     forceNext = true;
     route = { type: "tab" };
     activeTab = "pipeline";
-    send("start_project", P().newProjectArgs(form));
+    send("start_project", P().newProjectArgs(form, e.submitter));
   }, true);
   q("#app").addEventListener("pointerleave", () => {
     if (panelDeferred) renderPanel();

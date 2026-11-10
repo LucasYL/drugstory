@@ -44,7 +44,7 @@ from .content import (
     STATS,
     TERMS,
 )
-from .model import ACTIVE, DECISIONS, ability, blocking, busy, check, committed, date, make_hero, payroll
+from .model import ACTIVE, ability, blocking, busy, check, committed, date, make_hero, payroll
 from .units import pts, pts_map
 
 recommended_team = assist.recommended_team
@@ -356,9 +356,17 @@ def snapshot(s):
             "unlocked": all(ok for _, ok in engine.catalog_requirements(s, k)),
             "occupied": any(p["catalog"] == k and p["status"] in ACTIVE for p in s["projects"])
             or e.catalog_in_market(s, k),
+            "outlook": e.market_outlook(s, k) if c["kind"] != "innovative" else None,
         }
         for k, c in CATALOG.items()
     ]
+    handover = engine.autopilot_ready(s)
+    for row in catalogs:
+        row["autopilot"] = (
+            {mode: assist.autopilot_estimate(s, row["key"], mode) for mode in engine.AUTOPILOT}
+            if handover and row["kind"] == "generic" and row["unlocked"] and not row["occupied"]
+            else None
+        )
     weekly_profit = sum(e.expected_sales(s, d)[1] for d in s["products"] if not d["partner"])
     weekly_royalty = sum(d["weekly_royalty"] for d in s["deals"])
     burn = e.costs_per_week(s) - weekly_profit - weekly_royalty

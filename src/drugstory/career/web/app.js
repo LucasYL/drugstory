@@ -285,7 +285,7 @@ function showModal(type, id = "") {
         )
         .join(
           "",
-        )}</select></label><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。组合适配程度在筛选后记录进手记。</p>${teamPicker(
+        )}</select></label><label>产品验证路径<select name="design"><option value="standard">标准开发</option><option value="validated">强化产品特性验证</option></select></label><label>交给团队（第二款仿制药起）<select name="autopilot"><option value="">我来一步步做</option><option value="standard">交给团队 · 标准</option><option value="rush">交给团队 · 加急</option><option value="craft">交给团队 · 精工</option></select></label><div id="autopilot-note" class="hint"></div><p>先用 8 周筛选候选与整理资料，费用 ¥70 万。组合适配程度在筛选后记录进手记。</p>${teamPicker(
         state.heroes
           .filter((h) => !h.busy && ["proc", "chem"].includes(h.profession))
           .slice(0, 2)
@@ -449,6 +449,7 @@ function formArgs(form) {
         heroes,
         design: data.get("design") || "standard",
         work_focus: data.get("work_focus") || "balanced",
+        ...(data.get("autopilot") ? { autopilot: data.get("autopilot") } : {}),
       },
     ],
     phase: [
@@ -556,6 +557,15 @@ function updateNotes() {
       const design = cf.elements.design;
       design.disabled = !c.product_profile;
       if (!c.product_profile) design.value = "standard";
+      const auto = cf.elements.autopilot;
+      auto.disabled = !c.autopilot;
+      if (!c.autopilot) auto.value = "";
+      const plan = c.autopilot && auto.value ? c.autopilot[auto.value] : null;
+      $("#autopilot-note").textContent = plan
+        ? `约 ${plan.weeks} 周 · ¥${num(plan.cost)} 万 · ${plan.note}。会自动选候选、开工、上市，遇到补正会停下来交给你。`
+        : c.kind === "generic" && !c.autopilot && c.unlocked && !c.occupied
+          ? "第一款仿制药亲手做一遍，之后可以交给团队做完。"
+          : "";
       $("#catalog-note").innerHTML =
         `<p>${checks(c.requirements)}</p><p>${c.discovery?.reason ? "组合发现：" + esc(c.discovery.reason) + "（档位 " + c.discovery.tier + "）" : c.kind === "innovative" ? "组合尚未研究，筛选后留下适配记录。" : ""}${c.discovery?.mechanism != null ? ` 叶清和：这条通路的机制偏移 ${c.discovery.mechanism}。` : ""}</p>${c.gates ? `<div class="hint"><b>最后的难题 · 四道关</b>${c.gates.map((g) => `<p>${{ full: "✓", partial: "◐", none: "○" }[g.state]} <b>${esc(g.name)}</b>：${esc(g.problem)}。缺了 ${esc(g.missing)}。完全解决：${esc(g.full)}；部分：${esc(g.partial)}${g.people.length ? `（研究所里：${g.people.map(esc).join("、")}）` : ""}</p>`).join("")}</div>` : ""}<p><b>${esc(c.indication)} · ${esc(c.target)} · ${esc(c.modality)}</b></p><p>${esc(c.description)}</p><p>当前同领域竞争压力 ${c.competition.toFixed(1)} / 3 · 公布在研的对手：${c.announced_rivals.map(esc).join("、") || "暂无"}。在研管线可能失败，不能当作已上市。</p><small>${c.kind === "generic" ? "虚构参比产品，当前可进入市场；先建立制剂与质量证据。" : c.kind === "improved" ? "具体改动需要桥接和价值确认。" : "临床会新增人体证据，早期估计不能保证获批。"}</small>${productNote(c)}`;
     }

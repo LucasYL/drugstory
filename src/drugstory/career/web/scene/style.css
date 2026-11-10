@@ -2088,3 +2088,22 @@ canvas.mini {
   background: #f4f1ea; font-size: 13px;
 }
 .np-empty small { color: var(--muted, #6b6b63); }
+
+/* v0.12 · 交给团队 */
+.cat .outlook { display: block; font-size: 11px; color: var(--muted, #6b6b63); margin-top: 2px; }
+.cat .outlook.rival { color: #a3591b; }
+.seg.pace { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; border: 0; padding: 0; margin: 8px 0 4px; }
+.seg.pace label {
+  display: grid; gap: 2px; padding: 8px; border-radius: 10px; border: 1px solid var(--line, #e3ded2);
+  cursor: pointer; text-align: center; background: var(--card, #fff);
+}
+.seg.pace label.on { border-color: var(--accent, #1d9a85); background: #e9f6f2; }
+.seg.pace input { position: absolute; opacity: 0; pointer-events: none; }
+.seg.pace small { font-size: 11px; color: var(--muted, #6b6b63); }
+.autopilot-box {
+  display: grid; gap: 4px; padding: 10px 12px; margin: 8px 0; border-radius: 10px; background: #eef6f4;
+}
+.autopilot-box small { color: var(--muted, #6b6b63); }
+.autopilot-box button { justify-self: start; }
+.run-row.waiting small { color: #a3591b; }
+form.np button[data-manual] { margin-top: 6px; width: 100%; }
