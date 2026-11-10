@@ -225,15 +225,34 @@ const categoryNames = {
   equipment_upkeep: "设备运营",
   equipment: "设备升级",
 };
+// 产品：在售的按当前利润排在前面，退市的收起来；每款画一条销售曲线（每月一个点）
+function sparkline(points) {
+  if (!points || points.length < 2) return "";
+  const max = Math.max(...points, 1),
+    w = 120,
+    h = 28;
+  const xy = points.map(
+    (v, i) => `${((i / (points.length - 1)) * w).toFixed(1)},${(h - (v / max) * (h - 2) - 1).toFixed(1)}`,
+  );
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-label="销售曲线"><polyline points="${xy.join(" ")}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
+}
+function productCard(d) {
+  return `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周（已扣生产、市场与医学事务费用）</p>${d.exclusive_until ? `<p>${state.week >= d.exclusive_until ? "专利已到期，仿制药进场后销售会降到约三成" : `专利独占到${esc(d.patent_expires_label)}，之后仿制药进场`}</p>` : ""}${sparkline(d.history)}<p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p></article>`;
+}
+function productList() {
+  const own = state.products.filter((d) => !d.partner);
+  const live = own.filter((d) => d.active).sort((a, b) => b.last_profit - a.last_profit);
+  const gone = own.filter((d) => !d.active);
+  return (
+    live.map(productCard).join("") +
+    (gone.length
+      ? `<details class="gone"><summary>已退出市场 · ${gone.length}</summary>${gone.map(productCard).join("")}</details>`
+      : "")
+  );
+}
 function market() {
   return `<h2>产品与合作</h2><p class="muted">成功带来长期回报。合同总额与未来销售都不等于今天的现金。</p><div class="business-totals"><div>首付款<strong>${money(state.income.upfront)}</strong></div><div>里程碑已到账<strong>${money(state.income.milestones)}</strong></div><div>累计销售分成<strong>${money(state.income.royalties)}</strong></div></div><h3>自主产品</h3>${
-    state.products
-      .filter((d) => !d.partner)
-      .map(
-        (d) =>
-          `<article class="project-card"><div class="card-title"><h3>${esc(d.name)}</h3><span class="badge">${d.active ? "销售中" : "已退出市场"}</span></div>${productSalesNote(d)}<p>当前销售 ${money(d.last_revenue)} / 周 · 利润 ${money(d.last_profit)} / 周（已扣生产、市场与医学事务费用）</p>${d.exclusive_until ? `<p>${state.week >= d.exclusive_until ? "专利已到期，仿制药进场后销售会降到约三成" : `专利独占到${esc(d.patent_expires_label)}，之后仿制药进场`}</p>` : ""}<p>累计销售 ${money(d.total_revenue)} · 累计产品利润 ${money(d.total_profit)}</p></article>`,
-      )
-      .join("") ||
+    productList() ||
     empty("第一款产品上市后，会在这里看到导入、现金回流与生命周期。")
   }<h3>核心专利</h3>${state.patents.length ? `<table><thead><tr><th>项目</th><th>状态</th><th>独占到</th></tr></thead><tbody>${state.patents.map((t) => `<tr><td>${esc(t.name)}</td><td>${esc(t.status)}</td><td>${esc(t.expires_label)}</td></tr>`).join("")}</tbody></table><p class="muted">创新药通过临床前、改良药通过改良设计时提交专利，一年后授权。专利到期后仿制药进场，销售会在半年内降到约三成（改良药约四成）。</p>` : empty("创新药通过临床前、改良药通过改良设计后，会在这里看到专利和独占期。")}<h3>授权与共同开发</h3>${state.deals.map((d) => `<article class="project-card"><div class="card-title"><h3>${esc(state.projects.find((p) => p.id === d.project)?.name)}</h3><span class="badge">${{ developing: "合作方开发中", approved: "已获批，按销售分成", failed: "开发未成功" }[d.status]}</span></div><p>${esc(d.partner)} · ${esc(d.name)} · 销售额分成 ${num(d.royalty * 100)}%</p><p>首付款 ${money(d.upfront)} 已到账 · 已收里程碑 ${money(d.received_milestones)}<br>累计分成 ${money(d.royalties)} · 当前 ${money(d.weekly_royalty)} / 周</p><p>我方后续费用比例 ${num(d.cost_share * 100)}% · 剩余承诺 ${money(d.remaining_cost * d.cost_share)} · 已付 ${money(d.owner_spent)}</p>${d.status === "developing" ? `<p>当前阶段还需 ${d.left} 周，获批前仍可能失败。</p>` : ""}</article>`).join("") || empty("创新项目通过临床前或 II 期后，可在阶段结果中比较合作报价。")}<p>产业动态会公布对手的方向、阶段、延迟与失败。</p><button data-tab="competition">查看产业动态 →</button>`;
 }
@@ -413,7 +432,7 @@ function showModal(type, id = "") {
         )
         .join(
           "",
-        )}</select></label><label>任期<select name="term"><option value="20">二十年 · 标准局</option><option value="10">十年 · 短局</option></select></label><p>模式和任期开局后固定。任期结束时按五项打分评级，之后可以继续经营。当前进度先备份到本地。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
+        )}</select></label><label>任期<select name="term"><option value="10">十年 · 推荐第一次玩</option><option value="20">二十年 · 熟悉以后</option></select></label><p>模式和任期开局后固定。任期结束时按五项打分评级，之后可以继续经营。当前进度先备份到本地。</p><label>随机种子<input name="seed" type="number" min="0" max="999999999" value="42" required></label>`,
     );
   if (type === "help")
     html = `<h2 id="modal-title">经营一间会成长的研究社</h2><button class="modal-close" data-close aria-label="关闭弹窗">×</button><ol><li>从普通仿制或技术服务建立现金流，也可以承担更高风险直接研究创新药。</li><li>候选资料是估计范围。复核可能揭露坏消息，扩大试验也不能保证成功。</li><li>负责人按专业配合。开发阶段由专业与成员共同改善候选；临床阶段只收集证据。人物晋阶还要真实项目履历。</li><li>缺钱或等人时，点击项目的「暂缓决策」，再推进其他业务。未开工阶段不收费。</li><li>创新项目在临床前或 II 期取得支持证据后，可以比较授权、分成和共同开发。</li><li>先看已承诺支出，再看账面现金。新阶段、工资和上市准备都要预留。</li><li>进入研究社的伙伴图鉴，可以提前看到精英、大师与传奇的解锁条件。</li></ol><p>时间、指标和经济数值是游戏规则。场景与文字入口共用同一存档与真实引擎。场景遇到待决策、年度大会或后台切换会暂停；每次操作保存成功后才更新。</p>`;
@@ -490,7 +509,7 @@ function formArgs(form) {
         scenario: data.get("scenario"),
         seed: Number(data.get("seed")),
         difficulty: data.get("difficulty"),
-        term: Number(data.get("term") || 20),
+        term: Number(data.get("term") || 10),
       },
     ],
   };

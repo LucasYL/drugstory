@@ -1668,3 +1668,7 @@ summary {
   text-align: left;
   margin: 20px 0;
 }
+
+/* v0.12 · 产品销售曲线、退市产品收起 */
+svg.spark { display: block; color: #1d9a85; margin: 4px 0; }
+details.gone > summary { cursor: pointer; color: #6b6b63; margin: 8px 0; }

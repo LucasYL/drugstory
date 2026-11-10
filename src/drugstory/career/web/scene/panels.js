@@ -302,7 +302,9 @@
       running = state.projects.filter((p) => p.active && !w.includes(p)),
       past = state.projects.filter((p) => !p.active);
     const deals = state.deals.filter((d) => d.status === "developing");
-    return `${w.map(decisionCard).join("")}<div class="sec-head"><h3>进行中</h3><button class="primary small" data-np-open>＋ 新项目</button></div>${
+    // 手机上第一张决定卡放在底部面板里，这里不再重复一次
+    const shown = w.filter((p) => p.id !== sheet.id);
+    return `${shown.map(decisionCard).join("")}<div class="sec-head"><h3>进行中</h3><button class="primary small" data-np-open>＋ 新项目</button></div>${
       running.map(runRow).join("") ||
       (w.length
         ? ""
@@ -317,6 +319,7 @@
       .map((g) => window.DrugstorySceneUI.guideButton(g, `next-step ${g.chapter ? "chapter" : ""} ${g.ok ? "" : "blocked"}`))
       .join("")}</div>`;
   }
+  const sheet = { id: null };
   function money_line() {
     const s = state;
     return `<div class="cashflow"><span>每周支出 <b>${money(s.costs_per_week)}</b></span><span>产品利润 <b>${money(s.weekly_profit)}</b></span>${s.weekly_royalty ? `<span>分成 <b>${money(s.weekly_royalty)}</b></span>` : ""}<span>${s.runway === null ? "收支为正" : `约可撑 <b>${s.runway}</b> 周`}</span></div>`;
@@ -677,6 +680,8 @@
 
   window.DrugstoryPanels = {
     desk,
+    decisionCard,
+    sheet,
     project,
     newProject,
     newProjectArgs,

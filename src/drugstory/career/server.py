@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
-    parser.add_argument("--term", type=int, choices=[10, 20], default=20, help="新局的任期（年）")
+    parser.add_argument("--term", type=int, choices=[10, 20], default=10, help="新局的任期（年）；第一局推荐十年")
     parser.add_argument("--save-path", type=Path, default=DEFAULT_SAVE)
     parser.add_argument("--load", type=Path, help="从指定的文字版或网页版存档开始")
     parser.add_argument("--public-url", default="", help="HTTPS 反代入口，例如 https://example.com/game/")

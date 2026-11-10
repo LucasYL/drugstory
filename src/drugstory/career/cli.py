@@ -16,7 +16,7 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")
     parser.add_argument("--difficulty", choices=["standard", "competition"], default="standard")
-    parser.add_argument("--term", type=int, choices=[10, 20], default=20)
+    parser.add_argument("--term", type=int, choices=[10, 20], default=10)
     parser.add_argument("--load", type=Path)
     parser.add_argument("--save", type=Path, default=Path("saves/institute-cli.json"))
     args = parser.parse_args(argv)

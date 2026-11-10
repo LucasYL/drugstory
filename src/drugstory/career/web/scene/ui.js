@@ -159,6 +159,7 @@
           `<li><small>第 ${e.week} 周</small><span>${esc(e.text)}</span></li>`,
       )
       .join("");
+    updateSheet();
     renderPanel(force);
     lastRevision = s.revision;
     updateDock();
@@ -407,6 +408,32 @@
     }
   }
 
+  /* ---------- 手机：等你决定的卡片压在场景上 ---------- */
+  const phone = matchMedia("(max-width: 700px)");
+  let sheetOpen = true,
+    sheetKey = "";
+  function updateSheet() {
+    const box = q("#sheet");
+    const live = P().waiting().filter((p) => !p.deferred);
+    const p = phone.matches && !state.game_over ? live[0] : null;
+    P().sheet.id = p ? p.id : null;
+    document.body.classList.toggle("has-sheet", !!p);
+    if (!p) {
+      box.hidden = true;
+      box.innerHTML = "";
+      sheetKey = "";
+      return;
+    }
+    const key = `${p.id}:${p.status}:${p.key}`;
+    if (key !== sheetKey) sheetOpen = true; // 新的决定：展开
+    sheetKey = key;
+    box.hidden = false;
+    box.classList.toggle("closed", !sheetOpen);
+    const head = `<button class="sheet-handle" data-sheet-toggle><b>等你决定 · ${live.length}</b><span>${sheetOpen ? "收起" : `${esc(p.name)} · ${esc(p.status_name)} · 展开`}</span></button>`;
+    box.innerHTML = head + (sheetOpen ? P().decisionCard(p) : "");
+  }
+  phone.addEventListener?.("change", () => state && (updateSheet(), renderPanel(true)));
+
   /* ---------- 右侧面板 ---------- */
   function content() {
     if (route.type === "project") {
@@ -508,7 +535,7 @@
   }
   function help() {
     q("#modal-body").innerHTML =
-      '<h2 id="modal-title">怎么玩</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><ol class="help"><li><b>开项目：</b>右侧「＋ 新项目」，选一张卡点「开始筛选」。新手推荐「稳压片」。</li><li><b>让时间走：</b>点 ▶ 1×、2×、4×。有决定会自动停，决定完自动继续。⏭ 直接跳到下一件需要你的事。</li><li><b>做决定：</b>决定卡上的大按钮就是推荐方案，周数、费用和成功率都写在上面，点一下就开工。想换人、换方案点「调整方案」。</li><li><b>看画面：</b>橙色数字是开发（让药变好），蓝色是验证（看清药有多好）。</li><li><b>赚周转金：</b>「服务」里每单一键接下，默认派能力最低的合格伙伴。</li><li><b>养人和扩建：</b>点人物晋阶、培训；点房间升级设备、扩建研究所。</li></ol><p class="sub">快捷键：空格 暂停/继续 · 1 2 3 切换速度 · N 下一件事</p><button data-close class="primary">开始经营</button>';
+      '<h2 id="modal-title">怎么玩</h2><button data-close class="modal-close" aria-label="关闭弹窗">×</button><ol class="help"><li><b>开项目：</b>右侧「＋ 新项目」，选一张卡点「开始筛选」。新手推荐「稳压片」。</li><li><b>让时间走：</b>点 ▶ 1×、2×、4×。有决定会自动停，决定完自动继续。⏭ 直接跳到下一件需要你的事。</li><li><b>做决定：</b>决定卡上的大按钮就是推荐方案，周数、费用和成功率都写在上面，点一下就开工。想换人、换方案点「调整方案」。</li><li><b>看画面：</b>橙色数字是开发（让药变好），蓝色是验证（看清药有多好）。</li><li><b>赚周转金：</b>「服务」里每单一键接下，默认派能力最低的合格伙伴。</li><li><b>养人和扩建：</b>点人物晋阶、培训；点房间升级设备、扩建研究所。</li></ol><p class="sub">快捷键：空格 暂停/继续 · 1 2 3 切换速度 · N 下一件事 · 回车 执行推荐方案</p><button data-close class="primary">开始经营</button>';
     if (!q("#modal").open) q("#modal").showModal();
   }
 
@@ -594,6 +621,10 @@
     if (b.dataset.scene === "gallery") gallery();
     if (b.dataset.scene === "help") help();
     if (b.dataset.scene === "rating") showModal("rating");
+    if (b.dataset.sheetToggle !== undefined) {
+      sheetOpen = !sheetOpen;
+      updateSheet();
+    }
     if (b.dataset.scene === "numbers") {
       P().toggleNumbers();
       b.textContent = P().numbersOn() ? "隐藏数字" : "显示数字";
@@ -668,6 +699,14 @@
       setWant(want ? 0 : 1);
     } else if (["Digit1", "Digit2", "Digit3"].includes(e.code)) {
       setWant({ Digit1: 1, Digit2: 2, Digit3: 4 }[e.code]);
+    } else if (e.code === "Enter" || e.code === "NumpadEnter") {
+      // 回车：执行第一张决定卡上的推荐方案
+      if (e.target.closest("button,a,summary")) return;
+      const p = P().waiting().find((x) => !x.deferred);
+      if (!p?.quick?.ok) return;
+      e.preventDefault();
+      forceNext = true;
+      send(p.quick.command, p.quick.args);
     } else if (e.code === "KeyN" && !state.pending && !state.game_over) {
       forceNext = true;
       send("next_event", { batches: 0 });

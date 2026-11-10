@@ -1411,7 +1411,7 @@
                   y: iso(hx, hy).y,
                   phase: state.time * 3 + i,
                   working: true,
-                  away: true,
+                  away: false,
                   alpha: a.helperAlpha * 0.95,
                   flip: i % 2 === 1,
                 }),
@@ -1879,8 +1879,26 @@
       }
     }
 
+    // 负责人身边的成员：新画法的白大褂小人（没有名牌），四种长相轮换
+    const HELPER_ART = [
+      { profession: "chem", skin: "#efc8a6", hair: "buzz", hair_color: "#2b2422", prop: "pipette" },
+      { profession: "proc", skin: "#c98f63", hair: "bun", hair_color: "#3a2a22", prop: "clipboard" },
+      { profession: "tox", skin: "#f3d2b4", hair: "bob_sleek", hair_color: "#1f1c1d", prop: "notebook" },
+      { profession: "bio", skin: "#8d5a3c", hair: "curly", hair_color: "#1d1715", prop: "flask" },
+    ].map((x) => ({
+      tier: 1,
+      age: "young",
+      brow_shape: "soft",
+      mouth: "smile",
+      outfit: "coat",
+      pants: "#4a5260",
+      accessories: [],
+      name: "",
+      ...x,
+    }));
     function helperLook(st, i) {
       return {
+        art: HELPER_ART[i % HELPER_ART.length],
         build: "average",
         height: i % 2 ? 0 : -1,
         age: "young",
