@@ -18,6 +18,7 @@ from . import (
     product_design,
     rating,
     readouts,
+    skills,
     stories,
     talents,
     trial_choices,
@@ -387,6 +388,7 @@ def snapshot(s):
                 "potential": talents.potential(h),
                 "inherited": talents.inherited(h),
                 "inherit_to": engine.inherit_options(s, h["id"]),
+                "active": skills.view(s, h),
                 "talent_uses": {
                     "year": h.get("talent_uses", {}).get(str(s["week"] // 48 + 1), 0),
                     "total": sum(h.get("talent_uses", {}).values()),
@@ -418,6 +420,7 @@ def snapshot(s):
                 "connecting": any(j.get("target") == key for j in s["jobs"]),
                 "skill": SKILLS[c["profession"]],
                 "trait": talents.trait(key),
+                "active": {k: talents.ABILITIES[key]["active"][k] for k in ("name", "text", "cost", "cooldown")},
                 "potential": talents.potential(recruit),
             }
         )
@@ -498,6 +501,7 @@ def snapshot(s):
                 **project_view(s, p),
                 "quick": assist.quick(s, p),
                 "advice": assist.advice(s, p),
+                "skills": skills.usable(s, p),
                 "gates": gates.view(s, p["catalog"], p),
             }
             for p in s["projects"]

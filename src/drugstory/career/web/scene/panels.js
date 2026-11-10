@@ -223,6 +223,22 @@
     const pupils = h.inherit_to.map((id) => state.heroes.find((x) => x.id === id)).filter(Boolean);
     return `<p class="hint-line">${h.retire_in > 0 ? `约 ${years} 年后退休。` : "这个月做完手上的事就退休。"}退休前可以把专长传给一位弟子（12 周、¥200 万）。</p>${pupils.length ? `<div class="act-row">${pupils.map((u) => cmd(`传承给${esc(u.name)}`, "inherit", { teacher: h.id, pupil: u.id }, "small", !!h.busy || !!u.busy)).join("")}</div>` : ""}`;
   }
+  // 主动技能：能直接用在这个项目上的，列成次按钮
+  function skillRow(p) {
+    if (!p.skills?.length) return "";
+    return `<div class="skill-row"><small>可用专长：</small>${p.skills
+      .map((k) =>
+        cmd(
+          `${esc(k.hero_name)}·${esc(k.name)}${k.cost ? ` · ${money(k.cost)}` : ""}`,
+          "use_skill",
+          k.args,
+          "small skill",
+          false,
+          k.text,
+        ),
+      )
+      .join("")}</div>`;
+  }
   function talentLine(p) {
     return p.talents_used?.length ? `<p class="hint-line talents">这一阶段用上的专长：${esc(p.talents_used.join("、"))}</p>` : "";
   }
@@ -277,7 +293,7 @@
   }
 
   function decisionCard(p) {
-    return `<article class="card decide ${p.deferred ? "deferred" : ""}" data-project-card="${p.id}"><header><button class="title" data-scene-project="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.kind_name)} · ${esc(p.phase)}</small></button>${statusPill(p)}</header>${p.deferred ? "" : `<p class="lead">${esc(leadText(p))}</p>`}${decision(p)}</article>`;
+    return `<article class="card decide ${p.deferred ? "deferred" : ""}" data-project-card="${p.id}"><header><button class="title" data-scene-project="${p.id}"><b>${esc(p.name)}</b><small>${esc(p.kind_name)} · ${esc(p.phase)}</small></button>${statusPill(p)}</header>${p.deferred ? "" : `<p class="lead">${esc(leadText(p))}</p>`}${decision(p)}${p.deferred ? "" : skillRow(p)}</article>`;
   }
   function leadText(p) {
     return (
@@ -357,7 +373,7 @@
       p.status === "licensed"
         ? '<p class="hint-line">已授权给合作方，后续里程碑和分成在「产品」里看。</p>'
         : ""
-    }${autopilotBlock(p)}${evidenceBlock}${p.readings.length || p.work.length ? `<details class="block"><summary>分批数据与开发量</summary>${workList(p.work)}${p.readings
+    }${DECIDE.includes(p.status) ? "" : skillRow(p)}${autopilotBlock(p)}${evidenceBlock}${p.readings.length || p.work.length ? `<details class="block"><summary>分批数据与开发量</summary>${workList(p.work)}${p.readings
       .slice(-8)
       .reverse()
       .map(
@@ -631,6 +647,12 @@
   function promotable(h) {
     return h.rank < 4 && h.promotion.every((c) => c.ok);
   }
+  function activeBlock(h) {
+    const a = h.active;
+    if (!a) return "";
+    const status = !a.unlocked ? a.note : a.ready_in ? `还要等 ${a.ready_in} 周` : a.choices.length ? "" : "现在没有能用的地方";
+    return `<div class="active-skill"><b>主动 · ${esc(a.name)}</b><small>${esc(a.text)}${a.cost ? ` · ${money(a.cost)}` : ""} · 冷却 ${a.cooldown} 周</small>${status ? `<small class="hint-line">${esc(status)}</small>` : ""}${a.choices.length ? `<div class="act-row">${a.choices.map((c) => cmd(a.scope === "none" ? "使用" : `用在：${esc(c.label)}`, "use_skill", c.args, "small skill")).join("")}</div>` : ""}</div>`;
+  }
   function trainButton(h, cls = "small") {
     const capped = h.ability >= Math.min(RANK_CAP[h.rank], h.potential);
     return cmd(
@@ -668,7 +690,7 @@
   function hero(h) {
     const ready = promotable(h);
     const okCount = h.promotion.filter((c) => c.ok).length;
-    return `<button class="back" data-scene="overview">← 伙伴</button><article class="card detail hero-card2"><header class="hero-head"><canvas data-portrait="${h.id}" class="big" aria-hidden="true"></canvas><div><h2>${esc(h.name)}<small>「${esc(h.nickname)}」</small></h2><p>${esc(h.rank_name)} · ${esc(h.profession_name)}</p><span class="meter"><i style="width:${Math.min(100, h.ability)}%"></i></span><small>能力 ${h.ability} / 阶位上限 ${Math.min(RANK_CAP[h.rank], h.potential)} · 潜力 ${h.potential} · 经验 ${h.xp} · 成员 ${h.members} · 履历 ${h.cases.length}</small></div></header><p class="status-line">${h.busy ? `<span class="dot make"></span>正在：${esc(h.busy)}` : '<span class="dot idle"></span>空闲，可以安排工作'} · 工资 ${money(h.weekly_salary)}/周</p><div class="act-row">${h.rank < 4 ? cmd(`晋阶${["", "", "精英", "大师", "传奇"][h.rank + 1]} · ${money(h.promotion_cost)}`, "promote", { character: h.id }, ready ? "primary small" : "small", !!h.busy || !ready) : ""}${trainButton(h)}${modalButton("团队成员", "team", h.id, "small")}${modalButton("带教", "mentor", h.id, "small")}</div><section class="block"><h4>专长 · ${esc(h.trait.name)}${h.awakened ? '<small class="good">已觉醒</small>' : ""}</h4><p>${esc(h.trait.description)}</p>${h.talent_uses?.total ? `<p class="hint-line">今年用上 ${h.talent_uses.year} 次 · 累计 ${h.talent_uses.total} 次</p>` : ""}<p class="${h.awakened ? "" : "hint-line"}">${h.awakened ? "觉醒" : "大师后完成个人课题即觉醒"}：${esc(h.trait.awaken)}</p>${h.inherited.map((t) => `<p><b>传承 · ${esc(t.name)}</b> ${esc(t.description)}</p>`).join("")}${legacyBlock(h)}</section>${personalCard(h)}${h.rank < 4 ? `<details class="block" ${ready ? "open" : ""}><summary>晋阶条件 ${okCount}/${h.promotion.length}</summary><p>${checks(h.promotion)}</p></details>` : '<p class="hint-line">已达传奇，可以带教后辈。</p>'}<details class="block"><summary>背景</summary><p>${esc(h.story)}</p><p>${esc(h.bio)}</p></details></article>`;
+    return `<button class="back" data-scene="overview">← 伙伴</button><article class="card detail hero-card2"><header class="hero-head"><canvas data-portrait="${h.id}" class="big" aria-hidden="true"></canvas><div><h2>${esc(h.name)}<small>「${esc(h.nickname)}」</small></h2><p>${esc(h.rank_name)} · ${esc(h.profession_name)}</p><span class="meter"><i style="width:${Math.min(100, h.ability)}%"></i></span><small>能力 ${h.ability} / 阶位上限 ${Math.min(RANK_CAP[h.rank], h.potential)} · 潜力 ${h.potential} · 经验 ${h.xp} · 成员 ${h.members} · 履历 ${h.cases.length}</small></div></header><p class="status-line">${h.busy ? `<span class="dot make"></span>正在：${esc(h.busy)}` : '<span class="dot idle"></span>空闲，可以安排工作'} · 工资 ${money(h.weekly_salary)}/周</p><div class="act-row">${h.rank < 4 ? cmd(`晋阶${["", "", "精英", "大师", "传奇"][h.rank + 1]} · ${money(h.promotion_cost)}`, "promote", { character: h.id }, ready ? "primary small" : "small", !!h.busy || !ready) : ""}${trainButton(h)}${modalButton("团队成员", "team", h.id, "small")}${modalButton("带教", "mentor", h.id, "small")}</div><section class="block"><h4>专长 · ${esc(h.trait.name)}${h.awakened ? '<small class="good">已觉醒</small>' : ""}</h4><p>${esc(h.trait.description)}</p>${h.talent_uses?.total ? `<p class="hint-line">今年用上 ${h.talent_uses.year} 次 · 累计 ${h.talent_uses.total} 次</p>` : ""}${activeBlock(h)}<p class="${h.awakened ? "" : "hint-line"}">${h.awakened ? "觉醒" : "大师后完成个人课题即觉醒"}：${esc(h.trait.awaken)}</p>${h.inherited.map((t) => `<p><b>传承 · ${esc(t.name)}</b> ${esc(t.description)}</p>`).join("")}${legacyBlock(h)}</section>${personalCard(h)}${h.rank < 4 ? `<details class="block" ${ready ? "open" : ""}><summary>晋阶条件 ${okCount}/${h.promotion.length}</summary><p>${checks(h.promotion)}</p></details>` : '<p class="hint-line">已达传奇，可以带教后辈。</p>'}<details class="block"><summary>背景</summary><p>${esc(h.story)}</p><p>${esc(h.bio)}</p></details></article>`;
   }
 
   /* ---------- 房间 ---------- */

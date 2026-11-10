@@ -3,131 +3,379 @@
     "name": "举一反三",
     "text": "经验获取 ×1.5，潜力上限 99，全员最高；还没晋升时，他负责的阶段读数噪声 +10%（太冒失）。",
     "awaken": "融会贯通：可以同时继承两位传奇的专长，而且不限专业。",
-    "asset_id": "hero_prodigy"
+    "asset_id": "hero_prodigy",
+    "active": {
+      "name": "灵光一现",
+      "text": "他在做的专项研究立刻完成。",
+      "kind": "shorten",
+      "params": {
+        "experiment": true,
+        "member": true
+      },
+      "scope": "project",
+      "cost": 0,
+      "cooldown": 96
+    }
   },
   "sprout": {
     "name": "反例清单",
     "text": "她参与筛选时，候选获益的证据范围缩小 30%。",
     "awaken": "选中的候选若在 II 期失败，退回一半 II 期费用。",
-    "asset_id": "hero_sprout"
+    "asset_id": "hero_sprout",
+    "active": {
+      "name": "再筛一轮",
+      "text": "选候选时多找一个候选。",
+      "kind": "candidate",
+      "params": {},
+      "scope": "project",
+      "cost": 40,
+      "cooldown": 96
+    }
   },
   "scout": {
     "name": "靶点侦察",
     "text": "在职时，立项前就能看到每个组合的确切适配档位：主流路线里哪条最好，冷门路线能不能做。",
     "awaken": "他参与筛选时多一个候选。",
-    "asset_id": "hero_scout"
+    "asset_id": "hero_scout",
+    "active": {
+      "name": "探路",
+      "text": "一个靶点的 12 个组合全部写进组合手记。",
+      "kind": "notebook",
+      "params": {},
+      "scope": "target",
+      "cost": 60,
+      "cooldown": 96
+    }
   },
   "bridge": {
     "name": "影像标志物",
     "text": "他负责的人群分层研究，找到的获益人群效果翻倍。",
     "awaken": "分层入组不再缩小市场。",
-    "asset_id": "hero_bridge"
+    "asset_id": "hero_bridge",
+    "active": {
+      "name": "影像筛查",
+      "text": "立刻得到一次人群分层结果，不占人、不占时间。",
+      "kind": "marker",
+      "params": {},
+      "scope": "project",
+      "cost": 60,
+      "cooldown": 96
+    }
   },
   "star": {
     "name": "机制直觉",
     "text": "在职时，立项前就能看到靶点的机制偏移（这条通路天生好不好做）。",
     "awaken": "传承：弟子获得「反例清单」。",
     "asset_id": "hero_star",
-    "inherit": "sprout"
+    "inherit": "sprout",
+    "active": {
+      "name": "点拨",
+      "text": "一位同专业、阶位更低的伙伴立刻获得 20 经验。",
+      "kind": "xp",
+      "params": {
+        "amount": 20
+      },
+      "scope": "none",
+      "cost": 0,
+      "cooldown": 144
+    }
   },
   "beaker": {
     "name": "通宵冲刺",
     "text": "他负责的候选优化工期 −25%。",
     "awaken": "冲刺时开发量 +30%。",
-    "asset_id": "hero_beaker"
+    "asset_id": "hero_beaker",
+    "active": {
+      "name": "冲刺周",
+      "text": "他在做的开发阶段剩余工期 −3 周。",
+      "kind": "shorten",
+      "params": {
+        "weeks": 3,
+        "build": true,
+        "member": true
+      },
+      "scope": "project",
+      "cost": 30,
+      "cooldown": 96
+    }
   },
   "catalyst": {
     "name": "一克到一公斤",
     "text": "她负责的候选优化同时把工艺稳定提高 4 点（显示 +40）。",
     "awaken": "改良设计阶段工艺稳定再 +6。",
-    "asset_id": "hero_catalyst"
+    "asset_id": "hero_catalyst",
+    "active": {
+      "name": "放大一次",
+      "text": "临床前的候选工艺稳定 +40。",
+      "kind": "improve",
+      "params": {
+        "stat": "quality",
+        "amount": 4
+      },
+      "scope": "project",
+      "cost": 40,
+      "cooldown": 96
+    }
   },
   "wizard": {
     "name": "失败地图",
     "text": "在职时，同靶点每失败或终止一次，下一个候选获益 +4（最多 +12）。",
     "awaken": "失败的阶段退回四成该阶段费用。",
-    "asset_id": "hero_wizard"
+    "asset_id": "hero_wizard",
+    "active": {
+      "name": "从失败里找答案",
+      "text": "同靶点失败过的项目，选候选时多一个获益更好的候选。",
+      "kind": "candidate",
+      "params": {
+        "effect": 6,
+        "failed_target": true
+      },
+      "scope": "project",
+      "cost": 60,
+      "cooldown": 96
+    }
   },
   "alchemist": {
     "name": "不可能的分子",
     "text": "她参与筛选时，适配 −1 的组合按 0 档处理。",
     "awaken": "传承：弟子的定向优化可以做三次。",
     "asset_id": "hero_alchemist",
-    "inherit": "triple_refine"
+    "inherit": "triple_refine",
+    "active": {
+      "name": "不可能的分子",
+      "text": "临床前的候选获益 +50、安全 −20，不占定向优化次数。",
+      "kind": "improve",
+      "params": {
+        "stat": "effect",
+        "amount": 5,
+        "trade": {
+          "safety": -2
+        }
+      },
+      "scope": "project",
+      "cost": 80,
+      "cooldown": 144
+    }
   },
   "bubble": {
     "name": "再核一遍",
     "text": "她负责的专项复核费用减半，每项可以多做一次。",
     "awaken": "她负责的阶段，安全读数噪声 −15%。",
-    "asset_id": "hero_bubble"
+    "asset_id": "hero_bubble",
+    "active": {
+      "name": "连夜复核",
+      "text": "立刻复核一次安全窗口，范围变窄。",
+      "kind": "reveal",
+      "params": {
+        "stat": "safety",
+        "sigma": 5
+      },
+      "scope": "project",
+      "cost": 20,
+      "cooldown": 96
+    }
   },
   "shield": {
     "name": "排雷",
     "text": "他负责的 I 期因安全不过时，可以补一次研究，不直接失败。",
     "awaken": "他负责的临床前阶段读数噪声 −30%。",
-    "asset_id": "hero_shield"
+    "asset_id": "hero_shield",
+    "active": {
+      "name": "先排雷",
+      "text": "下一阶段安全门槛 −30。",
+      "kind": "limit",
+      "params": {
+        "limits": {
+          "safety": -3
+        }
+      },
+      "scope": "project",
+      "cost": 30,
+      "cooldown": 96
+    }
   },
   "judge": {
     "name": "预审",
     "text": "她负责的审评读数噪声减半；阿尔茨海默「脑水肿」部分解决。",
     "awaken": "审评补正只要 2 周。",
-    "asset_id": "hero_judge"
+    "asset_id": "hero_judge",
+    "active": {
+      "name": "预审会",
+      "text": "下一次审评工艺门槛 −40，工期 −2 周。",
+      "kind": "limit",
+      "params": {
+        "limits": {
+          "quality": -4
+        },
+        "minus": 2,
+        "stage": "review"
+      },
+      "scope": "project",
+      "cost": 40,
+      "cooldown": 96
+    }
   },
   "guardian": {
     "name": "安全设计",
     "text": "他负责的 I 期安全门槛 −4；阿尔茨海默「脑水肿」完全解决。",
     "awaken": "传承：弟子获得「排雷」。",
     "asset_id": "hero_guardian",
-    "inherit": "shield"
+    "inherit": "shield",
+    "active": {
+      "name": "安全设计评审",
+      "text": "下一阶段安全门槛 −50。",
+      "kind": "limit",
+      "params": {
+        "limits": {
+          "safety": -5
+        }
+      },
+      "scope": "project",
+      "cost": 60,
+      "cooldown": 144
+    }
   },
   "pill": {
     "name": "每一炉都一样",
     "text": "她负责的处方与工艺阶段工艺稳定 +4；她交付的服务回款 +30%。",
     "awaken": "仿制药质量阶段读数噪声减半。",
-    "asset_id": "hero_pill"
+    "asset_id": "hero_pill",
+    "active": {
+      "name": "加急一炉",
+      "text": "她手上的技术服务立刻交付并回款。",
+      "kind": "service",
+      "params": {},
+      "scope": "none",
+      "cost": 0,
+      "cooldown": 96
+    }
   },
   "crystal": {
     "name": "晶型筛选",
     "text": "他负责的阶段，工艺稳定读数噪声减半。",
     "awaken": "在职时自主产品毛利 +3%。",
-    "asset_id": "hero_crystal"
+    "asset_id": "hero_crystal",
+    "active": {
+      "name": "换个晶型",
+      "text": "临床前（仿制药等效性之前）的候选暴露与等效 +40。",
+      "kind": "improve",
+      "params": {
+        "stat": "exposure",
+        "amount": 4
+      },
+      "scope": "project",
+      "cost": 40,
+      "cooldown": 96
+    }
   },
   "forge": {
     "name": "长效递送",
     "text": "她负责的改良价值确认，获益门槛 −6。",
     "awaken": "脑穿梭递送：大分子可以入脑；阿尔茨海默「入脑」完全解决。",
-    "asset_id": "hero_forge"
+    "asset_id": "hero_forge",
+    "active": {
+      "name": "长效改造",
+      "text": "一款在售的自主产品需求 +10%（每款一次）。",
+      "kind": "product",
+      "params": {
+        "factor": 1.1
+      },
+      "scope": "product",
+      "cost": 200,
+      "cooldown": 144
+    }
   },
   "architect": {
     "name": "自建产线",
     "text": "在职时自主产品毛利 +6%。",
     "awaken": "传承：弟子获得「晶型筛选」。",
     "asset_id": "hero_architect",
-    "inherit": "crystal"
+    "inherit": "crystal",
+    "active": {
+      "name": "产线改造",
+      "text": "一款在售的自主产品毛利 +4%（每款一次）。",
+      "kind": "product",
+      "params": {
+        "margin": 0.04
+      },
+      "scope": "product",
+      "cost": 150,
+      "cooldown": 144
+    }
   },
   "ruler": {
     "name": "期中嗅觉",
     "text": "她负责的临床阶段读数噪声 −8%。",
     "awaken": "她负责的 II 期工期 −2 周。",
-    "asset_id": "hero_ruler"
+    "asset_id": "hero_ruler",
+    "active": {
+      "name": "看一眼曲线",
+      "text": "临床进行中，立刻多看一次获益，期中估计更准。",
+      "kind": "reveal",
+      "params": {
+        "stat": "effect",
+        "sigma": 6,
+        "clinical": true
+      },
+      "scope": "project",
+      "cost": 20,
+      "cooldown": 96
+    }
   },
   "curve": {
     "name": "中心核查",
     "text": "他负责的临床阶段读数噪声 −15%。",
     "awaken": "每个项目有一次临床失败可以重新分析，改为补正。",
-    "asset_id": "hero_curve"
+    "asset_id": "hero_curve",
+    "active": {
+      "name": "重新分析",
+      "text": "8 周内只差一点（每项差 60 以内）没过的临床阶段，改为可补正。",
+      "kind": "rescue",
+      "params": {
+        "margin": 6,
+        "weeks": 8
+      },
+      "scope": "project",
+      "cost": 80,
+      "cooldown": 96
+    }
   },
   "strategist": {
     "name": "多中心",
     "text": "她负责的 III 期工期 −30%；在职时多一个自营临床席位。",
     "awaken": "长周期试验工期恢复正常；阿尔茨海默「长终点」部分解决。",
-    "asset_id": "hero_strategist"
+    "asset_id": "hero_strategist",
+    "active": {
+      "name": "多开几个中心",
+      "text": "临床阶段剩余工期 −25%，剩余费用 ×1.2。",
+      "kind": "shorten",
+      "params": {
+        "ratio": 0.25,
+        "cost": 1.2,
+        "clinical": true
+      },
+      "scope": "project",
+      "cost": 0,
+      "cooldown": 96
+    }
   },
   "oracle": {
     "name": "长程终点",
     "text": "她负责的 III 期读数噪声 −15%；阿尔茨海默「长终点」完全解决。",
     "awaken": "传承：弟子获得「期中嗅觉」。",
     "asset_id": "hero_oracle",
-    "inherit": "ruler"
+    "inherit": "ruler",
+    "active": {
+      "name": "长程设计",
+      "text": "下一次 III 期工期 −20%。",
+      "kind": "limit",
+      "params": {
+        "weeks": 0.8,
+        "stage": "III"
+      },
+      "scope": "project",
+      "cost": 60,
+      "cooldown": 144
+    }
   }
 }

@@ -20,6 +20,7 @@ from . import (
     product_design,
     rating,
     readouts,
+    skills,
     stories,
     talents,
     trial_choices,
@@ -202,6 +203,7 @@ def run_phase(s, project: str, heroes: list, plan: str = "standard", mode: str =
     execution = sc.plan_phase(s, p, heroes, plan, mode)
     available_money(s, execution["cost"])
     p.setdefault("adjust", {})[key] = execution["adjust"]
+    p.get("adjust_next", {}).pop(key, None)  # 留给这一阶段的技能调整已经计入
     for item in execution.get("notes", []):
         talents.trigger(s, item["key"], item["text"], heroes, item["minimum"], p=p, stage=key)
     p.update(
@@ -955,6 +957,11 @@ def autopilot_step(s):
             )
 
 
+def use_skill(s, character: str, project: str = "", product: str = "", target: str = ""):
+    """用一位伙伴的主动技能（带冷却）。"""
+    skills.use(s, character, project, product, target)
+
+
 def pick_goal(s, goal: str):
     """从研究大会给出的三个目标里选一个当作今年的事。"""
     goals.pick(s, goal)
@@ -1001,6 +1008,7 @@ COMMANDS = {
         take_services,
         set_autopilot,
         pick_goal,
+        use_skill,
     ]
 }
 

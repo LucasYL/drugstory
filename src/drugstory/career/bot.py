@@ -7,6 +7,7 @@ import copy
 from . import economy as e
 from . import engine as g
 from . import science as sc
+from . import skills
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, ROSTER, STATS
 from .model import ACTIVE, ability, busy, committed, new_game
 from .view import recommended_team
@@ -19,8 +20,29 @@ def attempt(s, command, **args):
         return None
 
 
+def use_skills(s, cash):
+    """证据型玩家用主动技能：决定卡上能用的就用（留足周转金），产品和带教类技能有机会就用。"""
+    for p in s["projects"]:
+        for k in skills.usable(s, p):
+            if cash > k["cost"] + 800:
+                result = attempt(s, "use_skill", **k["args"])
+                if result:
+                    return result
+    for h in s["heroes"]:
+        if not h["employed"] or "active" not in skills.talents.ABILITIES.get(h["id"], {}):
+            continue
+        a = skills.view(s, h)
+        if a["scope"] in ("product", "none") and a["choices"] and cash > a["cost"] + 800:
+            result = attempt(s, "use_skill", **a["choices"][0]["args"])
+            if result:
+                return result
+    return None
+
+
 def choose(s, novice=False, remaining=960):
     cash = s["cash"] - committed(s)
+    if not novice and (result := use_skills(s, cash)):
+        return result
     for p in s["projects"]:
         pid, status = p["id"], p["status"]
         if status == "checkpoint":

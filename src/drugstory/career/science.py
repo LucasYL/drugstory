@@ -65,7 +65,8 @@ def mechanism(s, spec):
     return rand(s, "mechanism", key).gauss(0, 6)
 
 
-def generate_candidates(s, p):
+def _pool(s, p):
+    """这个项目候选的先验：各指标均值与标准差、机制偏移的键、失败地图加成、筛选范围系数。"""
     spec = CATALOG[p["catalog"]]
     kind = p["kind"]
     science = max(power(s, p["team"], "bio"), power(s, p["team"], "chem"))
@@ -85,6 +86,52 @@ def generate_candidates(s, p):
     mechanism_key = spec["target"] + "|" + spec["indication"]
     if mechanism_key not in s["mechanisms"]:
         s["mechanisms"][mechanism_key] = rand(s, "mechanism", mechanism_key).gauss(0, 6)
+    lessons = min(12, 4 * failures_on_target(s, p)) if kind == "innovative" and talents.has(s, "wizard") else 0
+    narrow = 0.7 if talents.has(s, "sprout", p["team"]) else 1.0
+    return {"means": means, "deviations": deviations, "mechanism": mechanism_key, "lessons": lessons, "narrow": narrow}
+
+
+def make_candidate(s, p, label, offsets, pool=None):
+    """生成下一个候选（编号 = 现有候选数），带键随机：同一项目、同一编号永远得到同一个候选。"""
+    spec = CATALOG[p["catalog"]]
+    kind = p["kind"]
+    pool = pool or _pool(s, p)
+    i = len(p["candidates"])
+    c = {
+        "id": i,
+        "label": label,
+        "truth": {},
+        "belief": {},
+        "optimized": 0,
+        "checks": {},
+        "marker": {"mean": 0, "variance": 64, "observations": 0},
+        "subgroup": max(0, rand(s, p["id"], i, "subgroup").gauss(5, 5)),
+    }
+    for stat, mean, sd in zip(STATS, pool["means"], pool["deviations"], strict=True):
+        mean += offsets.get(stat, 0)
+        if stat == "effect" and kind == "innovative":
+            mean -= 5 * spec["difficulty"]
+            mean += pool["lessons"]
+        actual = rand(s, "candidate", p["id"], spec.get("modality_id"), i, stat).gauss(mean, sd)
+        if stat == "effect" and kind == "innovative":
+            actual += s["mechanisms"][pool["mechanism"]]
+            if combo_tier(s, spec, p["team"]) <= -2:
+                # 不可能的组合：获益压在 II 期门槛以下，不再靠运气获批
+                actual = min(actual, STAGES["II"]["limits"]["effect"] - 8)
+        c["truth"][stat] = min(98, max(15, actual))
+        c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
+        sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
+        if stat == "effect":
+            sigma *= pool["narrow"]
+        observe(s, p, c, stat, sigma, "screen")
+    p["candidates"].append(c)
+    return c
+
+
+def generate_candidates(s, p):
+    spec = CATALOG[p["catalog"]]
+    kind = p["kind"]
+    pool = _pool(s, p)
     styles = [
         ("活性线索", {"effect": 6, "safety": -4}),
         ("稳健线索", {"safety": 6, "effect": -3}),
@@ -97,47 +144,17 @@ def generate_candidates(s, p):
             ("放大友好处方", {"quality": 7, "safety": -2}),
         ]
     extra = 1 if talents.has(s, "scout", p["team"]) >= 2 else 0
-    lessons = min(12, 4 * failures_on_target(s, p)) if kind == "innovative" and talents.has(s, "wizard") else 0
-    narrow = 0.7 if talents.has(s, "sprout", p["team"]) else 1.0
-    if narrow < 1:
+    if pool["narrow"] < 1:
         talents.trigger(s, "sprout", "候选获益的证据范围缩小 30%", p["team"], p=p, stage="screening")
     if extra:
         talents.trigger(s, "scout", "多找到一个候选", p["team"], 2, p=p, stage="screening")
-    if lessons:
-        talents.trigger(s, "wizard", f"同靶点失败过：候选获益 +{lessons * 10}", p=p, stage="screening")
+    if pool["lessons"]:
+        talents.trigger(s, "wizard", f"同靶点失败过：候选获益 +{pool['lessons'] * 10}", p=p, stage="screening")
     if spec.get("combo_tier") == -1 and combo_tier(s, spec, p["team"]) == 0:
         talents.trigger(s, "alchemist", "这对组合按「一般」处理", p["team"], p=p, stage="screening")
     styles += [(f"备用线索 {i + 1}", {}) for i in range(extra)]
-    for i, (label, offsets) in enumerate(styles):
-        c = {
-            "id": i,
-            "label": label,
-            "truth": {},
-            "belief": {},
-            "optimized": 0,
-            "checks": {},
-            "marker": {"mean": 0, "variance": 64, "observations": 0},
-            "subgroup": max(0, rand(s, p["id"], i, "subgroup").gauss(5, 5)),
-        }
-        for stat, mean, sd in zip(STATS, means, deviations, strict=True):
-            mean += offsets.get(stat, 0)
-            if stat == "effect" and kind == "innovative":
-                mean -= 5 * spec["difficulty"]
-                mean += lessons
-            actual = rand(s, "candidate", p["id"], spec.get("modality_id"), i, stat).gauss(mean, sd)
-            if stat == "effect" and kind == "innovative":
-                actual += s["mechanisms"][mechanism_key]
-                if combo_tier(s, spec, p["team"]) <= -2:
-                    # 不可能的组合：获益压在 II 期门槛以下，不再靠运气获批
-                    actual = min(actual, STAGES["II"]["limits"]["effect"] - 8)
-            c["truth"][stat] = min(98, max(15, actual))
-            c["belief"][stat] = {"mean": mean, "variance": sd**2 + (36 if stat == "effect" else 0), "observations": 0}
-            sigma = max(12, 24 - power(s, p["team"], STAT_ROLE[stat]) * 0.12)
-            if stat == "effect":
-                sigma *= narrow
-
-            observe(s, p, c, stat, sigma, "screen")
-        p["candidates"].append(c)
+    for label, offsets in styles:
+        make_candidate(s, p, label, offsets, pool)
 
 
 def stage_key(p):
@@ -176,6 +193,13 @@ def skill_effects(s, p, ids, key, partner=False):
             fx["notes"].append({"key": skill, "heroes": who, "minimum": minimum, "text": text})
 
     stats = list(STAGES[key]["limits"])
+    # 主动技能留给下一阶段的调整（先排雷、预审会、安全设计评审、长程设计）
+    nxt = p.get("adjust_next", {}).get(key)
+    if nxt:
+        for stat, delta in nxt["limits"].items():
+            fx["limits"][stat] = fx["limits"].get(stat, 0) + delta
+        fx["minus"] += nxt["minus"]
+        fx["weeks"] *= nxt["weeks"]
     if key == "optimize" and talents.has(s, "beaker", ids):
         fx["weeks"] *= 0.75
         note("beaker", "候选优化工期 −25%")

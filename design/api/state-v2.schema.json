@@ -1117,6 +1117,16 @@
             "type": "string"
           },
           "description": "这一阶段起作用的专长：「人名·专长名」。"
+        },
+        "skills": {
+          "type": "array",
+          "description": "现在能直接用在这个项目上的主动技能。",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/$defs/JsonValue"
+            }
+          }
         }
       },
       "required": [
@@ -1361,6 +1371,13 @@
             "total"
           ],
           "additionalProperties": false
+        },
+        "active": {
+          "type": "object",
+          "description": "主动技能：说明、冷却、现在能用在哪些地方（只读）。",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
         }
       },
       "required": [

@@ -109,6 +109,7 @@ export type Project = {
   "pace"?: "standard" | "rush" | "craft";
   "waiting"?: string | null;
   "talents_used"?: (string)[];
+  "skills"?: ({ [key: string]: JsonValue })[];
 };
 
 export type RoomId = "room_bio" | "room_chem" | "room_proc" | "room_tox" | "room_clinical" | "room_academy";
@@ -155,6 +156,7 @@ export type Hero = {
   "year": number;
   "total": number;
 };
+  "active"?: { [key: string]: JsonValue };
 };
 
 export type Patent = {

@@ -2173,3 +2173,10 @@ h4.area { margin: 12px 0 6px; font-size: 13px; color: var(--muted, #6b6b63); }
 /* v0.13 · 专长看得见 */
 button.quick small.talents { color: #b07a1c; }
 .hint-line.talents { color: #b07a1c; }
+
+/* v0.13 · 主动技能 */
+.skill-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.skill-row small { color: #b07a1c; }
+button.skill { border-color: #e7b766 !important; background: #fff8ea !important; }
+.active-skill { display: grid; gap: 3px; margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff8ea; }
+.active-skill small { color: var(--muted, #6b6b63); }
