@@ -6,7 +6,7 @@ import copy
 
 from . import economy as e
 from . import engine as g
-from . import incidents, skills
+from . import incidents, investments, skills
 from . import science as sc
 from .content import CATALOG, CLINICAL, FACILITIES, PATHS, ROSTER, STATS
 from .model import ACTIVE, ability, busy, committed, new_game
@@ -39,9 +39,36 @@ def use_skills(s, cash):
     return None
 
 
+SURPLUS = 8000  # 可用现金超过这个数，才把多余的钱花在长远投入上
+RESERVE = 3000  # 花完以后至少留下
+
+
+def spend_surplus(s, cash):
+    """证据型玩家的花钱顺序：产线 → 病房 → 学者计划 → 患者援助。只看公开数据。"""
+    if cash <= SURPLUS:
+        return None
+    room = cash - RESERVE
+    own = sorted(
+        (d for d in s["products"] if d["active"] and not d["partner"]), key=lambda d: (-d["last_revenue"], d["id"])
+    )
+    for d in own:
+        if investments.line_problem(s, d) is None and investments.line_cost(s, d) <= room:
+            return attempt(s, "build_line", product=d["id"])
+    if investments.ward_problem(s) is None and room >= investments.WARD_COST:
+        return attempt(s, "build_ward")
+    if investments.fellowship_problem(s) is None and room >= investments.FELLOWSHIP_COST:
+        return attempt(s, "fund_fellowship")
+    for d in own:
+        if not d.get("access"):
+            return attempt(s, "access_program", product=d["id"], on=1)
+    return None
+
+
 def choose(s, novice=False, remaining=960):
     cash = s["cash"] - committed(s)
     if not novice and (result := use_skills(s, cash)):
+        return result
+    if not novice and (result := spend_surplus(s, cash)):
         return result
     for p in s["projects"]:
         pid, status = p["id"], p["status"]

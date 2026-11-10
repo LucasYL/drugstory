@@ -15,6 +15,7 @@ from . import (
     guide,
     honors,
     incidents,
+    investments,
     patents,
     product_design,
     rating,
@@ -479,7 +480,7 @@ def snapshot(s):
         "weekly_royalty": weekly_royalty,
         "reputation": s["reputation"],
         "knowledge": s["knowledge"],
-        "facility": {**FACILITIES[s["facility"]], "level": s["facility"]},
+        "facility": {**FACILITIES[s["facility"]], "level": s["facility"], "slots": engine.clinical_slots(s)},
         "next_facility": {
             **FACILITIES[s["facility"] + 1],
             "upkeep": challenge.upkeep({**s, "facility": s["facility"] + 1}),
@@ -509,10 +510,15 @@ def snapshot(s):
             for p in s["projects"]
         ],
         "products": [
-            {**d, "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None}
+            {
+                **d,
+                "patent_expires_label": date(d["exclusive_until"]) if d.get("exclusive_until") else None,
+                "invest": investments.product_view(s, d),
+            }
             for d in s["products"]
         ],
         "patents": patents.view(s),
+        "investments": investments.view(s),
         "deals": [{k: v for k, v in d.items() if k != "execution"} for d in s["deals"]],
         "rivals": competition.public(s),
         "honors": honors.view(s),

@@ -527,6 +527,40 @@
       "additionalProperties": {
         "$ref": "#/$defs/JsonValue"
       }
+    },
+    "investments": {
+      "type": "object",
+      "description": "花钱的出口：自有产线位、青年学者计划、临床病房（v0.13）。",
+      "additionalProperties": false,
+      "required": [
+        "lines",
+        "fellowship",
+        "ward",
+        "upkeep"
+      ],
+      "properties": {
+        "lines": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "fellowship": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "ward": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        },
+        "upkeep": {
+          "type": "number"
+        }
+      }
     }
   },
   "required": [
@@ -585,7 +619,8 @@
     "assist",
     "negative_months",
     "rating",
-    "chapters"
+    "chapters",
+    "investments"
   ],
   "additionalProperties": false,
   "$defs": {

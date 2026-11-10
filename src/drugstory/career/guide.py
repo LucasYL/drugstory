@@ -375,6 +375,38 @@ def personal_items(s):
     return out
 
 
+INVEST_CASH = 10000  # 可用现金超过 1 亿时，建议把钱用在长远的事上
+
+
+def invest_items(s):
+    """现金很多时，给出一项长远投入：产线 → 病房 → 学者计划 → 患者援助。"""
+    from . import investments
+
+    if _cash(s) <= INVEST_CASH:
+        return []
+    own = sorted(
+        (d for d in s["products"] if d["active"] and not d["partner"]), key=lambda d: (-d["last_revenue"], d["id"])
+    )
+    line = next((d for d in own if investments.line_problem(s, d) is None), None)
+    if line:
+        margin = round(investments.LINE_MARGIN[line["kind"]] * 100)
+        text = f"毛利 +{margin}%，不受供货折减；¥{investments.line_cost(s, line):,} 万"
+        args = {"product": line["id"]}
+        return [_item("invest", "invest", f"为{line['name']}建自有产线", text, command="build_line", args=args)]
+    if investments.ward_problem(s) is None:
+        text = f"自营临床席位 +1；¥{investments.WARD_COST:,} 万"
+        return [_item("invest", "invest", "建一个临床病房", text, command="build_ward", args={})]
+    if investments.fellowship_problem(s) is None:
+        text = f"团队传承 +8 点；¥{investments.FELLOWSHIP_COST:,} 万"
+        return [_item("invest", "invest", "办一期青年学者计划", text, command="fund_fellowship", args={})]
+    target = next((d for d in own if not d.get("access")), None)
+    if target:
+        args = {"product": target["id"], "on": 1}
+        text = "每周花销售额的 12%，患者人次 ×1.6"
+        return [_item("invest", "invest", f"为{target['name']}开患者援助", text, command="access_program", args=args)]
+    return []
+
+
 def service_items(s):
     occupied = busy(s)
     idle = [h for h in s["heroes"] if h["employed"] and h["id"] not in occupied]
@@ -458,6 +490,7 @@ def suggestions(s, limit=3):
         + (project_items(s) if not _in_flight(s, ("generic", "improved")) else [])
         + personal_items(s)
         + hire_items(s)[:1]
+        + invest_items(s)
         + service_items(s)
     )
     out, seen = [], set()
@@ -478,10 +511,11 @@ def suggestions(s, limit=3):
 
 
 def blocker(s, command, args):
-    """建议里用到的五个命令，直接按引擎的前提条件检查，返回挡住它的原因。
+    """建议里用到的命令，直接按引擎的前提条件检查，返回挡住它的原因。
 
     不在副本上试执行：20 年的存档复制一次要好几毫秒。tests/test_guide.py 用真实引擎核对这里的判断。
     """
+    from . import investments
     from .engine import headcount
 
     occupied = busy(s)
@@ -500,6 +534,10 @@ def blocker(s, command, args):
         "hire": lambda: e.recruit_cost(args["character"]),
         "collaborate": lambda: 120,
         "mentor": lambda: 60,
+        "build_line": lambda: investments.line_cost(s, next(d for d in s["products"] if d["id"] == args["product"])),
+        "build_ward": lambda: investments.WARD_COST,
+        "fund_fellowship": lambda: investments.FELLOWSHIP_COST,
+        "access_program": lambda: 0,
     }[command]()
     if command == "hire" and headcount(s) + 3 > FACILITIES[s["facility"]]["capacity"]:
         return "场地容纳不下新团队，请先扩建"

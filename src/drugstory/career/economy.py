@@ -11,6 +11,7 @@ from . import (
     events,
     gates,
     honors,
+    investments,
     patents,
     product_design,
     rating,
@@ -275,7 +276,7 @@ def base_sales(s, d):
     revenue = d["peak"] * curve * share * price * product_design.supply_factor(s, d)
     margin = d["margin"]
     if not d["partner"]:
-        margin += 0.06 if talents.has(s, "architect") else 0
+        margin += investments.line_margin(s, d)
         margin += 0.03 if talents.has(s, "crystal") >= 2 else 0
     margin = min(0.90, margin)
     return revenue, revenue * margin
@@ -317,7 +318,8 @@ def market_step(s):
         d["last_revenue"], d["last_profit"] = revenue, profit
         d["total_revenue"] += revenue
         d["total_profit"] += profit
-        d["patients"] = d.get("patients", 0) + rating.weekly_patients(d, revenue)
+        reach = investments.access_step(s, d, revenue)
+        d["patients"] = d.get("patients", 0) + rating.weekly_patients(d, revenue) * reach
         if s["week"] % 4 == 0 and (d["active"] or revenue):
             # 每月一个点，最多 20 年，产品页画销售曲线用
             d.setdefault("history", []).append(round(revenue, 1))
@@ -382,6 +384,7 @@ def costs_per_week(s):
         + FACILITIES[s["facility"]]["rent"]
         + challenge.upkeep(s)
         + development.upkeep(s)
+        + investments.upkeep(s)
         + sum(p.get("cost_per_week", 0) for p in s["projects"] if p["status"] in ("screening", "running"))
         + sum(d.get("cost_per_week", 0) * d["cost_share"] for d in s["deals"] if d["status"] == "developing")
     )

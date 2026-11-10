@@ -411,4 +411,10 @@ export type GameState = {
   "chronicle_count"?: number;
   "guide"?: (GuideItem)[];
   "year_goal"?: { [key: string]: JsonValue };
+  "investments": {
+  "lines": { [key: string]: JsonValue };
+  "fellowship": { [key: string]: JsonValue };
+  "ward": { [key: string]: JsonValue };
+  "upkeep": number;
+};
 };

@@ -97,6 +97,7 @@ def legacy_points(s):
         + 5 * sum(bool(h.get("personal")) for h in s["heroes"])
         + 10 * len(s.get("inheritances", []))
         + 2 * sum(h["rank"] - h["tier"] for h in employed if h["tier"] > 1)
+        + 8 * s.get("fellowships", 0)
     )
 
 

@@ -708,7 +708,15 @@
         (r) =>
           `<div class="upgrade"><span><b>${esc(r.name)} · ${r.level} 级</b><small>${esc(r.text)}</small></span>${r.cost ? cmd(`升级 · ${money(r.cost)}`, "upgrade_equipment", { profession: r.profession }, "small", !r.available || r.cost > state.available_cash) : '<span class="pill mute">满级</span>'}</div>`,
       )
-      .join("")}</div>`;
+      .join("")}</div>${investBlock()}`;
+  }
+  // 花钱的出口：青年学者计划、临床病房（产线和患者援助在产品卡上）
+  function investBlock() {
+    const v = state.investments;
+    if (!v) return "";
+    const f = v.fellowship,
+      w = v.ward;
+    return `<div class="sec-head"><h3>长远投入</h3></div><p class="sub">自有产线 ${v.lines.used}/${v.lines.total}（在产品卡上建）${v.upkeep ? ` · 运营 ${money(v.upkeep)}/周` : ""}</p><div class="upgrade"><span><b>青年学者计划 · ${f.done}/${f.max} 期</b><small>每期团队传承 +8 点；第 3 期起每期一位见习伙伴经验 +10${f.problem ? "。" + esc(f.problem) : ""}</small></span>${cmd(`办一期 · ${money(f.cost)}`, "fund_fellowship", {}, "small", !f.ok)}</div><div class="upgrade"><span><b>临床病房 · ${w.done}/${w.max}</b><small>自营临床席位 +1 · 运营 ${money(w.upkeep)}/周${w.problem ? "。" + esc(w.problem) : ""}</small></span>${cmd(`建一个 · ${money(w.cost)}`, "build_ward", {}, "small", !w.ok)}</div>`;
   }
   function hero(h) {
     const ready = promotable(h);

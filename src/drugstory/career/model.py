@@ -227,6 +227,8 @@ def new_game(seed=42, scenario="foundation", difficulty="standard", term=20):
         "year_goal": None,
         "goal_history": [],
         "goal_log": [],
+        "fellowships": 0,
+        "wards": 0,
         "minimum_cash": float(c["cash"]),
         "first_income": None,
         "first_rank2": None,
@@ -322,6 +324,8 @@ def migrate_v10(s):
     s.setdefault("year_goal", None)
     s.setdefault("goal_history", [])
     s.setdefault("goal_log", [])
+    s.setdefault("fellowships", 0)
+    s.setdefault("wards", 0)
     # 第 3 章「新的实验室」是新插入的：已经走到原第 3 章及以后的存档，下标后移一位，新章算作跳过（不补奖励）
     if s.get("chapter", 0) >= 2:
         s["chapter"] += 1

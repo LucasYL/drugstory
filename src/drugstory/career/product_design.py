@@ -39,6 +39,8 @@ def reward(p):
 
 
 def supply_factor(s, d):
+    if d.get("production") == "self":
+        return 1.0  # 自有产线不受委托生产的供货折减
     if d["catalog"] == "g_pressure" and d.get("design_reward") != "supply" and s["week"] // 12 % 3 == 2:
         return 0.88
     return 1.0

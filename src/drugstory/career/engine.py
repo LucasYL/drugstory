@@ -17,6 +17,7 @@ from . import (
     guide,
     honors,
     incidents,
+    investments,
     patents,
     product_design,
     rating,
@@ -171,7 +172,7 @@ def choose_candidate(s, project: str, candidate: int):
 
 def clinical_slots(s):
     """自营临床席位；欧阳岚「多中心」在职时多一个。"""
-    return FACILITIES[s["facility"]]["slots"] + (1 if talents.has(s, "strategist") else 0)
+    return FACILITIES[s["facility"]]["slots"] + (1 if talents.has(s, "strategist") else 0) + s.get("wards", 0)
 
 
 def internal_usage(s):
@@ -769,6 +770,7 @@ def advance(s, weeks: int = 4):
         spend(s, FACILITIES[s["facility"]]["rent"], "rent")
         spend(s, challenge.upkeep(s), "platform_maintenance")
         spend(s, development.upkeep(s), "equipment_upkeep")
+        spend(s, investments.upkeep(s), "operations")
         for job in list(s["jobs"]):
             job["left"] -= 1
             if job["left"] <= 0:
@@ -990,6 +992,26 @@ def autopilot_step(s):
             )
 
 
+def build_line(s, product: str):
+    """为一款在售的自主产品建自有产线。"""
+    investments.build_line(s, product)
+
+
+def access_program(s, product: str, on: int):
+    """开或关一款产品的患者援助计划。"""
+    investments.access_program(s, product, on)
+
+
+def fund_fellowship(s):
+    """办一期青年学者计划。"""
+    investments.fund_fellowship(s)
+
+
+def build_ward(s):
+    """建一个临床病房：自营临床席位 +1。"""
+    investments.build_ward(s)
+
+
 def use_skill(s, character: str, project: str = "", product: str = "", target: str = ""):
     """用一位伙伴的主动技能（带冷却）。"""
     skills.use(s, character, project, product, target)
@@ -1021,6 +1043,10 @@ COMMANDS = {
         rework,
         rework_expert,
         launch,
+        build_line,
+        access_program,
+        fund_fellowship,
+        build_ward,
         license_project,
         hire,
         dismiss,

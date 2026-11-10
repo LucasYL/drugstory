@@ -287,7 +287,7 @@
   },
   "architect": {
     "name": "自建产线",
-    "text": "在职时自主产品毛利 +6%。",
+    "text": "自建产线：建线费用 −30%，自有产线毛利再 +6%。",
     "awaken": "传承：弟子获得「晶型筛选」。",
     "asset_id": "hero_architect",
     "inherit": "crystal",
