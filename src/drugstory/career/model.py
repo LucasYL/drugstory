@@ -293,7 +293,8 @@ def migrate_v8(s):
     s.setdefault("bounties_done", [])
     for h in s["heroes"]:
         h.setdefault("prodigy", False)
-        h.setdefault("joined", 0)
+        # v8 没有退休制度和入职记录，从升级当周起计时，给玩家安排传承的时间。
+        h.setdefault("joined", s["week"])
         h.setdefault("inherited", [])
         h.setdefault("retired", False)
     for d in s["products"]:

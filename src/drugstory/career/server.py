@@ -330,7 +330,7 @@ def create_server(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.12")
+    parser = argparse.ArgumentParser(description="新药物语 · 一屏研究所 v0.13")
     parser.add_argument("--port", type=int, default=8885)
     parser.add_argument("--seed", type=int, default=42, help="没有网页存档时的新局种子")
     parser.add_argument("--scenario", choices=list(SCENARIOS), default="foundation")

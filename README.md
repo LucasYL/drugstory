@@ -14,6 +14,8 @@
 
 [当前玩法](design/game-design.md) · [内容与角色](design/content.md) · [技术接口](design/tech.md) · [本版试玩记录](design/v13-playtest.md) · [实施方案](design/v12-plan.md) · [v0.12 记录](design/v12-playtest.md) · [v0.11 评估](design/review-v11.md) · [GitHub Releases](https://github.com/LucasYL/drugstory/releases)
 
+**v0.13.1 升级保护：** 从 v8 旧存档迁移时，缺少入职记录的伙伴从升级当周开始计算退休年限，给玩家完整的传承准备时间。已有入职记录保留。独立复核与后续建议见 [review-v13-codex.md](design/review-v13-codex.md)。
+
 ## 开始游玩
 
 需要 Python 3.12+ 与 uv：

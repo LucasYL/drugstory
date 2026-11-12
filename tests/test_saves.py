@@ -10,6 +10,41 @@ from drugstory.career.server import GameSession, create_server
 CUR = SUFFIX[VERSION]  # 本版本写的文件后缀
 
 
+def test_v8_legends_get_time_to_prepare_for_retirement(tmp_path):
+    from drugstory.career.engine import retirements
+    from drugstory.career.model import make_hero
+
+    s = json.loads(old_save(1, 8))
+    s["week"] = 1325
+    legend = make_hero("guardian")
+    legend.pop("joined")
+    s["heroes"].append(legend)
+    source = tmp_path / "old.json"
+    source.write_text(json.dumps(s))
+    before = source.read_bytes()
+    migrated = GameSession(source).state
+    h = next(h for h in migrated["heroes"] if h["id"] == "guardian")
+    assert h["joined"] == 1325
+    retirements(migrated)
+    assert h["employed"] and not h.get("retire_notice")
+    migrated["week"] += 7 * 48
+    retirements(migrated)
+    assert h["employed"] and h["retire_notice"]
+    migrated["week"] += 48
+    retirements(migrated)
+    assert h["retired"] and not h["employed"]
+    assert source.read_bytes() == before
+
+
+def test_migration_preserves_existing_joined_week(tmp_path):
+    s = json.loads(old_save(2, 8))
+    s["heroes"][0]["joined"] = 123
+    s["week"] = 500
+    source = tmp_path / "old.json"
+    source.write_text(json.dumps(s))
+    assert GameSession(source).state["heroes"][0]["joined"] == 123
+
+
 def old_save(seed, version):
     s = json.loads(dumps(new_game(seed)))
     s["version"] = version
